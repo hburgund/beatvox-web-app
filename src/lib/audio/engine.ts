@@ -17,7 +17,7 @@ import { Rng } from './rng';
 import type { FxChain } from './fx';
 import type { Slice } from './slicer';
 import { matchSlices, type RoleScores } from './drumRoles';
-import { instrumentRef, type Instrument } from '../instrument';
+import { instrumentRef, refersTo, type Instrument } from '../instrument';
 import { formatPattern, parsePattern, RECIPE_FORMAT, RECIPE_VERSION, type Recipe, type Role } from '../recipe';
 
 export const VOICES = 8;
@@ -471,7 +471,7 @@ export class BeatEngine {
     const used = new Set<number>();
     // slice numbers only mean something on the instrument the beat was made
     // with; on any other one (a reVox) every voice picks by role
-    const own = !!r.instrument && r.instrument.id === this.instrument?.id;
+    const own = refersTo(r.instrument, this.instrument);
     const wanted = r.voices.map((rv) =>
       own && typeof rv.slice === 'number' && rv.slice >= 0 && rv.slice < this.slices.length ? rv.slice : null,
     );

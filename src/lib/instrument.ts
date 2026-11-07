@@ -73,9 +73,36 @@ export interface InstrumentRef {
   assetId?: number | string;
 }
 
+/**
+ * A random (v4) UUID. randomUUID() needs a secure page (HTTPS or
+ * localhost); getRandomValues() works everywhere and is just as random.
+ */
 export function newId(): string {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
-  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+  if (typeof crypto.randomUUID === 'function') {
+    try {
+      return crypto.randomUUID();
+    } catch {
+      /* not a secure context; fall through */
+    }
+  }
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  b[6] = (b[6] & 0x0f) | 0x40; // version 4
+  b[8] = (b[8] & 0x3f) | 0x80; // RFC 4122 variant
+  const h = [...b].map((x) => x.toString(16).padStart(2, '0')).join('');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
+/**
+ * Does a recipe's instrument reference point at this instrument? The id
+ * must match, and when both sides know the voice's Roundware asset id, that
+ * must match too. A recipe that copied someone's id then can't claim their
+ * slice numbers.
+ */
+export function refersTo(ref: InstrumentRef | undefined, inst: Instrument | null): boolean {
+  if (!ref || !inst || ref.id !== inst.id) return false;
+  const a = ref.assetId;
+  const b = inst.source.assetId;
+  return a === undefined || b === undefined || String(a) === String(b);
 }
 
 const round = (x: number, places: number) => Math.round(x * 10 ** places) / 10 ** places;
