@@ -16,6 +16,7 @@
 import { Rng } from './rng';
 import type { FxChain } from './fx';
 import type { Slice } from './slicer';
+import { formatPattern, parsePattern, RECIPE_FORMAT, RECIPE_VERSION, type Recipe, type Role } from '../recipe';
 
 export const VOICES = 8;
 export const STEPS = 16;
@@ -38,6 +39,9 @@ export interface Voice {
   on: boolean;
   slice: number;
   pattern: boolean[];
+  /** gain per step (accent 1.25, ghost 0.55); 1 unless a recipe set it */
+  accent: number[];
+  role: Role;
   velocity: number;
   delaySend: number;
   reverbSend: number;
@@ -58,6 +62,8 @@ export interface EngineSettings {
   autoEvolve: boolean;
   /** seconds between automatic Evolve changes */
   evolveEvery: number;
+  /** 0..0.5 of a step: how late the off-beat sixteenths land */
+  swing: number;
   envelope: Envelope;
 }
 
@@ -67,6 +73,7 @@ export const DEFAULT_SETTINGS: EngineSettings = {
   panning: 0.6,
   autoEvolve: false,
   evolveEvery: 3,
+  swing: 0,
   // v1.93 used 100 ms in; the reference MP3's hits rise in ~50 ms
   envelope: { attack: 0.05, hold: 0.3, release: 0.1 },
 };
@@ -85,7 +92,10 @@ export type Action =
   | { kind: 'evolve'; auto: boolean }
   | { kind: 'toggleStep'; voice: number; step: number }
   | { kind: 'toggleVoice'; voice: number }
-  | { kind: 'settings'; settings: Partial<EngineSettings> };
+  | { kind: 'settings'; settings: Partial<EngineSettings> }
+  | { kind: 'recipe'; recipe: Recipe };
+
+const ones = () => Array<number>(STEPS).fill(1);
 
 interface VoiceNodes {
   input: GainNode;
@@ -207,6 +217,38 @@ export class BeatEngine {
     this.request({ kind: 'toggleVoice', voice });
   }
 
+  /** Load a style or saved beat (on the next downbeat while playing). */
+  applyRecipe(recipe: Recipe) {
+    this.request({ kind: 'recipe', recipe });
+  }
+
+  /** The current beat as a recipe. */
+  toRecipe(name: string, extra: Partial<Recipe> = {}): Recipe {
+    const st = this.settings;
+    return {
+      format: RECIPE_FORMAT,
+      version: RECIPE_VERSION,
+      name,
+      kind: 'saved',
+      bpm: st.bpm,
+      swing: st.swing,
+      pitch: st.pitch,
+      panning: Math.round(st.panning * 100),
+      evolve: { auto: st.autoEvolve, every: st.evolveEvery },
+      seed: this.rng.seed,
+      ...extra,
+      voices: this.voices.map((v) => ({
+        on: v.on,
+        pattern: formatPattern(v.pattern, v.accent),
+        role: v.role,
+        slice: v.slice,
+        velocity: Math.round(v.velocity),
+        delaySend: +v.delaySend.toFixed(2),
+        reverbSend: +v.reverbSend.toFixed(2),
+      })),
+    };
+  }
+
   /** Tempo, pitch, panning etc. take effect right away, like v1.93's sliders. */
   set(settings: Partial<EngineSettings>) {
     this.run({ kind: 'settings', settings });
@@ -233,8 +275,9 @@ export class BeatEngine {
         this.doEvolve();
         break;
       case 'toggleStep': {
-        const p = this.voices[a.voice].pattern;
-        p[a.step] = !p[a.step];
+        const v = this.voices[a.voice];
+        v.pattern[a.step] = !v.pattern[a.step];
+        v.accent[a.step] = 1;
         break;
       }
       case 'toggleVoice':
@@ -242,6 +285,9 @@ export class BeatEngine {
         break;
       case 'settings':
         this.applySettings(a.settings);
+        break;
+      case 'recipe':
+        this.doRecipe(a.recipe);
         break;
     }
     this.changed();
@@ -255,7 +301,13 @@ export class BeatEngine {
   // ── beat generation ───────────────────────────────────────────────────
 
   private blankVoice(): Voice {
-    return { on: false, slice: 0, pattern: [...PATTERNS.allOff], velocity: 80, delaySend: 0, reverbSend: 0 };
+    return { on: false, slice: 0, pattern: [...PATTERNS.allOff], accent: ones(), role: 'any', velocity: 80, delaySend: 0, reverbSend: 0 };
+  }
+
+  /** replace a voice's pattern (accents back to normal) */
+  private setPattern(v: Voice, hits: boolean[]) {
+    v.pattern = hits;
+    v.accent = ones();
   }
 
   /** v1.93 random pattern: every step a coin flip. */
@@ -286,13 +338,13 @@ export class BeatEngine {
       v.velocity = this.rng.range(50, 110);
       v.delaySend = this.rng.range(0, 1);
       v.reverbSend = this.rng.range(0.4, 1);
-      v.pattern = this.rng.chance(0.3) ? this.presetPattern() : this.randomPattern();
+      this.setPattern(v, this.rng.chance(0.3) ? this.presetPattern() : this.randomPattern());
     }
     this.applySends();
     if (kickoff) {
       // start with one voice on quarter notes; the rest join on a timer
       this.voices[0].on = true;
-      this.voices[0].pattern = [...PATTERNS.quarters];
+      this.setPattern(this.voices[0], [...PATTERNS.quarters]);
       this.kickoffStart = this.playing ? this.nextTime : null;
       this.kickoffStage = 0;
       this.settings.autoEvolve = false;
@@ -317,13 +369,14 @@ export class BeatEngine {
         const v = this.voices[onVoice()];
         const s = this.rng.int(STEPS);
         v.pattern[s] = !v.pattern[s];
+        v.accent[s] = 1;
         break;
       }
       case 1:
-        this.voices[onVoice()].pattern = this.randomPattern();
+        this.setPattern(this.voices[onVoice()], this.randomPattern());
         break;
       case 2:
-        this.voices[onVoice()].pattern = this.presetPattern();
+        this.setPattern(this.voices[onVoice()], this.presetPattern());
         break;
       case 3: {
         const i = onVoice();
@@ -338,7 +391,7 @@ export class BeatEngine {
         if (add && off.length) {
           const v = this.voices[this.rng.pick(off)];
           v.on = true;
-          if (!v.pattern.some(Boolean)) v.pattern = this.randomPattern();
+          if (!v.pattern.some(Boolean)) this.setPattern(v, this.randomPattern());
         } else if (!add && on.length) {
           this.voices[this.rng.pick(on)].on = false;
         }
@@ -360,12 +413,56 @@ export class BeatEngine {
   private doKickoffStage(stage: number) {
     if (stage === 1) {
       this.voices[1].on = true;
-      this.voices[1].pattern = [...PATTERNS.eighths];
+      this.setPattern(this.voices[1], [...PATTERNS.eighths]);
     } else if (stage === 2) {
       this.voices[2].on = true;
     } else if (stage === 3) {
       this.applySettings({ autoEvolve: true, evolveEvery: 3 });
     }
+  }
+
+  private doRecipe(r: Recipe) {
+    // a recipe replaces the kickoff
+    this.kickoffStart = null;
+    this.kickoffStage = 3;
+    const used = new Set<number>();
+    // keep a recipe's own slice choices first, then deal the rest
+    const wanted = r.voices.map((rv) =>
+      typeof rv.slice === 'number' && rv.slice >= 0 && rv.slice < this.slices.length ? rv.slice : null,
+    );
+    wanted.forEach((w) => w !== null && used.add(w));
+    this.voices = Array.from({ length: VOICES }, (_, i) => {
+      const rv = r.voices[i];
+      const v = this.blankVoice();
+      v.delaySend = this.rng.range(0, 0.6);
+      v.reverbSend = this.rng.range(0.4, 1);
+      if (!rv) {
+        v.slice = this.freeSlice(used);
+        used.add(v.slice);
+        return v;
+      }
+      const { hits, accent } = parsePattern(rv.pattern);
+      v.pattern = hits;
+      v.accent = accent;
+      v.on = rv.on ?? true;
+      v.role = rv.role ?? 'any';
+      v.velocity = Math.min(110, Math.max(50, rv.velocity ?? 90));
+      if (rv.delaySend !== undefined) v.delaySend = rv.delaySend;
+      if (rv.reverbSend !== undefined) v.reverbSend = rv.reverbSend;
+      if (wanted[i] !== null) v.slice = wanted[i]!;
+      else {
+        v.slice = this.freeSlice(used);
+        used.add(v.slice);
+      }
+      return v;
+    });
+    this.applySends();
+    const s: Partial<EngineSettings> = { swing: r.swing ?? 0, autoEvolve: r.evolve?.auto ?? false };
+    if (r.bpm !== undefined) s.bpm = r.bpm;
+    if (r.pitch !== undefined) s.pitch = r.pitch;
+    if (r.panning !== undefined) s.panning = r.panning / 100;
+    if (r.evolve?.every !== undefined) s.evolveEvery = r.evolve.every;
+    this.applySettings(s);
   }
 
   private applySettings(s: Partial<EngineSettings>) {
@@ -446,15 +543,17 @@ export class BeatEngine {
       }
       this.timeline(t);
       this.autoPan(t);
+      const stepDur = 60 / this.settings.bpm / 4;
+      const ht = this.step % 2 === 1 ? t + this.settings.swing * stepDur : t;
       const hits: number[] = [];
       this.voices.forEach((v, i) => {
         if (v.on && v.pattern[this.step]) {
-          this.hit(i, v, t);
+          this.hit(i, v, ht, v.accent[this.step] ?? 1);
           hits.push(i);
         }
       });
-      this.events.push({ time: t, step: this.step, hits });
-      this.nextTime += 60 / this.settings.bpm / 4;
+      this.events.push({ time: ht, step: this.step, hits });
+      this.nextTime += stepDur;
       this.step = (this.step + 1) % STEPS;
       this.absStep++;
     }
@@ -504,7 +603,7 @@ export class BeatEngine {
     });
   }
 
-  private hit(i: number, v: Voice, t: number) {
+  private hit(i: number, v: Voice, t: number, accent = 1) {
     const s = this.slices[v.slice];
     if (!s || !this.buffer) return;
     const ctx = this.ctx;
@@ -519,7 +618,7 @@ export class BeatEngine {
     const a = Math.max(0.003, env.attack * scale);
     const r = Math.max(0.01, env.release * scale);
     const h = Math.max(0, len - a - r);
-    const level = (v.velocity / 127) * 1.15;
+    const level = (v.velocity / 127) * 1.15 * accent;
 
     // choke the voice's previous hit
     const prev = this.last[i];

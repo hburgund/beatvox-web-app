@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { BeatEngine, STEPS, PATTERNS } from './engine';
 import { FxChain } from './fx';
 import type { Slice } from './slicer';
+import { STYLES } from '../styles';
+import { parsePattern } from '../recipe';
 
 // Just enough of Web Audio for the engine to run in Node.
 function fakeContext() {
@@ -145,5 +147,39 @@ describe('BeatEngine', () => {
       expect(Math.abs(k - Math.round(k))).toBeLessThan(1e-6);
     }
     expect(STEPS).toBe(16);
+  });
+
+  it('loads a style recipe: patterns, accents, swing, no kickoff', () => {
+    const { engine, ctx, started } = setup();
+    const house = STYLES.find((x) => x.name === 'House')!;
+    engine.applyRecipe(house);
+    expect(engine.voices.filter((v) => v.on)).toHaveLength(house.voices.length);
+    expect(engine.voices[0].pattern).toEqual(parsePattern(house.voices[0].pattern).hits);
+    expect(engine.voices[0].accent[0]).toBeGreaterThan(1);
+    expect(engine.settings.bpm).toBe(124);
+    expect(new Set(engine.voices.map((v) => v.slice)).size).toBe(8);
+    play(engine, ctx, 8);
+    // no kickoff voices joined, no auto-evolve
+    expect(engine.voices.filter((v) => v.on)).toHaveLength(house.voices.length);
+    // off-beat sixteenths land late by swing × step
+    const step = 60 / 124 / 4;
+    const t0 = started[0].when;
+    const late = started.filter((s) => Math.round((s.when - t0) / step) % 2 === 1);
+    expect(late.length).toBeGreaterThan(0);
+    for (const s of late) {
+      const k = (s.when - t0) / step;
+      expect(k - Math.floor(k)).toBeCloseTo(0.05, 5);
+    }
+    engine.stop();
+  });
+
+  it('saves the beat as a recipe and loads it back exactly', () => {
+    const a = setup(5);
+    for (let i = 0; i < 20; i++) a.engine.evolve();
+    const json = JSON.stringify(a.engine.toRecipe('mine'));
+    const b = setup(6);
+    b.engine.applyRecipe(JSON.parse(json));
+    const strip = (e: BeatEngine) => e.voices.map(({ on, slice, pattern }) => ({ on, slice, pattern }));
+    expect(strip(b.engine)).toEqual(strip(a.engine));
   });
 });

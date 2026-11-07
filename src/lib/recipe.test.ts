@@ -1,0 +1,44 @@
+import { describe, expect, it } from 'vitest';
+import { formatPattern, parsePattern, parseRecipe, validateRecipe } from './recipe';
+import { STYLES } from './styles';
+
+describe('recipe patterns', () => {
+  it('reads drum-machine notation', () => {
+    const p = parsePattern('X...x...o...x...');
+    expect(p.hits.filter(Boolean)).toHaveLength(4);
+    expect(p.accent[0]).toBeGreaterThan(1);
+    expect(p.accent[8]).toBeLessThan(1);
+  });
+
+  it('accepts v1.93 binary and ignores spaces and bars', () => {
+    expect(parsePattern('1001 0110 0001 0111').hits).toEqual(parsePattern('1001|0110|0001|0111').hits);
+    expect(parsePattern('1001011000010111').hits.filter(Boolean)).toHaveLength(8);
+  });
+
+  it('round-trips through formatPattern', () => {
+    const s = 'X.o.x...x.X..o.x';
+    const p = parsePattern(s);
+    expect(formatPattern(p.hits, p.accent)).toBe(s);
+  });
+
+  it('rejects bad patterns', () => {
+    expect(() => parsePattern('x...')).toThrow(/16/);
+    expect(() => parsePattern('x...y...x...x...')).toThrow(/unknown/);
+  });
+});
+
+describe('recipes', () => {
+  it('every built-in style is valid and survives JSON', () => {
+    for (const s of STYLES) {
+      expect(() => validateRecipe(s)).not.toThrow();
+      expect(parseRecipe(JSON.stringify(s))).toEqual(s);
+    }
+  });
+
+  it('rejects things that are not recipes', () => {
+    expect(() => parseRecipe('{"name":"x"}')).toThrow(/format/);
+    expect(() =>
+      validateRecipe({ format: 'beatvox-recipe', version: 1, name: 'x', kind: 'style', voices: Array(9).fill({ pattern: 'x'.repeat(16) }) }),
+    ).toThrow(/voices/);
+  });
+});
