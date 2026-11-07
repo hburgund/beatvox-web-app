@@ -69,7 +69,7 @@ From `docs/beatvox_v1.93.maxpat` and the abstractions in `docs/beatvox-reference
 3. **Works equally well on phones and laptops.** Each gets its own layout, not one squeezed into the other.
 4. **Simple by default, deep when wanted.** A Simple mode anyone gets in seconds, and an Advanced mode with everything.
 5. **Roundware v3 for sharing**, using its built-in save and share functions, with location on every contribution.
-6. **reVox:** contributors can choose to let others remix their voice.
+6. **reVox:** contributors can choose to let others play their voice (their *instrument*) with their own beats.
 
 Later, not now: gallery kiosk mode and live performance mode (quad output, MIDI). The architecture leaves room for both.
 
@@ -205,21 +205,25 @@ The slicer is the heart of BeatVox. It decides whether the beat sounds percussiv
 | Identify the device | `POST /api/3/participants/` | `project_id`, `device_id` (random, kept on the device), `client_type: "web"` → `participant_token` (sent afterwards as `X-Participant-Token`) |
 | Start a visit | `POST /api/3/sessions/` | `project_id`, `participant_id`, `client_type`, `client_system` |
 | **The contribution** | `POST /api/3/assets/` (multipart) | `project_id`, `session_id`, `media_type: audio`, `file` = combined MP3, `latitude`, `longitude`, `description` (title), `tag_ids` (e.g., `beatvox-mix`, plus `revox-ok` when allowed), `agreed_terms`, `recorded_at`, optional `contributor_name` |
-| **Recipe** (if reVox allowed) | `POST /api/3/assets/` | `media_type: text`, `parent_asset_id` = the contribution, `file` = `recipe.json` (or the JSON in `description` if .json files aren't accepted) |
-| **Original voice** (if reVox allowed) | `POST /api/3/assets/` | `media_type: audio`, tag `beatvox-source`, `weight: 0` so it doesn't play in streams; the recipe stores its id |
+| **Original voice** | `POST /api/3/assets/` | `media_type: audio`, tag `beatvox-source` (plus `revox-ok` when allowed), `weight: 0` so it doesn't play in streams |
+| **Instrument** | `POST /api/3/assets/` | `media_type: text`, `parent_asset_id` = the original voice, `file` = `instrument.json`: the slice times and drum-role scores (`src/lib/instrument.ts`) |
+| **Beat (recipe)** | `POST /api/3/assets/` | `media_type: text`, `parent_asset_id` = the original voice it was played on, `file` = `recipe.json` naming its instrument (`src/lib/recipe.ts`). Falls back to the JSON in `description` if .json files aren't accepted |
 | Browse voices to reVox | `GET /api/3/assets/?project_id=…&tag_ids=revox-ok&paginate=true` | no geo filter in v3, so "nearby" is sorted on the device from `latitude`/`longitude` |
 | Share page data | `GET /api/3/assets/{id}/shared/?project_id=…` | returns only `status: "pending"` until the contribution is approved, if the project holds contributions for review |
 
 Notes on the mapping:
 - **`parent_asset_id` is documented for photos and text attached to a recording**, not for audio. That is why the original voice is its own asset rather than an attachment.
-- **The server converts uploaded audio with FFmpeg,** so a WAV or FLAC voice won't stay lossless, and the conversion can shift timing by a few milliseconds. reVox therefore **re-slices the downloaded voice using the slicer settings saved in the recipe**, instead of trusting stored slice times. A per-project option to keep originals as uploaded would allow exact reuse (Q1).
+- **The server converts uploaded audio with FFmpeg,** so a WAV or FLAC voice won't stay lossless, and the conversion can shift timing by a few milliseconds. The instrument stores exact slice times plus the slicer settings, so if the converted file has shifted, reVox can re-cut the downloaded voice with those settings, or line the stored times up with it. A per-project option to keep originals as uploaded would allow exact reuse (Q1).
 - **Moderation:** with `auto_submit` off, share links show "pending" until approved. The share screen should say so.
 
+**Instruments and recipes**
+- An **instrument** is a voice recording and how it was cut: slice times and drum-role scores. A **recipe** is how it's played: patterns, tempo, effects. Built-in genre styles are recipes with roles but no instrument; a participant's saved **beat** is a recipe that names the instrument it was made on.
+- Any instrument can play any recipe. On its own instrument a beat sounds exactly as saved. On another, its voices pick slices by the sound they had (kick-like, hat-like…), so the groove carries over to the new voice.
+
 **reVox**
-- **Browse:** "voices you can reVox" are contributions where reVox was allowed, nearby or recent.
-- **Use:**
-  - start from their full recipe and remix it;
-  - or bring their voice in as extra voices alongside your own.
+- **A reVox is someone else's instrument played with your own beats.**
+- **Browse:** "voices you can reVox" are instruments whose owner allowed it, nearby or recent.
+- **Use:** pick their voice, then play one of your saved beats, a style or a fresh beat with it.
 - **Credit:** a reVox records what it came from, and its share page says "reVoxed from …". That builds a family tree of beats, and contributors could get a "your voice was reVoxed" count.
 - **Opt-out later:** if someone turns reVox off, new reVoxes of their voice stop. Existing ones stay, since they were made with permission.
 

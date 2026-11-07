@@ -10,8 +10,9 @@ Ideas and requests not yet scheduled. See [PROPOSAL.md](PROPOSAL.md) for the pla
 
 ## Sharing, reVox and storage
 
+- [x] **Instruments and recipes are separate.** An instrument (`src/lib/instrument.ts`) is a voice and its exact slices with drum-role scores; a recipe is how it's played. A beat names its instrument; on another instrument it picks slices by role. A reVox is someone else's instrument played with your own beats.
 - [ ] **Each reVox is connected to its source.** Store the "reVoxed from" link (the source contribution's id), so the chain or family tree can be shown and walked in both directions.
-- [ ] **Store the original and the BeatVoxes separately?** Upload the original voice once as its own asset, with each BeatVox mix as its own asset pointing back to it. One recording could then have many BeatVoxes, by its author or others via reVox. This fits the v3 mapping, where the voice is already a separate asset. Open question: does the shared MP3 still contain original + remix, or does the share page play the two parts from separate assets?
+- [~] **Store the original and the BeatVoxes separately.** Planned mapping in PROPOSAL §6: the voice is an audio asset, with the instrument and each beat as text assets whose parent is the voice. Still open: whether Roundware takes .json files, and whether the shared MP3 still contains original + remix or the share page plays the two parts from separate assets.
 
 ## Beat templates and drum roles
 

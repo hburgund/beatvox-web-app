@@ -2,7 +2,7 @@
 
 Each `.json` file here is one entry in the Style menu, in filename order. To add a style, copy a file, change `name` and the patterns, and give it a new number prefix. `npm test` checks every file.
 
-The format is the BeatVox recipe format (see `src/lib/recipe.ts`), the same one used for saved beats.
+The format is the BeatVox recipe format (see `src/lib/recipe.ts`), the same one a participant's saved beat uses. A style has `"kind": "style"` and no instrument, so it works with any voice: each voice's `role` picks the slice it plays.
 
 ```json
 {
