@@ -186,7 +186,8 @@ The slicer is the heart of BeatVox. It decides whether the beat sounds percussiv
 
 **Offline render.**
 - The logged loops are rendered with the same engine and effects, so there are no glitches from a busy phone.
-- The file is: original recording → ½ bar gap → remix → effects tail. It's encoded to MP3 in a background worker.
+- **The mix is a seamless loop** (decided Nov 2026, replacing "voice, then remix" in one file). It's whole bars, and the effects tail after the last bar is folded back onto the start, so it can loop forever on Roundware. The raw voice is a separate asset. It's encoded to MP3 in a background worker.
+- *Built so far:* a single file of voice → ½ bar → remix → tail. It gets changed to the loop when the Roundware upload is built.
 - **How it's built:** the engine sends every hit, pan move, send and effects change to the audio graph as a small command (`voiceBank.ts`). Capture tapes those commands, plus the state at the first downbeat, so the render replays exactly what was heard, including any New Beat, Evolve or knob moves made during the capture. The voice is trimmed to its slices, and silence after the effects die away is cut.
 - **Format:** 192 kbps stereo MP3, peak at -1 dBFS. About 0.7–0.9 MB for 8 loops. Rendering and encoding take about 2 s on a laptop.
 
@@ -206,15 +207,17 @@ The slicer is the heart of BeatVox. It decides whether the beat sounds percussiv
 |---|---|---|
 | Identify the device | `POST /api/3/participants/` | `project_id`, `device_id` (random, kept on the device), `client_type: "web"` → `participant_token` (sent afterwards as `X-Participant-Token`) |
 | Start a visit | `POST /api/3/sessions/` | `project_id`, `participant_id`, `client_type`, `client_system` |
-| **The contribution** | `POST /api/3/assets/` (multipart) | `project_id`, `session_id`, `media_type: audio`, `file` = combined MP3, `latitude`, `longitude`, `description` (title), `tag_ids` (e.g., `beatvox-mix`, plus `revox-ok` when allowed), `agreed_terms`, `recorded_at`, optional `contributor_name` |
-| **Original voice** | `POST /api/3/assets/` | `media_type: audio`, tag `beatvox-source` (plus `revox-ok` when allowed), `weight: 0` so it doesn't play in streams |
-| **Instrument** | `POST /api/3/assets/` | `media_type: text`, `parent_asset_id` = the original voice, `file` = `instrument.json`: the slice times and drum-role scores (`src/lib/instrument.ts`) |
-| **Beat (recipe)** | `POST /api/3/assets/` | `media_type: text`, `parent_asset_id` = the original voice it was played on, `file` = `recipe.json` naming its instrument (`src/lib/recipe.ts`). Falls back to the JSON in `description` if .json files aren't accepted |
+| **1. Raw voice** (the parent) | `POST /api/3/assets/` (multipart) | `media_type: audio`, `file` = the recording as made (before low cut and normalize), `latitude`, `longitude`, `tag_ids` (`beatvox-voice`, plus `revox-ok` when allowed), `agreed_terms`, `recorded_at`, optional `contributor_name` |
+| **2. BeatVox mix** (child of the voice) | `POST /api/3/assets/` | `media_type: audio`, `parent_asset_id` = the raw voice, `file` = the seamless-loop MP3, `description` (title), tag `beatvox-mix`, location |
+| **3. Instrument** (child of the voice) | `POST /api/3/assets/` | `media_type: text`, `parent_asset_id` = the raw voice, `file` = the instrument JSON with `source.assetId` set to the voice: slice times, drum-role scores, clean-up settings (`src/lib/instrument.ts`) |
+| **4. Recipe** (child of the mix) | `POST /api/3/assets/` | `media_type: text`, `parent_asset_id` = the mix, `file` = the recipe JSON naming its instrument by id and asset id (`src/lib/recipe.ts`). Sent as `.txt` if `.json` is refused |
+| **reVox** | steps 2 and 4 only | the new mix's parent is the *original* raw voice, so every reVox hangs off the same voice; no new voice or instrument. The recipe names the original instrument, and the mix carries the reVoxer's own participant, location and title |
 | Browse voices to reVox | `GET /api/3/assets/?project_id=…&tag_ids=revox-ok&paginate=true` | no geo filter in v3, so "nearby" is sorted on the device from `latitude`/`longitude` |
 | Share page data | `GET /api/3/assets/{id}/shared/?project_id=…` | returns only `status: "pending"` until the contribution is approved, if the project holds contributions for review |
 
 Notes on the mapping:
-- **`parent_asset_id` is documented for photos and text attached to a recording**, not for audio. That is why the original voice is its own asset rather than an attachment.
+- **`parent_asset_id` is documented for photos and text attached to a recording**, not for audio children or grandchildren (voice → mix → recipe). To confirm on the server: audio children are accepted, play normally, and show on the map.
+- **Looping:** the mix only loops seamlessly if Roundware's player loops it with Web Audio and handles MP3 encoder padding. A plain `<audio loop>` leaves a small gap.
 - **The server converts uploaded audio with FFmpeg,** so a WAV or FLAC voice won't stay lossless, and the conversion can shift timing by a few milliseconds. The instrument stores exact slice times plus the slicer settings, so if the converted file has shifted, reVox can re-cut the downloaded voice with those settings, or line the stored times up with it. A per-project option to keep originals as uploaded would allow exact reuse (Q1).
 - **Moderation:** with `auto_submit` off, share links show "pending" until approved. The share screen should say so.
 
