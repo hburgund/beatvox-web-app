@@ -11,10 +11,14 @@ import type { RoleScores } from './drumRoles';
 
 // Just enough of Web Audio for the engine to run in Node.
 function fakeContext() {
+  // every gain a hit's envelope rises to (choke ramps go to 0, so they're skipped)
+  const peaks: number[] = [];
   const param = () => ({
     value: 0,
     setValueAtTime() {},
-    linearRampToValueAtTime() {},
+    linearRampToValueAtTime(v: number) {
+      if (v > 0) peaks.push(v);
+    },
     setTargetAtTime() {},
     setValueCurveAtTime() {},
   });
@@ -53,7 +57,7 @@ function fakeContext() {
         stop() {},
       }),
   };
-  return { ctx: ctx as unknown as BaseAudioContext, started };
+  return { ctx: ctx as unknown as BaseAudioContext, started, peaks };
 }
 
 const slices: Slice[] = Array.from({ length: 12 }, (_, i) => ({ start: i * 0.3, end: i * 0.3 + 0.2, peakDb: -6 }));
@@ -78,11 +82,11 @@ function instrumentWith(roles: Exclude<Role, 'any'>[]): Instrument {
 }
 
 function setup(seed = 42, instrument = instrumentWith(['kick', 'snare', 'hat', 'perc', 'tonal'])) {
-  const { ctx, started } = fakeContext();
+  const { ctx, started, peaks } = fakeContext();
   const fx = new FxChain(ctx);
   const engine = new BeatEngine(ctx, fx, seed);
   engine.load(buffer, instrument);
-  return { ctx, engine, started, instrument };
+  return { ctx, engine, started, peaks, instrument };
 }
 
 /** run the scheduler for `seconds` of audio time */
@@ -193,6 +197,36 @@ describe('BeatEngine', () => {
       expect(k - Math.floor(k)).toBeCloseTo(0.05, 5);
     }
     engine.stop();
+  });
+
+  it('humanize wanders each hit below the steady track level', () => {
+    const { engine, ctx, peaks } = setup();
+    const one = (level: number, humanize: number) => ({
+      format: 'beatvox-recipe' as const,
+      version: 1,
+      name: 't',
+      kind: 'style' as const,
+      humanize,
+      voices: [{ pattern: 'x'.repeat(16), level }],
+    });
+    // humanize 0: every hit at exactly the level
+    engine.applyRecipe(one(0.5, 0));
+    play(engine, ctx, 4);
+    engine.stop();
+    expect(peaks.length).toBeGreaterThan(20);
+    for (const p of peaks) expect(p).toBeCloseTo(0.5, 9);
+    expect(engine.voices[0].level).toBe(0.5);
+
+    // humanize 1 (v1.93): hits wander between 0.45× and 1× of the level
+    peaks.length = 0;
+    engine.applyRecipe(one(0.8, 1));
+    play(engine, ctx, 8);
+    engine.stop();
+    expect(Math.min(...peaks)).toBeGreaterThanOrEqual(0.8 * 0.45 - 1e-9);
+    expect(Math.max(...peaks)).toBeLessThanOrEqual(0.8 + 1e-9);
+    expect(new Set(peaks.map((p) => p.toFixed(3))).size).toBeGreaterThan(10);
+    expect(engine.voices[0].level).toBe(0.8);
+    expect(engine.toRecipe('t').humanize).toBe(1);
   });
 
   it('builds a valid instrument that survives JSON', () => {

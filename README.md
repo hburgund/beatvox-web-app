@@ -16,7 +16,7 @@ In dev, both pages can load the private 2008 reference recordings from `docs/bea
 
 ## Code map
 
-- `src/lib/audio/engine.ts`: the v1.93 beat engine (8 voices × 16 steps, gate envelope, brownian velocity, auto-pan, downbeat changes, kickoff, Evolve). Seeded, so a beat can be replayed exactly.
+- `src/lib/audio/engine.ts`: the v1.93 beat engine (8 voices × 16 steps, gate envelope, per-track level with a humanize walk, auto-pan, downbeat changes, kickoff, Evolve). Seeded, so a beat can be replayed exactly.
 - `src/lib/audio/fx.ts`: effects (delay, reverb, EQ, compression, limiter) and the Simple-mode "Space" knob.
 - `src/lib/audio/slicer.ts`, `analysis.ts`, `pitch.ts`: slicing and pitch.
 - `src/lib/audio/recorder.ts`, `prepare.ts`: mic recording and clean-up.

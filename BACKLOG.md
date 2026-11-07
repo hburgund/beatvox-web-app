@@ -4,6 +4,7 @@ Ideas and requests not yet scheduled. See [PROPOSAL.md](PROPOSAL.md) for the pla
 
 ## Patterns and recipes
 
+- [x] **Track level and humanize are separate.** Each voice has a steady `level` (0–1, 1 = natural) for the mix, and the v1.93 velocity walk is now a `humanize` multiplier on top (recipe-wide amount 0–1). Replaces the MIDI-style `velocity` 50–110/127, which drifted so far that a style's relative levels were lost within a few bars. A per-track level fader in Advanced mode can use it directly.
 - [ ] **Undo for patterns.** An undo button that steps back through the last handful of beat states (e.g., 10), covering New Beat, Evolve and manual edits. Possibly redo too.
 - [ ] **Save settings as a recipe.** A "save" button that stores the current beat as a recipe so a pattern you like isn't lost. The recipe holds: slices, patterns, voice/slice assignments, tempo, pitch, pan, effects and seed.
 - [ ] **Re-load recipes.** A list of saved recipes to load back in, kept locally on the device. Also loadable from Roundware for shared ones.
@@ -12,6 +13,7 @@ Ideas and requests not yet scheduled. See [PROPOSAL.md](PROPOSAL.md) for the pla
 
 - [x] **Instruments and recipes are separate.** An instrument (`src/lib/instrument.ts`) is a voice and its exact slices with drum-role scores; a recipe is how it's played. A beat names its instrument; on another instrument it picks slices by role. A reVox is someone else's instrument played with your own beats.
 - [ ] **Each reVox is connected to its source.** Store the "reVoxed from" link (the source contribution's id), so the chain or family tree can be shown and walked in both directions.
+- [ ] **Loudness-normalize each voice (LUFS).** Today a recording is peak-normalized, so one loud plosive makes the whole voice quiet. Normalize to a loudness target with a peak ceiling, so every participant's instrument, reVoxes and MP3s in the Roundware stream sit at the same loudness. Fits Phase 2.
 - [~] **Store the original and the BeatVoxes separately.** Planned mapping in PROPOSAL §6: the voice is an audio asset, with the instrument and each beat as text assets whose parent is the voice. Still open: whether Roundware takes .json files, and whether the shared MP3 still contains original + remix or the share page plays the two parts from separate assets.
 
 ## Beat templates and drum roles

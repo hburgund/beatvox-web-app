@@ -21,9 +21,9 @@
 //   "bpm": 90, "swing": 0.12, "space": 25,
 //   "evolve": { "auto": false },
 //   "voices": [
-//     { "role": "kick",  "pattern": "X.....x...x.....", "velocity": 105 },
+//     { "role": "kick",  "pattern": "X.....x...x.....", "level": 1 },
 //     { "role": "snare", "pattern": "....X.......X..." },
-//     { "role": "hat",   "pattern": "x.o.x.o.x.o.x.ox" }
+//     { "role": "hat",   "pattern": "x.o.x.o.x.o.x.ox", "level": 0.65 }
 //   ]
 // }
 
@@ -52,8 +52,9 @@ export interface RecipeVoice {
   /** beats only: the role the saved slice suited. On another instrument
    *  (a reVox) a voice with no role of its own picks a slice like this. */
   sliceRole?: Role;
-  /** starting velocity 50–110 (it still drifts, as in v1.93) */
-  velocity?: number;
+  /** mix level 0..1, 1 = the recording's natural level (default 1). Each
+   *  hit then wanders below it by the recipe's humanize amount. */
+  level?: number;
   delaySend?: number;
   reverbSend?: number;
 }
@@ -71,6 +72,9 @@ export interface Recipe {
   pitch?: number;
   /** auto-pan width 0..100 */
   panning?: number;
+  /** 0..1: how much each hit's loudness wanders, like a person playing
+   *  (default 1 = v1.93; 0 = machine-steady) */
+  humanize?: number;
   /** Simple-mode Space knob 0..100 */
   space?: number;
   evolve?: { auto: boolean; every?: number };
@@ -133,9 +137,12 @@ export function validateRecipe(value: unknown): Recipe {
     parsePattern(v.pattern);
     if (v.role && !ROLES.includes(v.role)) throw new Error(`unknown role "${v.role}"`);
     if (v.sliceRole && !ROLES.includes(v.sliceRole)) throw new Error(`unknown role "${v.sliceRole}"`);
+    if ('velocity' in v) throw new Error('"velocity" is now "level", 0–1 (1 = natural level)');
+    if (v.level !== undefined && !(v.level >= 0 && v.level <= 1)) throw new Error('level must be 0–1');
   }
   if (r.bpm !== undefined && !(r.bpm >= 20 && r.bpm <= 300)) throw new Error('bpm out of range');
   if (r.swing !== undefined && !(r.swing >= 0 && r.swing <= 0.5)) throw new Error('swing must be 0–0.5');
+  if (r.humanize !== undefined && !(r.humanize >= 0 && r.humanize <= 1)) throw new Error('humanize must be 0–1');
   return r;
 }
 

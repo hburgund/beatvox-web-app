@@ -7,10 +7,10 @@
   "space": 30,
   "evolve": {"auto": false},
   "voices": [
-    {"pattern": "X.........x..x..", "role": "kick", "velocity": 108},
-    {"pattern": "........X.......", "role": "snare", "velocity": 104},
-    {"pattern": "x.x.x.x.x.xxx.x.", "role": "hat", "velocity": 68},
-    {"pattern": ".............ooo", "role": "hat", "velocity": 60},
-    {"pattern": "X.....x.........", "role": "tonal", "velocity": 85}
+    {"pattern": "X.........x..x..", "role": "kick", "level": 1},
+    {"pattern": "........X.......", "role": "snare", "level": 0.95},
+    {"pattern": "x.x.x.x.x.xxx.x.", "role": "hat", "level": 0.6},
+    {"pattern": ".............ooo", "role": "hat", "level": 0.55},
+    {"pattern": "X.....x.........", "role": "tonal", "level": 0.75}
   ]
 }

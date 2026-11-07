@@ -48,4 +48,12 @@ describe('recipes', () => {
       validateRecipe({ format: 'beatvox-recipe', version: 1, name: 'x', kind: 'style', voices: Array(9).fill({ pattern: 'x'.repeat(16) }) }),
     ).toThrow(/voices/);
   });
+
+  it('checks level and humanize, and says velocity is now level', () => {
+    const r = (voice: object, extra: object = {}) => ({ format: 'beatvox-recipe', version: 1, name: 'x', kind: 'style', voices: [{ pattern: 'x'.repeat(16), ...voice }], ...extra });
+    expect(() => validateRecipe(r({ level: 0.7 }, { humanize: 0.5 }))).not.toThrow();
+    expect(() => validateRecipe(r({ level: 1.5 }))).toThrow(/level/);
+    expect(() => validateRecipe(r({}, { humanize: 2 }))).toThrow(/humanize/);
+    expect(() => validateRecipe(r({ velocity: 90 }))).toThrow(/now "level"/);
+  });
 });

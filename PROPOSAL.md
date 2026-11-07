@@ -124,7 +124,7 @@ For reVox, the original voice is uploaded **lossless** (WAV, or FLAC at roughly 
 
 ### 4.3 Sequencer and voices
 - A standard look-ahead scheduler timed by the audio clock: sample-accurate and steady on phones.
-- **8 voices × 16 sixteenth-note steps.** Slices drawn urn-style. Velocity is the 50–110 brownian walk.
+- **8 voices × 16 sixteenth-note steps.** Slices drawn urn-style. Each voice has a steady mix **level** (0–1, 1 = the recording's natural level) for balancing tracks. On top of it, a **humanize** walk makes each hit wander between 45% and 100% of that level. At full strength that is v1.93's 50–110 velocity walk, now without MIDI units, and a beat-wide `humanize` amount can calm it down to steady.
 - **Lighter than the Max voices:** each hit is a one-shot player reading from the shared voice buffer, with a short envelope (100/300/100 ms by default) and a quick fade on the previous hit. The result matches the two-player crossfade.
 - New Beat, Evolve and edits are applied on the next downbeat. The kickoff ramp and evolve timer are reproduced.
 - Auto-pan per voice: random ramp, linear, sine or random shape, constant-power, stereo.

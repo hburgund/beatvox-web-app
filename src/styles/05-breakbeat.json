@@ -8,9 +8,9 @@
   "space": 25,
   "evolve": {"auto": false},
   "voices": [
-    {"pattern": "X.x.......xx....", "role": "kick", "velocity": 106},
-    {"pattern": "....X..o.o..X..o", "role": "snare", "velocity": 102},
-    {"pattern": "x.x.x.x.x.x.x.x.", "role": "hat", "velocity": 70},
-    {"pattern": ".......x......x.", "role": "perc", "velocity": 70}
+    {"pattern": "X.x.......xx....", "role": "kick", "level": 0.95},
+    {"pattern": "....X..o.o..X..o", "role": "snare", "level": 0.95},
+    {"pattern": "x.x.x.x.x.x.x.x.", "role": "hat", "level": 0.65},
+    {"pattern": ".......x......x.", "role": "perc", "level": 0.65}
   ]
 }

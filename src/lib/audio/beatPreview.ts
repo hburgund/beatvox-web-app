@@ -1,6 +1,6 @@
 // A small stand-in for the v1.93 beat engine, used to judge slices by ear:
 // N voices × 16 sixteenth-note steps, one slice per voice (no repeats),
-// brownian velocity 50–110, fixed random pan, look-ahead scheduling.
+// a humanize walk on each hit's loudness, fixed random pan, look-ahead scheduling.
 
 import type { Slice } from './slicer';
 
@@ -18,7 +18,8 @@ export interface Voice {
   slice: number;
   pattern: boolean[];
   pan: number;
-  velocity: number;
+  /** humanize multiplier, wanders 0.45–1 */
+  human: number;
 }
 
 export interface Hit { voice: number; slice: number; step: number; time: number }
@@ -71,7 +72,7 @@ export class BeatPreview {
       slice,
       pattern: this.randomPattern(v),
       pan: v === 0 ? 0 : Math.random() * 1.4 - 0.7,
-      velocity: 50 + Math.random() * 60,
+      human: 0.45 + Math.random() * 0.55,
     }));
   }
 
@@ -112,7 +113,7 @@ export class BeatPreview {
       while (this.voices.length < n) {
         const v = this.voices.length;
         const slice = free.length ? free.splice(Math.floor(Math.random() * free.length), 1)[0] : v % this.slices.length;
-        this.voices.push({ slice, pattern: this.randomPattern(v), pan: Math.random() * 1.4 - 0.7, velocity: 80 });
+        this.voices.push({ slice, pattern: this.randomPattern(v), pan: Math.random() * 1.4 - 0.7, human: 0.75 });
       }
     }
   }
@@ -140,8 +141,8 @@ export class BeatPreview {
     const stepDur = 60 / this.bpm / 4;
     while (this.nextTime < this.ctx.currentTime + LOOKAHEAD) {
       this.voices.forEach((v, i) => {
-        // brownian velocity walk, 50–110
-        v.velocity = Math.min(110, Math.max(50, v.velocity + (Math.random() - 0.5) * 12));
+        // humanize: brownian walk, 0.45–1
+        v.human = Math.min(1, Math.max(0.45, v.human + (Math.random() - 0.5) * 0.11));
         if (v.pattern[this.step]) this.play(i, v, this.nextTime);
       });
       this.nextTime += stepDur;
@@ -164,7 +165,7 @@ export class BeatPreview {
     const pan = this.ctx.createStereoPanner();
     pan.pan.value = v.pan;
     const dur = s.end - s.start;
-    const level = v.velocity / 127;
+    const level = 0.87 * v.human;
     gain.gain.setValueAtTime(0, t);
     gain.gain.linearRampToValueAtTime(level, t + 0.003);
     gain.gain.setValueAtTime(level, t + Math.max(0.004, dur - 0.02));

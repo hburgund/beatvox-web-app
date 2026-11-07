@@ -15,8 +15,8 @@ The format is the BeatVox recipe format (see `src/lib/recipe.ts`), the same one 
   "space": 30,
   "evolve": {"auto": false},
   "voices": [
-    {"pattern": "X...X...X...X...", "role": "kick", "velocity": 108},
-    {"pattern": "....X.......X...", "role": "snare"}
+    {"pattern": "X...X...X...X...", "role": "kick", "level": 1},
+    {"pattern": "....X.......X...", "role": "snare", "level": 0.85}
   ]
 }
 ```
@@ -26,7 +26,7 @@ The format is the BeatVox recipe format (see `src/lib/recipe.ts`), the same one 
 **Voice fields:**
 - `pattern`: required.
 - `role`: `kick`, `snare`, `hat`, `perc`, `tonal` or `any`. This picks which slice of the voice plays it.
-- `velocity`: starting loudness, 50–110 (it drifts while playing, as in v1.93).
+- `level`: the track's mix level, 0–1. 1 (the default) is the recording's natural level; 0.5 is about 6 dB quieter. It stays put; the beat-wide `humanize` makes each hit wander below it.
 - `on`: `false` to start the voice muted.
 - `delaySend`, `reverbSend`: 0–1.
 
@@ -37,5 +37,6 @@ Up to 8 voices.
 - `swing`: 0–0.5, how late the off-beat sixteenths land.
 - `pitch`: playback rate, 1 = normal.
 - `panning`: 0–100.
+- `humanize`: 0–1, how much each hit's loudness wanders, like a person playing. 1 (the default) is v1.93's amount: hits drift between about 45% and 100% of the track's level. 0 makes every hit exactly the level.
 - `space`: 0–100, the Space knob.
 - `evolve`: `{"auto": true, "every": 3}` keeps changing the beat every 3 seconds.

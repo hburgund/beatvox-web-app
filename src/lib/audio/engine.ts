@@ -4,7 +4,8 @@
 // - 8 voices × 16 sixteenth-note steps, one slice per voice (urn, no repeats)
 // - each hit is gated: attack / hold / release (v1.93: 100 / 300 / 100 ms)
 //   and a new hit on a voice quickly fades out the previous one
-// - velocity: brownian walk between 50 and 110, stepping on each hit
+// - loudness: each voice has a steady mix level, and a humanize walk on top
+//   wanders each hit between 0.45× and 1× (v1.93's brownian velocity 50–110)
 // - auto-pan: a random ramp every 2–10 s per voice (linear, sine or wobbly)
 // - New Beat, Evolve and edits land on the next downbeat
 // - kickoff: 1 voice, +1 at 5 s, +1 at 10 s, auto-evolve from 12 s every 3 s
@@ -44,7 +45,10 @@ export interface Voice {
   /** gain per step (accent 1.25, ghost 0.55); 1 unless a recipe set it */
   accent: number[];
   role: Role;
-  velocity: number;
+  /** mix level 0..1, 1 = the recording's natural level; steady */
+  level: number;
+  /** humanize multiplier, wanders between HUMAN_FLOOR and 1 on each hit */
+  human: number;
   delaySend: number;
   reverbSend: number;
 }
@@ -67,6 +71,8 @@ export interface EngineSettings {
   /** 0..0.5 of a step: how late the off-beat sixteenths land */
   swing: number;
   envelope: Envelope;
+  /** 0..1: how much the per-hit loudness wanders (1 = v1.93, 0 = steady) */
+  humanize: number;
 }
 
 export const DEFAULT_SETTINGS: EngineSettings = {
@@ -78,7 +84,13 @@ export const DEFAULT_SETTINGS: EngineSettings = {
   swing: 0,
   // v1.93 used 100 ms in; the reference MP3's hits rise in ~50 ms
   envelope: { attack: 0.05, hold: 0.3, release: 0.1 },
+  humanize: 1,
 };
+
+// Humanize at full strength reproduces v1.93's velocity walk: 50–110 out of
+// 127 (×1.15) is 0.45–1.0 of full level, in steps of up to ±8/127×1.15.
+const HUMAN_FLOOR = 0.45;
+const HUMAN_STEP = 0.072;
 
 /** One step as heard: which voices fired. The UI reads these to flash the grid. */
 export interface StepEvent {
@@ -264,6 +276,7 @@ export class BeatEngine {
       swing: st.swing,
       pitch: st.pitch,
       panning: Math.round(st.panning * 100),
+      humanize: +st.humanize.toFixed(2),
       evolve: { auto: st.autoEvolve, every: st.evolveEvery },
       seed: this.rng.seed,
       ...extra,
@@ -273,7 +286,7 @@ export class BeatEngine {
         role: v.role,
         slice: v.slice,
         sliceRole: this.instrument?.slices[v.slice]?.role,
-        velocity: Math.round(v.velocity),
+        level: +v.level.toFixed(2),
         delaySend: +v.delaySend.toFixed(2),
         reverbSend: +v.reverbSend.toFixed(2),
       })),
@@ -331,8 +344,13 @@ export class BeatEngine {
 
   // ── beat generation ───────────────────────────────────────────────────
 
+  /** a starting point for the humanize walk */
+  private randomHuman() {
+    return this.rng.range(1 - (1 - HUMAN_FLOOR) * this.settings.humanize, 1);
+  }
+
   private blankVoice(): Voice {
-    return { on: false, slice: 0, pattern: [...PATTERNS.allOff], accent: ones(), role: 'any', velocity: 80, delaySend: 0, reverbSend: 0 };
+    return { on: false, slice: 0, pattern: [...PATTERNS.allOff], accent: ones(), role: 'any', level: 1, human: 1, delaySend: 0, reverbSend: 0 };
   }
 
   /** replace a voice's pattern (accents back to normal) */
@@ -378,7 +396,7 @@ export class BeatEngine {
     this.voices = Array.from({ length: VOICES }, () => this.blankVoice());
     this.dealSlices();
     for (const v of this.voices) {
-      v.velocity = this.rng.range(50, 110);
+      v.human = this.randomHuman();
       v.delaySend = this.rng.range(0, 1);
       v.reverbSend = this.rng.range(0.4, 1);
       this.setPattern(v, this.rng.chance(0.3) ? this.presetPattern() : this.randomPattern());
@@ -468,6 +486,8 @@ export class BeatEngine {
     // a recipe replaces the kickoff
     this.kickoffStart = null;
     this.kickoffStage = 3;
+    // set before the voices pick where their humanize walk starts
+    this.settings.humanize = r.humanize ?? 1;
     const used = new Set<number>();
     // slice numbers only mean something on the instrument the beat was made
     // with; on any other one (a reVox) every voice picks by role
@@ -503,7 +523,8 @@ export class BeatEngine {
       v.accent = accent;
       v.on = rv.on ?? true;
       v.role = rv.role ?? 'any';
-      v.velocity = Math.min(110, Math.max(50, rv.velocity ?? 90));
+      v.level = Math.min(1, Math.max(0, rv.level ?? 1));
+      v.human = this.randomHuman();
       if (rv.delaySend !== undefined) v.delaySend = rv.delaySend;
       if (rv.reverbSend !== undefined) v.reverbSend = rv.reverbSend;
       if (wanted[i] !== null) v.slice = wanted[i]!;
@@ -514,7 +535,7 @@ export class BeatEngine {
       return v;
     });
     this.applySends();
-    const s: Partial<EngineSettings> = { swing: r.swing ?? 0, autoEvolve: r.evolve?.auto ?? false };
+    const s: Partial<EngineSettings> = { swing: r.swing ?? 0, humanize: r.humanize ?? 1, autoEvolve: r.evolve?.auto ?? false };
     if (r.bpm !== undefined) s.bpm = r.bpm;
     if (r.pitch !== undefined) s.pitch = r.pitch;
     if (r.panning !== undefined) s.panning = r.panning / 100;
@@ -664,8 +685,10 @@ export class BeatEngine {
     const s = this.slices[v.slice];
     if (!s || !this.buffer) return;
     const ctx = this.ctx;
-    // velocity: brownian walk 50–110, one step per hit
-    v.velocity = Math.min(110, Math.max(50, v.velocity + this.rng.range(-8, 8)));
+    // humanize: brownian walk, one step per hit
+    const hz = this.settings.humanize;
+    const floor = 1 - (1 - HUMAN_FLOOR) * hz;
+    v.human = Math.min(1, Math.max(floor, v.human + this.rng.range(-HUMAN_STEP, HUMAN_STEP) * hz));
     const rate = this.settings.pitch;
     const sliceDur = (s.end - s.start) / rate;
     const env = ROLE_ENVELOPE[v.role] ?? this.settings.envelope;
@@ -675,7 +698,7 @@ export class BeatEngine {
     const a = Math.max(0.003, env.attack * scale);
     const r = Math.max(0.01, env.release * scale);
     const h = Math.max(0, len - a - r);
-    const level = (v.velocity / 127) * 1.15 * accent;
+    const level = v.level * v.human * accent;
 
     // choke the voice's previous hit
     const prev = this.last[i];
