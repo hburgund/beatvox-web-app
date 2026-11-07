@@ -299,7 +299,7 @@ The widgets are vector-drawn, so they stay crisp at any size. Refinements are li
 | Phase | Deliverable |
 |---|---|
 | **0. Spike** ✅ (iPhone 16e tested; Android not yet) | Record on iPhone, Android and a laptop. **Slicer test page** comparing Syllables / Attacks / Mixed on the 2008 recordings. Play an 8×16 beat with basic reverb. |
-| **1. Faithful port** | v1.93 engine + FX module + Simple mode; maxkit UI in phone and laptop layouts; keep the screen awake while playing (Screen Wake Lock), since mobile browsers pause audio when the screen locks. Done when it sounds like `and_justice.mp3`. |
+| **1. Faithful port** (built; tuning by ear next) | v1.93 engine + FX module + Simple mode; maxkit UI in phone and laptop layouts; keep the screen awake while playing (Screen Wake Lock), since mobile browsers pause audio when the screen locks. Done when it sounds like `and_justice.mp3`. |
 | **2. Share** | Loop capture, offline render, MP3, Roundware v3 submit with location, built-in save/share. |
 | **3. Advanced + reVox** | Advanced mode, grid editing, slice view, reVox browse / remix / credit. |
 | **4. Improvements** | Craziness, swing, XY pad, word slicing, etc. |
