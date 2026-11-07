@@ -16,11 +16,11 @@ Ideas and requests not yet scheduled. See [PROPOSAL.md](PROPOSAL.md) for the pla
 ## Beat templates and drum roles
 
 - [x] **Recipe format.** JSON with 16-character patterns in drum-machine notation (`x` hit, `X` accent, `o` ghost, `.` rest), per-voice role, optional slice, and tempo, swing, space and evolve settings. See `src/lib/recipe.ts`. Styles and saved beats share it.
-- [~] **Style templates.** Started: a Style menu in Listen with v1.93 Groove, House, Boom Bap, Rock, Breakbeat, Dembow, Trap and Drum & Bass (`src/lib/styles.ts`). Still to do: jazz (needs triplet or 8th-note swing), evolve rules per style, and matching slices to roles. Original idea: starting-point beats for styles such as electronica, rock, jazz, hip-hop and four-on-the-floor house. Each template sets:
+- [~] **Style templates.** Started: a Style menu in Listen with v1.93 Groove, House, Boom Bap, Rock, Breakbeat, Dembow, Trap and Drum & Bass (`src/lib/styles.ts`). Still to do: jazz (needs triplet or 8th-note swing) and evolve rules per style. Original idea: starting-point beats for styles such as electronica, rock, jazz, hip-hop and four-on-the-floor house. Each template sets:
   - per-voice patterns and a drum role per voice;
   - tempo range, swing and effects preset;
   - how Evolve is allowed to change it, so a template keeps its feel.
-- [ ] **Guess which drum each slice suits.** Classify slices by sound and put them on matching voices in templates:
+- [x] **Guess which drum each slice suits.** Done in `src/lib/audio/drumRoles.ts`: styles deal slices by role, Evolve keeps role voices on good fits, drum roles get tighter gates, and the slicer lab shows each slice's role. Possible next: per-role tone shaping (low shelf on kicks). Original idea: Classify slices by sound and put them on matching voices in templates:
   - **kick:** low spectral centroid, energy below ~200 Hz, short (deep vowels, "b", "d", "oo");
   - **snare:** broadband and noisy mid-range with a sharp attack ("t", "k", "ch", "p");
   - **hi-hat:** high centroid, very noisy (high spectral flatness), very short (sibilants "s", "sh", "ts");

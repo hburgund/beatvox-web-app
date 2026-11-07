@@ -4,6 +4,7 @@
   import { analyze, toMono, type Features } from '../lib/audio/analysis';
   import { sliceSignal, DEFAULT_PARAMS, METHODS, type SliceMethod, type SliceParams, type SliceResult } from '../lib/audio/slicer';
   import { slicePitch, noteName, type PitchResult } from '../lib/audio/pitch';
+  import { bestRole, DRUM_ROLES, roleScores, sliceTraits, type RoleScores } from '../lib/audio/drumRoles';
   import { BeatPreview, playSlice, STEPS } from '../lib/audio/beatPreview';
   import { startRecording, type Recording } from '../lib/audio/recorder';
 
@@ -35,6 +36,7 @@
   let beatMethod = $state<SliceMethod>('mixed');
   let tableMethod = $state<SliceMethod>('mixed');
   let sortByPitch = $state(false);
+  let sortByRole = $state(false);
   let votes = $state<Record<string, SliceMethod>>(load('bv-lab-votes', {}));
   let voiceCount = $state(4);
   let bpm = $state(89);
@@ -47,6 +49,7 @@
   let recLeft = $state(0);
   let recLevel = $state(0);
   let pitches = $state.raw<PitchResult[]>([]);
+  let roles = $state.raw<RoleScores[]>([]);
 
   let lanes: Record<string, Lane> = {};
   let beat: BeatPreview | null = null;
@@ -72,9 +75,10 @@
   $effect(() => {
     const r = results?.[tableMethod];
     const m = mono, b = buffer;
-    if (!r || !m || !b) { pitches = []; return; }
+    if (!r || !m || !b) { pitches = []; roles = []; return; }
     const id = setTimeout(() => {
       pitches = r.slices.map((s) => slicePitch(m, b.sampleRate, s.start, s.end));
+      roles = roleScores(r.slices.map((s) => sliceTraits(m, b.sampleRate, s)));
     }, 200);
     return () => clearTimeout(id);
   });
@@ -82,8 +86,13 @@
   const tableRows = $derived.by(() => {
     const r = results?.[tableMethod];
     if (!r) return [];
-    const rows = r.slices.map((s, i) => ({ i, s, p: pitches[i] }));
+    const rows = r.slices.map((s, i) => {
+      const sc = roles[i];
+      const role = sc ? bestRole(sc) : null;
+      return { i, s, p: pitches[i], role, score: sc && role ? sc[role] : 0 };
+    });
     if (sortByPitch) rows.sort((a, b) => (a.p?.hz ?? 1e9) - (b.p?.hz ?? 1e9));
+    if (sortByRole) rows.sort((a, b) => DRUM_ROLES.indexOf(a.role!) - DRUM_ROLES.indexOf(b.role!) || b.score - a.score);
     return rows;
   });
 
@@ -172,6 +181,21 @@
     if (!s || !buffer) return;
     playSlice(audio(), buffer, s);
     lanes[m]?.flash(i);
+  }
+
+  /** play the 3 slices that best fit a drum role */
+  function playRole(role: (typeof DRUM_ROLES)[number]) {
+    const r = results?.[tableMethod];
+    if (!r || !buffer || !roles.length) return;
+    const c = audio();
+    const best = roles.map((sc, i) => ({ i, v: sc[role] })).sort((a, b) => b.v - a.v).slice(0, 3);
+    let t = c.currentTime + 0.05;
+    for (const { i } of best) {
+      const s = r.slices[i];
+      playSlice(c, buffer, s, t);
+      setTimeout(() => lanes[tableMethod]?.flash(i), (t - c.currentTime) * 1000);
+      t += Math.min(0.5, s.end - s.start) + 0.25;
+    }
   }
 
   function playInOrder(m: SliceMethod) {
@@ -434,10 +458,17 @@
           {#each METHODS as m}<option value={m}>{INFO[m].label}</option>{/each}
         </select>
         <label class="check"><input type="checkbox" bind:checked={sortByPitch} /> sort by pitch</label>
+        <label class="check"><input type="checkbox" bind:checked={sortByRole} /> sort by role</label>
       </h2>
+      <div class="row roles">
+        <span>best 3:</span>
+        {#each DRUM_ROLES as role (role)}
+          <button class="pill" disabled={!roles.length} onclick={() => playRole(role)}>{role}</button>
+        {/each}
+      </div>
       <div class="scroll">
         <table>
-          <thead><tr><th>#</th><th>start</th><th>length</th><th>level</th><th>pitch</th><th>voiced</th></tr></thead>
+          <thead><tr><th>#</th><th>start</th><th>length</th><th>level</th><th>pitch</th><th>voiced</th><th>role</th></tr></thead>
           <tbody>
             {#each tableRows as row (row.i)}
               <tr onclick={() => auditionSlice(tableMethod, row.i)}>
@@ -447,6 +478,7 @@
                 <td>{row.s.peakDb.toFixed(0)} dB</td>
                 <td>{row.p?.hz ? `${noteName(row.p.hz)} · ${row.p.hz.toFixed(0)} Hz` : '—'}</td>
                 <td>{row.p ? Math.round(row.p.voiced * 100) + '%' : ''}</td>
+                <td>{row.role ? `${row.role} ${Math.round(row.score * 100)}` : ''}</td>
               </tr>
             {/each}
           </tbody>
