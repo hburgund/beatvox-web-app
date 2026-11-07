@@ -3,6 +3,9 @@
 
 import { BeatEngine, VOICES, STEPS, type Voice } from '../lib/audio/engine';
 import { FxChain, spaceToParams } from '../lib/audio/fx';
+import { encodeMp3 } from '../lib/audio/mp3';
+import { renderShare, voiceSpan } from '../lib/audio/render';
+import type { Recipe } from '../lib/recipe';
 import { prepareVoice } from '../lib/audio/prepare';
 import { startRecording, type Recording } from '../lib/audio/recorder';
 import type { Slice } from '../lib/audio/slicer';
@@ -12,6 +15,24 @@ import { STYLES } from '../lib/styles';
 
 export type Tab = 'record' | 'listen' | 'share';
 export const MAX_RECORD_SEC = 15;
+/** loops in a shared piece (Simple mode; Advanced will offer 4 / 8 / 16) */
+export const SHARE_LOOPS = 8;
+
+/** idle → waiting (for the downbeat) → capturing → rendering → ready */
+export type SharePhase = 'idle' | 'waiting' | 'capturing' | 'rendering' | 'ready';
+
+export interface ShareResult {
+  mp3: Blob;
+  url: string;
+  /** seconds */
+  duration: number;
+  /** where the remix starts, seconds */
+  remixAt: number;
+  /** the beat as it was when capture started, and the voice it played */
+  recipe: Recipe;
+  instrument: Instrument;
+  createdAt: Date;
+}
 
 export class Session {
   tab = $state<Tab>('record');
@@ -45,6 +66,16 @@ export class Session {
   space = $state(35);
   /** name of the style the beat started from, or '' for a random beat */
   style = $state('');
+
+  // share
+  share = $state<SharePhase>('idle');
+  /** 0..1 through the capture */
+  shareProgress = $state(0);
+  shareResult = $state.raw<ShareResult | null>(null);
+  shareTitle = $state('');
+  shareStatus = $state('');
+  /** bumps to drop a capture or render that's out of date */
+  private shareRun = 0;
 
   private ctx: AudioContext | null = null;
   private fx: FxChain | null = null;
@@ -141,6 +172,7 @@ export class Session {
     } else {
       this.status = `${instrument.slices.length} slices`;
     }
+    this.discardShare();
     if (instrument.slices.length) this.engine!.load(voice, instrument);
   }
 
@@ -189,6 +221,7 @@ export class Session {
     this.slices = [];
     this.status = '';
     this.style = '';
+    this.discardShare();
     this.tab = 'record';
   }
 
@@ -248,7 +281,125 @@ export class Session {
     if (!this.engine || !this.fx) return;
     this.engine.set({ bpm: this.bpm, pitch: this.pitch, panning: this.panning / 100 });
     this.fx.setVolume(Math.pow(this.volume / 100, 2) * 1.25);
-    this.fx.set(spaceToParams(this.space / 100));
+    this.engine.setFx(spaceToParams(this.space / 100));
+  }
+
+  // ── Share tab ─────────────────────────────────────────────────────────
+
+  /** Capture SHARE_LOOPS bars from the next downbeat, then render the MP3. */
+  async capture() {
+    if (!this.voice || !this.instrument || !this.slices.length) return;
+    if (this.share === 'waiting' || this.share === 'capturing' || this.share === 'rendering') return;
+    this.discardShare();
+    const run = ++this.shareRun;
+    const voice = this.voice;
+    const instrument = this.instrument;
+    this.go();
+    const taped = this.engine!.capture(SHARE_LOOPS);
+    this.share = 'waiting';
+    this.shareProgress = 0;
+    this.tick();
+    let tape;
+    try {
+      tape = await taped;
+    } catch (e) {
+      if (run === this.shareRun) {
+        this.share = 'idle';
+        this.shareStatus = /stopped/.test((e as Error).message) ? 'The beat stopped before the capture finished. Try again.' : '';
+      }
+      return;
+    }
+    if (run !== this.shareRun) return;
+    this.share = 'rendering';
+    try {
+      const t0 = performance.now();
+      const { audio, remixAt } = await renderShare(tape, voice, { voiceSpan: voiceSpan(instrument.slices, voice.duration) });
+      const t1 = performance.now();
+      const mp3 = await encodeMp3(audio);
+      if (import.meta.env.DEV) console.info(`share: render ${Math.round(t1 - t0)} ms, mp3 ${Math.round(performance.now() - t1)} ms`);
+      if (run !== this.shareRun) return;
+      this.shareResult = {
+        mp3,
+        url: URL.createObjectURL(mp3),
+        duration: audio.duration,
+        remixAt,
+        recipe: tape.recipe,
+        instrument,
+        createdAt: new Date(),
+      };
+      this.share = 'ready';
+    } catch (e) {
+      if (run !== this.shareRun) return;
+      this.share = 'idle';
+      this.shareStatus = `Couldn't make the MP3 (${(e as Error).message}).`;
+    }
+  }
+
+  cancelCapture() {
+    this.shareRun++;
+    this.engine?.cancelCapture();
+    if (this.share !== 'ready') this.share = 'idle';
+  }
+
+  /** forget the captured piece (a new voice, or capturing again) */
+  discardShare() {
+    this.shareRun++;
+    this.engine?.cancelCapture();
+    if (this.shareResult) URL.revokeObjectURL(this.shareResult.url);
+    this.shareResult = null;
+    this.share = 'idle';
+    this.shareProgress = 0;
+    this.shareStatus = '';
+  }
+
+  shareFileName() {
+    const r = this.shareResult;
+    const slug = this.shareTitle
+      .toLowerCase()
+      .normalize('NFKD')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 40);
+    const d = r?.createdAt ?? new Date();
+    const p = (n: number) => String(n).padStart(2, '0');
+    const stamp = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
+    return `beatvox-${slug || 'beat'}-${stamp}.mp3`;
+  }
+
+  private shareFile() {
+    return new File([this.shareResult!.mp3], this.shareFileName(), { type: 'audio/mpeg' });
+  }
+
+  /** Can this device hand the file to its share sheet (phones, some laptops)? */
+  canShareFile() {
+    if (!this.shareResult || typeof navigator.canShare !== 'function') return false;
+    try {
+      return navigator.canShare({ files: [this.shareFile()] });
+    } catch {
+      return false;
+    }
+  }
+
+  /** Save to the device as a download. */
+  saveMp3() {
+    if (!this.shareResult) return;
+    const a = document.createElement('a');
+    a.href = this.shareResult.url;
+    a.download = this.shareFileName();
+    document.body.append(a);
+    a.click();
+    a.remove();
+  }
+
+  /** Open the system share sheet with the MP3 attached. */
+  async shareMp3() {
+    if (!this.shareResult) return;
+    try {
+      await navigator.share({ files: [this.shareFile()], title: this.shareTitle || 'My BeatVox' });
+    } catch (e) {
+      // closing the share sheet isn't an error
+      if ((e as Error).name !== 'AbortError') this.shareStatus = `Couldn't share (${(e as Error).message}). Try Save instead.`;
+    }
   }
 
   private sync() {
@@ -282,6 +433,15 @@ export class Session {
           const last = evs[evs.length - 1];
           this.step = last.step;
           this.firing = last.hits;
+        }
+        again = true;
+      }
+      if (this.engine?.capturing) {
+        const now = ctx.currentTime - (ctx.outputLatency || ctx.baseLatency || 0);
+        const p = this.engine.captureProgress(now);
+        if (p) {
+          this.share = p.waiting ? 'waiting' : 'capturing';
+          this.shareProgress = p.done;
         }
         again = true;
       }

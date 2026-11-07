@@ -187,6 +187,8 @@ The slicer is the heart of BeatVox. It decides whether the beat sounds percussiv
 **Offline render.**
 - The logged loops are rendered with the same engine and effects, so there are no glitches from a busy phone.
 - The file is: original recording → ½ bar gap → remix → effects tail. It's encoded to MP3 in a background worker.
+- **How it's built:** the engine sends every hit, pan move, send and effects change to the audio graph as a small command (`voiceBank.ts`). Capture tapes those commands, plus the state at the first downbeat, so the render replays exactly what was heard, including any New Beat, Evolve or knob moves made during the capture. The voice is trimmed to its slices, and silence after the effects die away is cut.
+- **Format:** 192 kbps stereo MP3, peak at -1 dBFS. About 0.7–0.9 MB for 8 loops. Rendering and encoding take about 2 s on a laptop.
 
 **Submit.**
 - A short form:
@@ -303,8 +305,8 @@ The widgets are vector-drawn, so they stay crisp at any size. Refinements are li
 | Phase | Deliverable |
 |---|---|
 | **0. Spike** ✅ (iPhone 16e tested; Android not yet) | Record on iPhone, Android and a laptop. **Slicer test page** comparing Syllables / Attacks / Mixed on the 2008 recordings. Play an 8×16 beat with basic reverb. |
-| **1. Faithful port** (built; tuning by ear next) | v1.93 engine + FX module + Simple mode; maxkit UI in phone and laptop layouts; keep the screen awake while playing (Screen Wake Lock), since mobile browsers pause audio when the screen locks. Done when it sounds like `and_justice.mp3`. |
-| **2. Share** | Loop capture, offline render, MP3, Roundware v3 submit with location, built-in save/share. |
+| **1. Faithful port** ✅ | v1.93 engine + FX module + Simple mode; maxkit UI in phone and laptop layouts; keep the screen awake while playing (Screen Wake Lock), since mobile browsers pause audio when the screen locks. Done when it sounds like `and_justice.mp3`. |
+| **2. Share** (capture, render, MP3 and save/share built; Roundware next) | Loop capture, offline render, MP3, Roundware v3 submit with location, built-in save/share. |
 | **3. Advanced + reVox** | Advanced mode, grid editing, slice view, reVox browse / remix / credit. |
 | **4. Improvements** | Craziness, swing, XY pad, word slicing, etc. |
 | Later | Kiosk mode, performance mode (quad, MIDI). |

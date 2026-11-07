@@ -3,7 +3,7 @@
   import RecordTab from './RecordTab.svelte';
   import ListenTab from './ListenTab.svelte';
   import ShareTab from './ShareTab.svelte';
-  import { Session, type Tab } from './session.svelte';
+  import { Session, SHARE_LOOPS, type Tab } from './session.svelte';
 
   const s = new Session();
 
@@ -42,6 +42,11 @@
 <div class="app">
   <header>
     <h1>BEAT VOX</h1>
+    {#if s.share === 'waiting' || s.share === 'capturing'}
+      <button class="rec" onclick={() => (s.tab = 'share')} aria-label="Capturing for your MP3">
+        ● REC {s.share === 'waiting' ? '…' : `${Math.min(SHARE_LOOPS, Math.floor(s.shareProgress * SHARE_LOOPS) + 1)}/${SHARE_LOOPS}`}
+      </button>
+    {/if}
     <BeatLeds step={s.step} />
   </header>
   <nav>
@@ -80,6 +85,22 @@
     font: normal 44px/1 var(--bv-mono);
     letter-spacing: 3px;
     margin: 0;
+  }
+  .rec {
+    margin-left: auto;
+    border: 1px solid #900;
+    border-radius: 999px;
+    background: var(--bv-red);
+    color: #fff;
+    font: bold 12px var(--bv-mono);
+    padding: 3px 10px;
+    cursor: pointer;
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    50% {
+      opacity: 0.6;
+    }
   }
   nav {
     display: flex;

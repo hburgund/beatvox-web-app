@@ -19,5 +19,8 @@
     "typescript": "^5.9.3",
     "vite": "^8.3.6",
     "vitest": "^5.1.0"
+  },
+  "dependencies": {
+    "wasm-media-encoders": "^0.7.0"
   }
 }
