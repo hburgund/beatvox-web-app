@@ -5,6 +5,7 @@
   import Knob from '../lib/maxkit/Knob.svelte';
   import BeatGrid from '../lib/maxkit/BeatGrid.svelte';
   import type { Session } from './session.svelte';
+  import { STYLES } from '../lib/styles';
 
   let { s, narrow }: { s: Session; narrow: boolean } = $props();
   const ready = $derived(s.slices.length > 0);
@@ -43,7 +44,16 @@
           <span>Evolve Beat</span>
         </div>
       </div>
-      <Toggle label="keep evolving" checked={s.autoEvolve} onchange={(v) => s.setAutoEvolve(v)} />
+      <div class="modrow">
+        <label class="style">
+          <span>Style</span>
+          <select value={s.style} disabled={!ready} onchange={(e) => s.applyStyle(e.currentTarget.value)}>
+            <option value="">random (v1.93)</option>
+            {#each STYLES as st (st.name)}<option value={st.name}>{st.name}</option>{/each}
+          </select>
+        </label>
+        <Toggle label="keep evolving" checked={s.autoEvolve} onchange={(v) => s.setAutoEvolve(v)} />
+      </div>
     </div>
 
     {#if !narrow}
@@ -123,6 +133,27 @@
     align-items: center;
     gap: 8px;
     font: bold 12px Arial, sans-serif;
+  }
+  .modrow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    align-items: center;
+    justify-content: center;
+  }
+  .style {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font: bold 12px Arial, sans-serif;
+  }
+  .style select {
+    font: bold 12px Arial, sans-serif;
+    border: 1px solid #777;
+    border-radius: 999px;
+    background: linear-gradient(#f4f4f4, #c9c9c9);
+    padding: 4px 10px;
+    color: var(--bv-ink);
   }
   .right {
     display: grid;

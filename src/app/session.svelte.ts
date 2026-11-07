@@ -7,6 +7,7 @@ import { prepareVoice } from '../lib/audio/prepare';
 import { startRecording, type Recording } from '../lib/audio/recorder';
 import { DEFAULT_PARAMS, sliceSignal, type Slice } from '../lib/audio/slicer';
 import { keepAwake } from '../lib/wakeLock';
+import { STYLES } from '../lib/styles';
 
 export type Tab = 'record' | 'listen' | 'share';
 export const MAX_RECORD_SEC = 15;
@@ -39,6 +40,8 @@ export class Session {
   panning = $state(60);
   pitch = $state(1);
   space = $state(35);
+  /** name of the style the beat started from, or '' for a random beat */
+  style = $state('');
 
   private ctx: AudioContext | null = null;
   private fx: FxChain | null = null;
@@ -179,6 +182,7 @@ export class Session {
     this.mono = null;
     this.slices = [];
     this.status = '';
+    this.style = '';
     this.tab = 'record';
   }
 
@@ -208,7 +212,20 @@ export class Session {
 
   newBeat() {
     this.audio();
+    this.style = '';
     this.engine?.newBeat();
+  }
+
+  /** Start from a genre style ('' = a random v1.93 beat). */
+  applyStyle(name: string) {
+    const r = STYLES.find((x) => x.name === name);
+    if (!r) return this.newBeat();
+    this.audio();
+    this.style = name;
+    if (r.bpm !== undefined) this.bpm = r.bpm;
+    if (r.space !== undefined) this.space = r.space;
+    if (r.panning !== undefined) this.panning = r.panning;
+    this.engine?.applyRecipe(r);
   }
 
   evolve() {
