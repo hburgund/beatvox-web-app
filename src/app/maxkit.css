@@ -1,0 +1,93 @@
+/* maxkit: the Max 5 look of BeatVox v1.93, redrawn in CSS. */
+
+:root {
+  --bv-panel: #c3d5e4;
+  --bv-panel-edge: #7a8a99;
+  --bv-yellow: #fdf3a0;
+  --bv-yellow-edge: #b9a94a;
+  --bv-led: #f3d23a;
+  --bv-green: #2fd12f;
+  --bv-red: #e22;
+  --bv-blue: #2233dd;
+  --bv-wave-bg: #6f97e0;
+  --bv-wave: #1d3fb8;
+  --bv-tile: #d8d8d8;
+  --bv-ink: #111;
+  --bv-mono: 'Courier New', Courier, monospace;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: #fff;
+  color: var(--bv-ink);
+  font: 13px/1.35 Arial, Helvetica, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+.panel {
+  background: var(--bv-panel);
+  border: 1px solid var(--bv-panel-edge);
+  border-radius: 8px;
+}
+
+.pill {
+  border: 1px solid #777;
+  border-radius: 999px;
+  background: linear-gradient(#f4f4f4, #c9c9c9);
+  padding: 6px 22px;
+  font: bold 15px Arial, sans-serif;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  color: var(--bv-ink);
+  box-shadow: inset 0 1px 0 #fff;
+  touch-action: manipulation;
+}
+.pill:active,
+.pill.on {
+  background: linear-gradient(#cfe9cf, #9fd09f);
+}
+.pill.live {
+  background: linear-gradient(#ff8a8a, #e04040);
+  color: #fff;
+}
+.pill:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.pill.small {
+  font-size: 12px;
+  padding: 3px 12px;
+}
+
+.numbox {
+  font: 11px var(--bv-mono);
+  background: #fff;
+  border: 1px solid #888;
+  border-radius: 3px;
+  padding: 1px 4px;
+  min-width: 30px;
+  text-align: center;
+  box-shadow: inset 1px 1px 0 #ccc;
+}
+
+.hint {
+  color: #234;
+  font-size: 12px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
