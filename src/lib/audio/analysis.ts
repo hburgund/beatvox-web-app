@@ -5,7 +5,7 @@ export const FFT_SIZE = 1024;
 export const HOP = 256;
 
 /** In-place radix-2 complex FFT. */
-function fft(re: Float32Array, im: Float32Array) {
+export function fft(re: Float32Array, im: Float32Array) {
   const n = re.length;
   for (let i = 1, j = 0; i < n; i++) {
     let bit = n >> 1;

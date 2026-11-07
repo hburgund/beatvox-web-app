@@ -16,6 +16,7 @@
 import { Rng } from './rng';
 import type { FxChain } from './fx';
 import type { Slice } from './slicer';
+import { matchSlices, type RoleScores } from './drumRoles';
 import { formatPattern, parsePattern, RECIPE_FORMAT, RECIPE_VERSION, type Recipe, type Role } from '../recipe';
 
 export const VOICES = 8;
@@ -97,6 +98,15 @@ export type Action =
 
 const ones = () => Array<number>(STEPS).fill(1);
 
+/** Tighter gates for drum roles; 'any' keeps the v1.93 envelope. */
+export const ROLE_ENVELOPE: Partial<Record<Role, Envelope>> = {
+  kick: { attack: 0.008, hold: 0.22, release: 0.08 },
+  snare: { attack: 0.004, hold: 0.12, release: 0.08 },
+  hat: { attack: 0.002, hold: 0.04, release: 0.04 },
+  perc: { attack: 0.004, hold: 0.08, release: 0.06 },
+  tonal: { attack: 0.02, hold: 0.3, release: 0.12 },
+};
+
 interface VoiceNodes {
   input: GainNode;
   panSource: ConstantSourceNode;
@@ -130,6 +140,8 @@ export class BeatEngine {
   private rng: Rng;
   private buffer: AudioBuffer | null = null;
   private slices: Slice[] = [];
+  /** drum-role scores per slice, if the caller measured them */
+  private scores: RoleScores[] | null = null;
   private nodes: VoiceNodes[] = [];
   private pan: PanState[] = [];
   private last: (LastHit | null)[] = [];
@@ -181,16 +193,18 @@ export class BeatEngine {
   }
 
   /** Load a new voice recording and its slices. Starts a fresh beat with the kickoff. */
-  load(buffer: AudioBuffer, slices: Slice[]) {
+  load(buffer: AudioBuffer, slices: Slice[], scores?: RoleScores[]) {
     this.buffer = buffer;
     this.slices = slices;
+    this.scores = scores && scores.length === slices.length ? scores : null;
     this.queue = [];
     this.run({ kind: 'kickoff' });
   }
 
   /** Swap in a new slice list (e.g. re-sliced) and keep the beat. */
-  setSlices(slices: Slice[]) {
+  setSlices(slices: Slice[], scores?: RoleScores[]) {
     this.slices = slices;
+    this.scores = scores && scores.length === slices.length ? scores : null;
     const used = new Set<number>();
     for (const v of this.voices) {
       if (v.slice >= slices.length || used.has(v.slice)) v.slice = this.freeSlice(used);
@@ -326,6 +340,18 @@ export class BeatEngine {
     return this.slices.length ? this.rng.int(this.slices.length) : 0;
   }
 
+  /** a free slice for a role: one of the 3 best fits, or any free one */
+  private sliceFor(role: Role, used: Set<number>) {
+    if (!this.scores || role === 'any') return this.freeSlice(used);
+    const r = role;
+    const ranked = this.scores
+      .map((sc, i) => ({ i, score: sc[r] }))
+      .filter((x) => !used.has(x.i))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3);
+    return ranked.length ? this.rng.pick(ranked).i : this.freeSlice(used);
+  }
+
   private dealSlices() {
     const urn = this.rng.shuffle(this.slices.map((_, i) => i));
     this.voices.forEach((v, i) => (v.slice = urn.length ? urn[i % urn.length] : 0));
@@ -381,7 +407,7 @@ export class BeatEngine {
       case 3: {
         const i = onVoice();
         const used = new Set(this.voices.filter((_, j) => j !== i).map((v) => v.slice));
-        this.voices[i].slice = this.freeSlice(used);
+        this.voices[i].slice = this.sliceFor(this.voices[i].role, used);
         break;
       }
       case 4: {
@@ -402,7 +428,7 @@ export class BeatEngine {
         for (let k = 0; k < 3; k++) {
           const i = anyVoice();
           const used = new Set(this.voices.filter((_, j) => j !== i).map((v) => v.slice));
-          this.voices[i].slice = this.freeSlice(used);
+          this.voices[i].slice = this.sliceFor(this.voices[i].role, used);
         }
         break;
       }
@@ -431,6 +457,16 @@ export class BeatEngine {
       typeof rv.slice === 'number' && rv.slice >= 0 && rv.slice < this.slices.length ? rv.slice : null,
     );
     wanted.forEach((w) => w !== null && used.add(w));
+    // then match roles to the slices that suit them
+    if (this.scores) {
+      const roles = r.voices.map((rv, i) => (wanted[i] === null ? (rv.role ?? null) : null));
+      matchSlices(this.scores, roles, used, this.rng).forEach((s, i) => {
+        if (s >= 0) {
+          wanted[i] = s;
+          used.add(s);
+        }
+      });
+    }
     this.voices = Array.from({ length: VOICES }, (_, i) => {
       const rv = r.voices[i];
       const v = this.blankVoice();
@@ -611,7 +647,7 @@ export class BeatEngine {
     v.velocity = Math.min(110, Math.max(50, v.velocity + this.rng.range(-8, 8)));
     const rate = this.settings.pitch;
     const sliceDur = (s.end - s.start) / rate;
-    const env = this.settings.envelope;
+    const env = ROLE_ENVELOPE[v.role] ?? this.settings.envelope;
     const full = env.attack + env.hold + env.release;
     const len = Math.min(sliceDur, full);
     const scale = len / full;

@@ -8,6 +8,7 @@ import { startRecording, type Recording } from '../lib/audio/recorder';
 import { DEFAULT_PARAMS, sliceSignal, type Slice } from '../lib/audio/slicer';
 import { keepAwake } from '../lib/wakeLock';
 import { STYLES } from '../lib/styles';
+import { roleScores, sliceTraits } from '../lib/audio/drumRoles';
 
 export type Tab = 'record' | 'listen' | 'share';
 export const MAX_RECORD_SEC = 15;
@@ -136,7 +137,8 @@ export class Session {
     } else {
       this.status = `${slices.length} slices`;
     }
-    if (slices.length) this.engine!.load(voice, slices);
+    const scores = roleScores(slices.map((sl) => sliceTraits(mono, voice.sampleRate, sl)));
+    if (slices.length) this.engine!.load(voice, slices, scores);
   }
 
   toggleReview() {
