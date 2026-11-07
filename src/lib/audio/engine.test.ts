@@ -3,7 +3,11 @@ import { BeatEngine, STEPS, PATTERNS } from './engine';
 import { FxChain } from './fx';
 import type { Slice } from './slicer';
 import { STYLES } from '../styles';
-import { parsePattern } from '../recipe';
+import { parsePattern, type Role } from '../recipe';
+import { createInstrument, validateInstrument, type Instrument } from '../instrument';
+import { DEFAULT_PARAMS } from './slicer';
+import { DEFAULT_PREPARE } from './prepare';
+import type { RoleScores } from './drumRoles';
 
 // Just enough of Web Audio for the engine to run in Node.
 function fakeContext() {
@@ -55,12 +59,30 @@ function fakeContext() {
 const slices: Slice[] = Array.from({ length: 12 }, (_, i) => ({ start: i * 0.3, end: i * 0.3 + 0.2, peakDb: -6 }));
 const buffer = { duration: 4, length: 44100 * 4, sampleRate: 44100 } as AudioBuffer;
 
-function setup(seed = 42) {
+/** An instrument whose slice i is a clear `roles[i]` (cycled). */
+function instrumentWith(roles: Exclude<Role, 'any'>[]): Instrument {
+  const scores = slices.map((_, i): RoleScores => {
+    const r = roles[i % roles.length];
+    return { kick: 0.1, snare: 0.1, hat: 0.1, perc: 0.1, tonal: 0.1, [r]: 0.9 };
+  });
+  return createInstrument({
+    slices,
+    scores,
+    bestRoles: slices.map((_, i) => roles[i % roles.length]),
+    duration: 4,
+    sampleRate: 44100,
+    method: 'mixed',
+    params: DEFAULT_PARAMS,
+    prepare: DEFAULT_PREPARE,
+  });
+}
+
+function setup(seed = 42, instrument = instrumentWith(['kick', 'snare', 'hat', 'perc', 'tonal'])) {
   const { ctx, started } = fakeContext();
   const fx = new FxChain(ctx);
   const engine = new BeatEngine(ctx, fx, seed);
-  engine.load(buffer, slices);
-  return { ctx, engine, started };
+  engine.load(buffer, instrument);
+  return { ctx, engine, started, instrument };
 }
 
 /** run the scheduler for `seconds` of audio time */
@@ -173,11 +195,39 @@ describe('BeatEngine', () => {
     engine.stop();
   });
 
+  it('builds a valid instrument that survives JSON', () => {
+    const { instrument } = setup();
+    expect(validateInstrument(JSON.parse(JSON.stringify(instrument)))).toEqual(instrument);
+  });
+
+  it('saves the beat as a recipe that names its instrument', () => {
+    const { engine, instrument } = setup();
+    const r = engine.toRecipe('mine');
+    expect(r.kind).toBe('beat');
+    expect(r.instrument?.id).toBe(instrument.id);
+    expect(r.voices[0].sliceRole).toBe(instrument.slices[r.voices[0].slice!].role);
+  });
+
+  it('a reVox (another instrument) picks slices by the sound they had', () => {
+    const a = setup(5);
+    for (let i = 0; i < 20; i++) a.engine.evolve();
+    const beat = JSON.parse(JSON.stringify(a.engine.toRecipe('mine')));
+    // the other voice has its roles in a different order
+    const b = setup(6, instrumentWith(['tonal', 'hat', 'kick', 'perc', 'snare']));
+    b.engine.applyRecipe(beat);
+    const other = b.instrument;
+    b.engine.voices.forEach((v, i) => {
+      // patterns carry over, slice numbers don't
+      expect(v.pattern).toEqual(a.engine.voices[i].pattern);
+      expect(other.slices[v.slice].role).toBe(beat.voices[i].sliceRole);
+    });
+  });
+
   it('saves the beat as a recipe and loads it back exactly', () => {
     const a = setup(5);
     for (let i = 0; i < 20; i++) a.engine.evolve();
     const json = JSON.stringify(a.engine.toRecipe('mine'));
-    const b = setup(6);
+    const b = setup(6, a.instrument);
     b.engine.applyRecipe(JSON.parse(json));
     const strip = (e: BeatEngine) => e.voices.map(({ on, slice, pattern }) => ({ on, slice, pattern }));
     expect(strip(b.engine)).toEqual(strip(a.engine));

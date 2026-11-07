@@ -5,10 +5,10 @@ import { BeatEngine, VOICES, STEPS, type Voice } from '../lib/audio/engine';
 import { FxChain, spaceToParams } from '../lib/audio/fx';
 import { prepareVoice } from '../lib/audio/prepare';
 import { startRecording, type Recording } from '../lib/audio/recorder';
-import { DEFAULT_PARAMS, sliceSignal, type Slice } from '../lib/audio/slicer';
+import type { Slice } from '../lib/audio/slicer';
+import { cutInstrument, type Instrument } from '../lib/instrument';
 import { keepAwake } from '../lib/wakeLock';
 import { STYLES } from '../lib/styles';
-import { roleScores, sliceTraits } from '../lib/audio/drumRoles';
 
 export type Tab = 'record' | 'listen' | 'share';
 export const MAX_RECORD_SEC = 15;
@@ -20,6 +20,8 @@ export class Session {
   voice = $state.raw<AudioBuffer | null>(null);
   mono = $state.raw<Float32Array | null>(null);
   slices = $state.raw<Slice[]>([]);
+  /** the current voice, cut into slices (what a recipe plays) */
+  instrument = $state.raw<Instrument | null>(null);
   recording = $state(false);
   remaining = $state(MAX_RECORD_SEC);
   level = $state(0);
@@ -128,17 +130,18 @@ export class Session {
     const ctx = this.audio();
     const voice = prepareVoice(ctx, raw);
     const mono = voice.getChannelData(0);
-    const { slices } = sliceSignal(mono, voice.sampleRate, 'mixed', DEFAULT_PARAMS);
+    const instrument = cutInstrument(mono, voice.sampleRate);
     this.voice = voice;
     this.mono = mono;
-    this.slices = slices;
-    if (slices.length < 2) {
+    this.instrument = instrument;
+    this.slices = instrument.slices;
+    this.style = '';
+    if (instrument.slices.length < 2) {
       this.status = 'Not much to slice there. Try speaking or beatboxing a bit louder.';
     } else {
-      this.status = `${slices.length} slices`;
+      this.status = `${instrument.slices.length} slices`;
     }
-    const scores = roleScores(slices.map((sl) => sliceTraits(mono, voice.sampleRate, sl)));
-    if (slices.length) this.engine!.load(voice, slices, scores);
+    if (instrument.slices.length) this.engine!.load(voice, instrument);
   }
 
   toggleReview() {
@@ -182,6 +185,7 @@ export class Session {
     this.stopReview();
     this.voice = null;
     this.mono = null;
+    this.instrument = null;
     this.slices = [];
     this.status = '';
     this.style = '';

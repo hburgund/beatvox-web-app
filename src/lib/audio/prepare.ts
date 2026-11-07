@@ -29,16 +29,18 @@ export function normalize(x: Float32Array, peak = 0.95) {
   for (let i = 0; i < x.length; i++) x[i] *= g;
 }
 
+export const DEFAULT_PREPARE = { lowCut: 80, normalize: 0.95 };
+
 /** A mono, low-cut, normalized copy of any buffer. */
-export function prepareVoice(ctx: BaseAudioContext, input: AudioBuffer, lowCutHz = 80): AudioBuffer {
+export function prepareVoice(ctx: BaseAudioContext, input: AudioBuffer, opts = DEFAULT_PREPARE): AudioBuffer {
   const n = input.length;
   const mono = new Float32Array(n);
   for (let c = 0; c < input.numberOfChannels; c++) {
     const d = input.getChannelData(c);
     for (let i = 0; i < n; i++) mono[i] += d[i] / input.numberOfChannels;
   }
-  highpass(mono, input.sampleRate, lowCutHz);
-  normalize(mono);
+  highpass(mono, input.sampleRate, opts.lowCut);
+  normalize(mono, opts.normalize);
   const out = ctx.createBuffer(1, n, input.sampleRate);
   out.copyToChannel(mono, 0);
   return out;

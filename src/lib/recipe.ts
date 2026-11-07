@@ -1,11 +1,13 @@
 // Recipes: a beat saved as JSON, so it can be stored, shared and recalled.
 // Built-in styles are recipe files in src/styles/ (see its README).
 //
-// The same format covers two uses:
-// - a **style** (genre preset): patterns and roles, no slices, since it has
-//   to work with anyone's voice;
-// - a **saved beat**: everything, including which slice each voice plays,
-//   tied to one recording and the slicer settings that cut it.
+// A recipe says how an instrument is played (instrument.ts holds the voice
+// and its slices). Two kinds:
+// - a **style** (genre preset): patterns and roles only, for any voice;
+// - a **beat** (saved by a participant): also names the instrument it was
+//   made with and which slice each voice plays. On that instrument it
+//   sounds exactly as saved; on another one (a reVox), voices pick slices
+//   by role, like a style.
 //
 // Patterns are 16-character strings, one character per sixteenth note,
 // written like drum-machine notation so they read at a glance:
@@ -25,13 +27,18 @@
 //   ]
 // }
 
+import type { InstrumentRef } from './instrument';
+
 export const RECIPE_FORMAT = 'beatvox-recipe';
 export const RECIPE_VERSION = 1;
 export const STEPS = 16;
 export const MAX_VOICES = 8;
 
-/** What a voice is for. Used later to pick fitting slices (kick = low and
- *  round, hat = short and hissy...); until then slices are dealt at random. */
+export type RecipeKind = 'style' | 'beat';
+export const RECIPE_KINDS: RecipeKind[] = ['style', 'beat'];
+
+/** What a voice is for; picks a fitting slice (kick = low and round,
+ *  hat = short and hissy...). 'any' = no preference. */
 export type Role = 'kick' | 'snare' | 'hat' | 'perc' | 'tonal' | 'any';
 export const ROLES: Role[] = ['kick', 'snare', 'hat', 'perc', 'tonal', 'any'];
 
@@ -40,8 +47,11 @@ export interface RecipeVoice {
   /** default true */
   on?: boolean;
   role?: Role;
-  /** slice index; only in saved beats (null or absent = deal one) */
+  /** slice index in the recipe's instrument; beats only (null or absent = pick by role) */
   slice?: number | null;
+  /** beats only: the role the saved slice suited. On another instrument
+   *  (a reVox) a voice with no role of its own picks a slice like this. */
+  sliceRole?: Role;
   /** starting velocity 50–110 (it still drifts, as in v1.93) */
   velocity?: number;
   delaySend?: number;
@@ -52,7 +62,9 @@ export interface Recipe {
   format: typeof RECIPE_FORMAT;
   version: number;
   name: string;
-  kind: 'style' | 'saved';
+  kind: RecipeKind;
+  /** beats only: the instrument the slice numbers refer to */
+  instrument?: InstrumentRef;
   bpm?: number;
   /** 0..0.5: how late the off-beat sixteenths land */
   swing?: number;
@@ -65,8 +77,9 @@ export interface Recipe {
   /** up to 8; missing voices are off */
   voices: RecipeVoice[];
   seed?: number;
-  /** saved beats only: which recording and how it was sliced */
-  source?: { assetId?: number | string; slicer?: { method: string; params?: Record<string, number> } };
+  /** optional: Roundware participant who made it */
+  participant?: number | string;
+  createdAt?: string;
 }
 
 export interface ParsedPattern {
@@ -113,10 +126,13 @@ export function validateRecipe(value: unknown): Recipe {
   if (r.format !== RECIPE_FORMAT) throw new Error(`not a BeatVox recipe (format should be "${RECIPE_FORMAT}")`);
   if (typeof r.version !== 'number' || r.version > RECIPE_VERSION) throw new Error(`unsupported recipe version ${r.version}`);
   if (typeof r.name !== 'string') throw new Error('recipe needs a name');
+  if (!RECIPE_KINDS.includes(r.kind)) throw new Error(`kind must be ${RECIPE_KINDS.map((k) => `"${k}"`).join(' or ')}`);
+  if (r.instrument !== undefined && typeof r.instrument?.id !== 'string') throw new Error('instrument needs an id');
   if (!Array.isArray(r.voices) || r.voices.length > MAX_VOICES) throw new Error(`recipe needs 0–${MAX_VOICES} voices`);
   for (const v of r.voices) {
     parsePattern(v.pattern);
     if (v.role && !ROLES.includes(v.role)) throw new Error(`unknown role "${v.role}"`);
+    if (v.sliceRole && !ROLES.includes(v.sliceRole)) throw new Error(`unknown role "${v.sliceRole}"`);
   }
   if (r.bpm !== undefined && !(r.bpm >= 20 && r.bpm <= 300)) throw new Error('bpm out of range');
   if (r.swing !== undefined && !(r.swing >= 0 && r.swing <= 0.5)) throw new Error('swing must be 0–0.5');

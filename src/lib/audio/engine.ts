@@ -17,6 +17,7 @@ import { Rng } from './rng';
 import type { FxChain } from './fx';
 import type { Slice } from './slicer';
 import { matchSlices, type RoleScores } from './drumRoles';
+import { instrumentRef, type Instrument } from '../instrument';
 import { formatPattern, parsePattern, RECIPE_FORMAT, RECIPE_VERSION, type Recipe, type Role } from '../recipe';
 
 export const VOICES = 8;
@@ -140,8 +141,9 @@ export class BeatEngine {
   private rng: Rng;
   private buffer: AudioBuffer | null = null;
   private slices: Slice[] = [];
-  /** drum-role scores per slice, if the caller measured them */
+  /** drum-role scores per slice */
   private scores: RoleScores[] | null = null;
+  private instrument: Instrument | null = null;
   private nodes: VoiceNodes[] = [];
   private pan: PanState[] = [];
   private last: (LastHit | null)[] = [];
@@ -192,19 +194,32 @@ export class BeatEngine {
     return this.slices.length;
   }
 
-  /** Load a new voice recording and its slices. Starts a fresh beat with the kickoff. */
-  load(buffer: AudioBuffer, slices: Slice[], scores?: RoleScores[]) {
-    this.buffer = buffer;
-    this.slices = slices;
-    this.scores = scores && scores.length === slices.length ? scores : null;
-    this.queue = [];
-    this.run({ kind: 'kickoff' });
+  get instrumentId() {
+    return this.instrument?.id ?? null;
   }
 
-  /** Swap in a new slice list (e.g. re-sliced) and keep the beat. */
-  setSlices(slices: Slice[], scores?: RoleScores[]) {
-    this.slices = slices;
-    this.scores = scores && scores.length === slices.length ? scores : null;
+  /**
+   * Load an instrument: the voice recording (already prepared) and its
+   * slices. With no recipe, starts a fresh beat with the v1.93 kickoff;
+   * with one, plays that recipe instead.
+   */
+  load(buffer: AudioBuffer, instrument: Instrument, recipe?: Recipe) {
+    this.buffer = buffer;
+    this.useInstrument(instrument);
+    this.queue = [];
+    this.run(recipe ? { kind: 'recipe', recipe } : { kind: 'kickoff' });
+  }
+
+  private useInstrument(inst: Instrument) {
+    this.instrument = inst;
+    this.slices = inst.slices;
+    this.scores = inst.slices.map((s) => s.scores);
+  }
+
+  /** Swap in a re-cut instrument for the same recording and keep the beat. */
+  setInstrument(instrument: Instrument) {
+    this.useInstrument(instrument);
+    const slices = this.slices;
     const used = new Set<number>();
     for (const v of this.voices) {
       if (v.slice >= slices.length || used.has(v.slice)) v.slice = this.freeSlice(used);
@@ -243,7 +258,8 @@ export class BeatEngine {
       format: RECIPE_FORMAT,
       version: RECIPE_VERSION,
       name,
-      kind: 'saved',
+      kind: 'beat',
+      ...(this.instrument ? { instrument: instrumentRef(this.instrument) } : {}),
       bpm: st.bpm,
       swing: st.swing,
       pitch: st.pitch,
@@ -256,6 +272,7 @@ export class BeatEngine {
         pattern: formatPattern(v.pattern, v.accent),
         role: v.role,
         slice: v.slice,
+        sliceRole: this.instrument?.slices[v.slice]?.role,
         velocity: Math.round(v.velocity),
         delaySend: +v.delaySend.toFixed(2),
         reverbSend: +v.reverbSend.toFixed(2),
@@ -452,14 +469,18 @@ export class BeatEngine {
     this.kickoffStart = null;
     this.kickoffStage = 3;
     const used = new Set<number>();
-    // keep a recipe's own slice choices first, then deal the rest
+    // slice numbers only mean something on the instrument the beat was made
+    // with; on any other one (a reVox) every voice picks by role
+    const own = !!r.instrument && r.instrument.id === this.instrument?.id;
     const wanted = r.voices.map((rv) =>
-      typeof rv.slice === 'number' && rv.slice >= 0 && rv.slice < this.slices.length ? rv.slice : null,
+      own && typeof rv.slice === 'number' && rv.slice >= 0 && rv.slice < this.slices.length ? rv.slice : null,
     );
     wanted.forEach((w) => w !== null && used.add(w));
     // then match roles to the slices that suit them
     if (this.scores) {
-      const roles = r.voices.map((rv, i) => (wanted[i] === null ? (rv.role ?? null) : null));
+      const roleOf = (rv: Recipe['voices'][number]) =>
+        rv.role && rv.role !== 'any' ? rv.role : (rv.sliceRole ?? rv.role ?? null);
+      const roles = r.voices.map((rv, i) => (wanted[i] === null ? roleOf(rv) : null));
       matchSlices(this.scores, roles, used, this.rng).forEach((s, i) => {
         if (s >= 0) {
           wanted[i] = s;
