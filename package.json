@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "check": "svelte-check --tsconfig ./tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "deploy": "npm run build && netlify deploy --prod --dir dist --site 40f00ce7-850c-4383-93eb-92056ec68ff7"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
