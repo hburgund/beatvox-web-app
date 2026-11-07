@@ -1,0 +1,9 @@
+node_modules
+dist
+.DS_Store
+# Private reference material: visitor recordings and email addresses (never commit or upload)
+# The old Max patches also hold visitor email addresses and mail-server settings,
+# so the whole reference archive and the v1.93 patch stay local.
+docs/beatvox-reference/
+docs/*.maxpat
+.netlify
