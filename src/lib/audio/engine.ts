@@ -15,7 +15,8 @@
 // OfflineAudioContext to render the shared MP3.
 
 import { Rng } from './rng';
-import type { FxChain } from './fx';
+import type { FxChain, FxParams } from './fx';
+import { VoiceBank, type Cmd } from './voiceBank';
 import type { Slice } from './slicer';
 import { matchSlices, type RoleScores } from './drumRoles';
 import { instrumentRef, refersTo, type Instrument } from '../instrument';
@@ -120,24 +121,37 @@ export const ROLE_ENVELOPE: Partial<Record<Role, Envelope>> = {
   tonal: { attack: 0.02, hold: 0.3, release: 0.12 },
 };
 
-interface VoiceNodes {
-  input: GainNode;
-  panSource: ConstantSourceNode;
-  panWidth: GainNode;
-  panner: StereoPannerNode;
-  delaySend: GainNode;
-  reverbSend: GainNode;
-}
-
 interface PanState {
   nextAt: number;
   value: number;
 }
 
-interface LastHit {
-  src: AudioBufferSourceNode;
-  choke: GainNode;
+/**
+ * A stretch of the performance, taped as the commands the engine sent to
+ * the audio graph, so it can be rendered again exactly (render.ts).
+ */
+export interface Tape {
+  /** audio time of the downbeat it starts on */
+  start: number;
+  /** audio time right after the last loop */
   end: number;
+  loops: number;
+  /** tempo when it started (sets the gap before the remix) */
+  bpm: number;
+  /** the state at `start`: effects, tempo, pan width, sends, running pan ramps */
+  head: Cmd[];
+  /** everything sent from `start` to `end`, in order */
+  cmds: Cmd[];
+  /** the beat as it was when capture started */
+  recipe: Recipe;
+}
+
+interface Capture {
+  loops: number;
+  stepsLeft: number;
+  tape: Tape | null;
+  resolve: (t: Tape) => void;
+  reject: (e: Error) => void;
 }
 
 export class BeatEngine {
@@ -156,9 +170,9 @@ export class BeatEngine {
   /** drum-role scores per slice */
   private scores: RoleScores[] | null = null;
   private instrument: Instrument | null = null;
-  private nodes: VoiceNodes[] = [];
+  private bank: VoiceBank;
   private pan: PanState[] = [];
-  private last: (LastHit | null)[] = [];
+  private cap: Capture | null = null;
   private queue: Action[] = [];
   private events: StepEvent[] = [];
   private timer: ReturnType<typeof setInterval> | undefined;
@@ -175,25 +189,8 @@ export class BeatEngine {
     seed?: number,
   ) {
     this.rng = new Rng(seed);
-    for (let v = 0; v < VOICES; v++) {
-      const input = ctx.createGain();
-      const panner = ctx.createStereoPanner();
-      panner.pan.value = 0;
-      const panSource = ctx.createConstantSource();
-      panSource.offset.value = 0;
-      const panWidth = ctx.createGain();
-      panSource.connect(panWidth).connect(panner.pan);
-      panSource.start();
-      const delaySend = ctx.createGain();
-      const reverbSend = ctx.createGain();
-      input.connect(panner);
-      panner.connect(fx.dry);
-      panner.connect(delaySend).connect(fx.delaySend);
-      panner.connect(reverbSend).connect(fx.reverbSend);
-      this.nodes.push({ input, panSource, panWidth, panner, delaySend, reverbSend });
-      this.pan.push({ nextAt: 0, value: 0 });
-      this.last.push(null);
-    }
+    this.bank = new VoiceBank(ctx, fx);
+    for (let v = 0; v < VOICES; v++) this.pan.push({ nextAt: 0, value: 0 });
     this.applySettings({});
     this.voices = Array.from({ length: VOICES }, () => this.blankVoice());
   }
@@ -216,7 +213,9 @@ export class BeatEngine {
    * with one, plays that recipe instead.
    */
   load(buffer: AudioBuffer, instrument: Instrument, recipe?: Recipe) {
+    this.cancelCapture();
     this.buffer = buffer;
+    this.bank.setBuffer(buffer);
     this.useInstrument(instrument);
     this.queue = [];
     this.run(recipe ? { kind: 'recipe', recipe } : { kind: 'kickoff' });
@@ -296,6 +295,52 @@ export class BeatEngine {
   /** Tempo, pitch, panning etc. take effect right away, like v1.93's sliders. */
   set(settings: Partial<EngineSettings>) {
     this.run({ kind: 'settings', settings });
+  }
+
+  /** Effects settings, through the engine so a capture tapes them too. */
+  setFx(params: FxParams) {
+    this.emit({ k: 'fx', t: this.ctx.currentTime, params });
+  }
+
+  // ── capture ───────────────────────────────────────────────────────────
+
+  /**
+   * Tape the next `loops` bars, starting on the next downbeat. Resolves
+   * when the last one has been scheduled; rejects if playback stops first.
+   */
+  capture(loops: number): Promise<Tape> {
+    this.cancelCapture();
+    return new Promise((resolve, reject) => {
+      this.cap = { loops, stepsLeft: loops * STEPS, tape: null, resolve, reject };
+    });
+  }
+
+  cancelCapture(reason = 'capture cancelled') {
+    const c = this.cap;
+    this.cap = null;
+    c?.reject(new Error(reason));
+  }
+
+  /** 0..1 how far a running capture has got by audio time `now`, or null */
+  captureProgress(now: number): { waiting: boolean; done: number } | null {
+    const c = this.cap;
+    if (!c) return null;
+    if (!c.tape || now < c.tape.start) return { waiting: true, done: 0 };
+    const total = c.loops * STEPS;
+    const stepDur = 60 / this.settings.bpm / 4;
+    const scheduled = total - c.stepsLeft;
+    // steps scheduled but not yet heard
+    const ahead = Math.max(0, (this.nextTime - now) / stepDur);
+    return { waiting: false, done: Math.min(1, Math.max(0, (scheduled - ahead) / total)) };
+  }
+
+  get capturing() {
+    return this.cap !== null;
+  }
+
+  private emit(c: Cmd) {
+    this.bank.apply(c);
+    if (this.cap?.tape) this.cap.tape.cmds.push(c);
   }
 
   private request(a: Action) {
@@ -546,8 +591,8 @@ export class BeatEngine {
   private applySettings(s: Partial<EngineSettings>) {
     this.settings = { ...this.settings, ...s, envelope: { ...this.settings.envelope, ...s.envelope } };
     const t = this.ctx.currentTime;
-    for (const n of this.nodes) n.panWidth.gain.setTargetAtTime(this.settings.panning, t, 0.05);
-    this.fx.setTempo(this.settings.bpm);
+    this.emit({ k: 'width', t, value: this.settings.panning });
+    this.emit({ k: 'tempo', t, bpm: this.settings.bpm });
     if (s.autoEvolve && this.playing && this.nextEvolveAt === Infinity) {
       this.nextEvolveAt = this.nextTime + this.settings.evolveEvery;
     }
@@ -556,10 +601,7 @@ export class BeatEngine {
 
   private applySends() {
     const t = this.ctx.currentTime;
-    this.voices.forEach((v, i) => {
-      this.nodes[i].delaySend.gain.setTargetAtTime(v.delaySend, t, 0.05);
-      this.nodes[i].reverbSend.gain.setTargetAtTime(v.reverbSend, t, 0.05);
-    });
+    this.voices.forEach((v, voice) => this.emit({ k: 'sends', t, voice, delay: v.delaySend, reverb: v.reverbSend }));
   }
 
   // ── transport ─────────────────────────────────────────────────────────
@@ -580,15 +622,10 @@ export class BeatEngine {
     if (!this.playing) return;
     this.playing = false;
     clearInterval(this.timer);
+    this.cancelCapture('stopped before the capture finished');
     // apply anything still waiting for a downbeat
     for (const a of this.queue.splice(0)) this.run(a);
-    const t = this.ctx.currentTime;
-    for (const h of this.last) {
-      if (h && h.end > t) {
-        h.choke.gain.setValueAtTime(1, t);
-        h.choke.gain.linearRampToValueAtTime(0, t + 0.05);
-      }
-    }
+    this.emit({ k: 'silence', t: this.ctx.currentTime });
     // kickoff and evolve pick up again from GO
     this.kickoffStart = null;
     this.nextEvolveAt = Infinity;
@@ -598,11 +635,7 @@ export class BeatEngine {
 
   dispose() {
     this.stop();
-    for (const n of this.nodes) {
-      n.panSource.stop();
-      n.input.disconnect();
-      n.panner.disconnect();
-    }
+    this.bank.dispose();
   }
 
   /** Steps whose time has come, for the UI. */
@@ -618,6 +651,7 @@ export class BeatEngine {
       const t = this.nextTime;
       if (this.step === 0) {
         for (const a of this.queue.splice(0)) this.run(a);
+        if (this.cap && !this.cap.tape) this.beginTape(t);
       }
       this.timeline(t);
       this.autoPan(t);
@@ -634,7 +668,29 @@ export class BeatEngine {
       this.nextTime += stepDur;
       this.step = (this.step + 1) % STEPS;
       this.absStep++;
+      if (this.cap?.tape && --this.cap.stepsLeft === 0) this.endTape();
     }
+  }
+
+  private beginTape(t: number) {
+    const c = this.cap!;
+    c.tape = {
+      start: t,
+      end: t,
+      loops: c.loops,
+      bpm: this.settings.bpm,
+      head: this.bank.snapshot(t),
+      cmds: [],
+      recipe: this.toRecipe('Captured beat'),
+    };
+  }
+
+  private endTape() {
+    const c = this.cap!;
+    const tape = c.tape!;
+    tape.end = this.nextTime;
+    this.cap = null;
+    c.resolve(tape);
   }
 
   /** kickoff stages and auto-evolve, on the audio clock */
@@ -671,11 +727,7 @@ export class BeatEngine {
         if (shape === 'wobble') y = x + 0.15 * Math.sin(2 * Math.PI * wob * x) * (1 - x);
         curve[k] = Math.max(-1, Math.min(1, p.value + (target - p.value) * y));
       }
-      try {
-        this.nodes[i].panSource.offset.setValueCurveAtTime(curve, start, dur);
-      } catch {
-        // overlapping automation (rare after a stop/start); skip this ramp
-      }
+      this.emit({ k: 'pan', t: start, voice: i, dur, curve });
       p.value = target;
       p.nextAt = start + dur;
     });
@@ -684,7 +736,6 @@ export class BeatEngine {
   private hit(i: number, v: Voice, t: number, accent = 1) {
     const s = this.slices[v.slice];
     if (!s || !this.buffer) return;
-    const ctx = this.ctx;
     // humanize: brownian walk, one step per hit
     const hz = this.settings.humanize;
     const floor = 1 - (1 - HUMAN_FLOOR) * hz;
@@ -699,34 +750,6 @@ export class BeatEngine {
     const r = Math.max(0.01, env.release * scale);
     const h = Math.max(0, len - a - r);
     const level = v.level * v.human * accent;
-
-    // choke the voice's previous hit
-    const prev = this.last[i];
-    if (prev && prev.end > t) {
-      prev.choke.gain.setValueAtTime(1, t);
-      prev.choke.gain.linearRampToValueAtTime(0, t + 0.03);
-      try {
-        prev.src.stop(t + 0.035);
-      } catch {
-        /* already stopped */
-      }
-    }
-
-    const src = ctx.createBufferSource();
-    src.buffer = this.buffer;
-    src.playbackRate.value = rate;
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(level, t + a);
-    g.gain.setValueAtTime(level, t + a + h);
-    g.gain.linearRampToValueAtTime(0, t + len);
-    const choke = ctx.createGain();
-    src.connect(g).connect(choke).connect(this.nodes[i].input);
-    src.start(t, s.start, len * rate + 0.01);
-    src.onended = () => {
-      src.disconnect();
-      choke.disconnect();
-    };
-    this.last[i] = { src, choke, end: t + len };
+    this.emit({ k: 'hit', t, voice: i, offset: s.start, len, rate, level, a, h });
   }
 }

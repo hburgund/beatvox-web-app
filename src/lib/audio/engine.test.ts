@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BeatEngine, STEPS, PATTERNS } from './engine';
+import { BeatEngine, STEPS, PATTERNS, type Tape } from './engine';
 import { FxChain } from './fx';
 import type { Slice } from './slicer';
 import { STYLES } from '../styles';
@@ -227,6 +227,48 @@ describe('BeatEngine', () => {
     expect(new Set(peaks.map((p) => p.toFixed(3))).size).toBeGreaterThan(10);
     expect(engine.voices[0].level).toBe(0.8);
     expect(engine.toRecipe('t').humanize).toBe(1);
+  });
+
+  it('captures whole loops from the next downbeat', async () => {
+    const { engine, ctx, started } = setup();
+    play(engine, ctx, 1); // part-way into a bar
+    const taped = engine.capture(2);
+    expect(engine.capturing).toBe(true);
+    const c = ctx as unknown as { currentTime: number };
+    let tape: Tape | null = null;
+    void taped.then((t) => (tape = t));
+    for (let i = 0; i < 400 && !tape; i++) {
+      c.currentTime += 0.025;
+      engine.schedule(c.currentTime + 0.12);
+      await Promise.resolve();
+    }
+    expect(tape).not.toBeNull();
+    const t = tape!;
+    const step = 60 / 89 / 4;
+    // starts on a downbeat after the request, lasts exactly 2 bars
+    expect(t.start).toBeGreaterThan(1);
+    expect(t.end - t.start).toBeCloseTo(32 * step, 6);
+    expect(t.loops).toBe(2);
+    // the head recreates the state at the start
+    expect(t.head.map((x) => x.k)).toEqual(expect.arrayContaining(['fx', 'tempo', 'width', 'sends']));
+    // every hit heard in those two bars is on the tape, and nothing else
+    const hits = t.cmds.filter((x) => x.k === 'hit');
+    const heard = started.filter((s) => s.when >= t.start - 1e-9 && s.when < t.end - 1e-9);
+    expect(hits.length).toBe(heard.length);
+    expect(hits.length).toBeGreaterThan(0);
+    for (const h of hits) expect(h.t).toBeLessThan(t.end);
+    expect(t.recipe.kind).toBe('beat');
+    expect(engine.capturing).toBe(false);
+    engine.stop();
+  });
+
+  it('stopping cancels a capture', async () => {
+    const { engine, ctx } = setup();
+    play(engine, ctx, 0.5);
+    const taped = engine.capture(8);
+    engine.stop();
+    await expect(taped).rejects.toThrow(/stopped/);
+    expect(engine.capturing).toBe(false);
   });
 
   it('builds a valid instrument that survives JSON', () => {
