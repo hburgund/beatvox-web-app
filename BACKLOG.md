@@ -16,7 +16,7 @@ Ideas and requests not yet scheduled. See [PROPOSAL.md](PROPOSAL.md) for the pla
 ## Beat templates and drum roles
 
 - [x] **Recipe format.** JSON with 16-character patterns in drum-machine notation (`x` hit, `X` accent, `o` ghost, `.` rest), per-voice role, optional slice, and tempo, swing, space and evolve settings. See `src/lib/recipe.ts`. Styles and saved beats share it.
-- [~] **Style templates.** Started: a Style menu in Listen with v1.93 Groove, House, Boom Bap, Rock, Breakbeat, Dembow, Trap and Drum & Bass (`src/lib/styles.ts`). Still to do: jazz (needs triplet or 8th-note swing) and evolve rules per style. Original idea: starting-point beats for styles such as electronica, rock, jazz, hip-hop and four-on-the-floor house. Each template sets:
+- [~] **Style templates.** Started: a Style menu in Listen with v1.93 Groove, House, Boom Bap, Rock, Breakbeat, Dembow, Trap and Drum & Bass (`src/styles/*.json`). Still to do: jazz (needs triplet or 8th-note swing) and evolve rules per style. Original idea: starting-point beats for styles such as electronica, rock, jazz, hip-hop and four-on-the-floor house. Each template sets:
   - per-voice patterns and a drum role per voice;
   - tempo range, swing and effects preset;
   - how Evolve is allowed to change it, so a template keeps its feel.

@@ -1,4 +1,5 @@
 // Recipes: a beat saved as JSON, so it can be stored, shared and recalled.
+// Built-in styles are recipe files in src/styles/ (see its README).
 //
 // The same format covers two uses:
 // - a **style** (genre preset): patterns and roles, no slices, since it has

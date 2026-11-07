@@ -1,0 +1,17 @@
+{
+  "format": "beatvox-recipe",
+  "version": 1,
+  "name": "Boom Bap",
+  "kind": "style",
+  "bpm": 90,
+  "swing": 0.16,
+  "space": 22,
+  "evolve": {"auto": false},
+  "voices": [
+    {"pattern": "X.....x...X.....", "role": "kick", "velocity": 108},
+    {"pattern": "....X.......X...", "role": "snare", "velocity": 104},
+    {"pattern": "x.o.x.o.x.o.x.ox", "role": "hat", "velocity": 72},
+    {"pattern": "..........x....o", "role": "perc", "velocity": 70},
+    {"pattern": "x.......x.x.....", "role": "tonal", "velocity": 75}
+  ]
+}

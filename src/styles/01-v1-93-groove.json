@@ -1,0 +1,15 @@
+{
+  "format": "beatvox-recipe",
+  "version": 1,
+  "name": "v1.93 Groove",
+  "kind": "style",
+  "bpm": 89,
+  "space": 35,
+  "evolve": {"auto": true, "every": 3},
+  "voices": [
+    {"pattern": "1001011000010111", "role": "kick", "velocity": 100},
+    {"pattern": "1000100010001000", "role": "snare"},
+    {"pattern": "1010101010101010", "role": "hat", "velocity": 70},
+    {"pattern": "..x.......x..x..", "role": "tonal"}
+  ]
+}

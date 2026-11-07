@@ -1,0 +1,16 @@
+{
+  "format": "beatvox-recipe",
+  "version": 1,
+  "name": "Trap",
+  "kind": "style",
+  "bpm": 140,
+  "space": 30,
+  "evolve": {"auto": false},
+  "voices": [
+    {"pattern": "X.........x..x..", "role": "kick", "velocity": 108},
+    {"pattern": "........X.......", "role": "snare", "velocity": 104},
+    {"pattern": "x.x.x.x.x.xxx.x.", "role": "hat", "velocity": 68},
+    {"pattern": ".............ooo", "role": "hat", "velocity": 60},
+    {"pattern": "X.....x.........", "role": "tonal", "velocity": 85}
+  ]
+}

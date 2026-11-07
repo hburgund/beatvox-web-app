@@ -1,0 +1,15 @@
+{
+  "format": "beatvox-recipe",
+  "version": 1,
+  "name": "Drum & Bass",
+  "kind": "style",
+  "bpm": 172,
+  "space": 28,
+  "evolve": {"auto": false},
+  "voices": [
+    {"pattern": "X.........x.....", "role": "kick", "velocity": 108},
+    {"pattern": "....X.......X...", "role": "snare", "velocity": 104},
+    {"pattern": "x.x.x.x.x.x.x.x.", "role": "hat", "velocity": 62},
+    {"pattern": "..x.......o...x.", "role": "perc", "velocity": 70}
+  ]
+}

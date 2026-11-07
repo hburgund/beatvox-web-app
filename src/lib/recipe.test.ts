@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { formatPattern, parsePattern, parseRecipe, validateRecipe } from './recipe';
-import { STYLES } from './styles';
+import { STYLES, STYLE_ERRORS } from './styles';
 
 describe('recipe patterns', () => {
   it('reads drum-machine notation', () => {
@@ -28,6 +28,13 @@ describe('recipe patterns', () => {
 });
 
 describe('recipes', () => {
+  it('loads every file in src/styles', () => {
+    expect(STYLE_ERRORS).toEqual([]);
+    expect(STYLES.map((s) => s.name)).toEqual([
+      'v1.93 Groove', 'House', 'Boom Bap', 'Rock', 'Breakbeat', 'Dembow', 'Trap', 'Drum & Bass',
+    ]);
+  });
+
   it('every built-in style is valid and survives JSON', () => {
     for (const s of STYLES) {
       expect(() => validateRecipe(s)).not.toThrow();
