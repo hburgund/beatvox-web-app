@@ -20,9 +20,9 @@
       case 'rendering':
         return 'Mixing your MP3…';
       case 'ready':
-        return 'Done! Listen, then save it.';
+        return 'Done! Have a listen.';
       default:
-        return `Records ${SHARE_LOOPS} loops (about ${seconds} s) of your beat, with your own voice first.`;
+        return `Records ${SHARE_LOOPS} bars (about ${seconds} s) of your beat as a loop that repeats forever.`;
     }
   });
 </script>
@@ -70,10 +70,19 @@
 
     {#if s.share === 'ready' && s.shareResult}
       {@const r = s.shareResult}
-      <audio controls src={r.url} preload="auto"></audio>
-      <p class="info">
-        {clock(r.duration)} · {kb(r.mp3.size)} · your voice, then the beat from {clock(r.remixAt)}
-      </p>
+      <div class="part">
+        <h3>Your BeatVox loop</h3>
+        <div class="line">
+          <button class="pill" class:on={s.loopPlaying} onclick={() => s.toggleLoop()}>{s.loopPlaying ? 'STOP' : 'PLAY LOOP'}</button>
+          <span class="info">{r.loop.loops} bars, {r.loop.duration.toFixed(1)} s, repeating forever. This is what plays on the BeatVox map.</span>
+        </div>
+      </div>
+
+      <div class="part">
+        <h3>Your voice, then the beat</h3>
+        <audio controls src={r.full.url} preload="auto"></audio>
+        <p class="info">{clock(r.full.duration)} · {kb(r.full.mp3.size)} · the beat starts at {clock(r.remixAt)}</p>
+      </div>
 
       <label class="title">
         <span>Title</span>
@@ -86,7 +95,9 @@
           <button class="pill" onclick={() => s.shareMp3()}>SHARE…</button>
         {/if}
       </div>
-      <p class="file">{s.shareFileName()}</p>
+      <p class="file">
+        {s.shareFileName()} · <button class="link" onclick={() => s.saveMp3('loop')}>save the loop too</button>
+      </p>
     {/if}
 
     {#if s.shareStatus}<p class="status">{s.shareStatus}</p>{/if}
@@ -171,6 +182,17 @@
   }
   audio {
     width: 100%;
+  }
+  .part {
+    display: grid;
+    gap: 8px;
+  }
+  h3 {
+    margin: 0;
+    font-size: 13px;
+  }
+  .part .info {
+    margin: 0;
   }
   .info,
   .file {

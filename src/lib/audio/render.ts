@@ -1,6 +1,9 @@
-// Render the shared piece offline:
+// Render a capture offline, once, and cut two files from it:
 //
-//   [ the original voice ] ½ bar [ the captured loops ] effects tail
+//   render:  [ the original voice ] ½ bar [ the captured loops ] effects tail
+//   full:    all of it, silence trimmed: to save and send to friends
+//   loop:    just the loops, with the tail folded back onto the start, so it
+//            repeats seamlessly (what Roundware plays)
 //
 // The loops are played back from a Tape (the exact commands the engine sent
 // while it was being heard) through a fresh voice bank and effects chain in
@@ -20,8 +23,11 @@ export interface RenderOptions {
 }
 
 export interface Rendered {
-  audio: AudioBuffer;
-  /** where the remix starts, in seconds */
+  /** voice, then the beat */
+  full: AudioBuffer;
+  /** the beat alone as a seamless loop of whole bars */
+  loop: AudioBuffer;
+  /** where the beat starts in `full`, in seconds */
   remixAt: number;
 }
 
@@ -44,7 +50,8 @@ export function shift(c: Cmd, tape: Tape, remixAt: number): Cmd {
 export async function renderShare(tape: Tape, voice: AudioBuffer, opts: RenderOptions = {}): Promise<Rendered> {
   const sr = voice.sampleRate;
   const span = opts.voiceSpan ?? { start: 0, end: voice.duration };
-  const tail = opts.tail ?? 3.5;
+  // long enough for big reverbs and dub echoes; trimmed or folded after
+  const tail = opts.tail ?? 6;
   const stepDur = 60 / tape.bpm / 4;
   const voiceDur = span.end - span.start;
   const remixAt = LEAD + voiceDur + 8 * stepDur;
@@ -75,8 +82,37 @@ export async function renderShare(tape: Tape, voice: AudioBuffer, opts: RenderOp
   for (const c of tape.cmds) bank.apply(shift(c, tape, remixAt));
 
   const rendered = await ctx.startRendering();
-  const audio = finish(rendered, opts.peak ?? 0.89, remixAt + (tape.end - tape.start));
-  return { audio, remixAt };
+  const peak = opts.peak ?? 0.89;
+  const loopDur = tape.end - tape.start;
+  return {
+    full: finish(rendered, peak, remixAt + loopDur),
+    loop: foldLoop(rendered, Math.round(remixAt * sr), Math.round(loopDur * sr), peak),
+    remixAt,
+  };
+}
+
+/**
+ * `length` samples from `from` on, with everything after them (the effects
+ * tail, hits still ringing) wrapped around and added to the start, so the
+ * end flows into the beginning when it repeats. Peak set to `peak`.
+ */
+export function foldLoop(audio: AudioBuffer, from: number, length: number, peak: number): AudioBuffer {
+  const out = new AudioBuffer({ length, numberOfChannels: audio.numberOfChannels, sampleRate: audio.sampleRate });
+  let max = 0;
+  for (let c = 0; c < audio.numberOfChannels; c++) {
+    const d = audio.getChannelData(c);
+    const o = out.getChannelData(c);
+    for (let i = from; i < d.length; i++) o[(i - from) % length] += d[i];
+    for (let i = 0; i < length; i++) max = Math.max(max, Math.abs(o[i]));
+  }
+  if (max > 1e-4) {
+    const k = peak / max;
+    for (let c = 0; c < out.numberOfChannels; c++) {
+      const o = out.getChannelData(c);
+      for (let i = 0; i < length; i++) o[i] *= k;
+    }
+  }
+  return out;
 }
 
 /**

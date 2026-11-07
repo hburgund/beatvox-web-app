@@ -21,12 +21,19 @@ export const SHARE_LOOPS = 8;
 /** idle → waiting (for the downbeat) → capturing → rendering → ready */
 export type SharePhase = 'idle' | 'waiting' | 'capturing' | 'rendering' | 'ready';
 
-export interface ShareResult {
+export interface ShareFile {
   mp3: Blob;
   url: string;
   /** seconds */
   duration: number;
-  /** where the remix starts, seconds */
+}
+
+export interface ShareResult {
+  /** your voice, then the beat: to save and send */
+  full: ShareFile;
+  /** the beat as a seamless loop: what goes to Roundware */
+  loop: ShareFile & { audio: AudioBuffer; loops: number };
+  /** where the beat starts in `full`, seconds */
   remixAt: number;
   /** the beat as it was when capture started, and the voice it played */
   recipe: Recipe;
@@ -74,6 +81,9 @@ export class Session {
   shareResult = $state.raw<ShareResult | null>(null);
   shareTitle = $state('');
   shareStatus = $state('');
+  /** the loop preview is playing */
+  loopPlaying = $state(false);
+  private loopSrc: AudioBufferSourceNode | null = null;
   /** bumps to drop a capture or render that's out of date */
   private shareRun = 0;
 
@@ -239,6 +249,7 @@ export class Session {
     if (!this.slices.length) return;
     this.audio();
     this.stopReview();
+    this.stopLoop();
     this.engine!.start();
     keepAwake(true);
     this.tick();
@@ -313,15 +324,14 @@ export class Session {
     this.share = 'rendering';
     try {
       const t0 = performance.now();
-      const { audio, remixAt } = await renderShare(tape, voice, { voiceSpan: voiceSpan(instrument.slices, voice.duration) });
+      const { full, loop, remixAt } = await renderShare(tape, voice, { voiceSpan: voiceSpan(instrument.slices, voice.duration) });
       const t1 = performance.now();
-      const mp3 = await encodeMp3(audio);
+      const [fullMp3, loopMp3] = await Promise.all([encodeMp3(full), encodeMp3(loop)]);
       if (import.meta.env.DEV) console.info(`share: render ${Math.round(t1 - t0)} ms, mp3 ${Math.round(performance.now() - t1)} ms`);
       if (run !== this.shareRun) return;
       this.shareResult = {
-        mp3,
-        url: URL.createObjectURL(mp3),
-        duration: audio.duration,
+        full: { mp3: fullMp3, url: URL.createObjectURL(fullMp3), duration: full.duration },
+        loop: { mp3: loopMp3, url: URL.createObjectURL(loopMp3), duration: loop.duration, audio: loop, loops: tape.loops },
         remixAt,
         recipe: tape.recipe,
         instrument,
@@ -345,14 +355,45 @@ export class Session {
   discardShare() {
     this.shareRun++;
     this.engine?.cancelCapture();
-    if (this.shareResult) URL.revokeObjectURL(this.shareResult.url);
+    this.stopLoop();
+    if (this.shareResult) {
+      URL.revokeObjectURL(this.shareResult.full.url);
+      URL.revokeObjectURL(this.shareResult.loop.url);
+    }
     this.shareResult = null;
     this.share = 'idle';
     this.shareProgress = 0;
     this.shareStatus = '';
   }
 
-  shareFileName() {
+  /** Play the loop over and over (Web Audio loops it with no gap). */
+  toggleLoop() {
+    if (this.loopPlaying) return this.stopLoop();
+    const r = this.shareResult;
+    if (!r) return;
+    const ctx = this.audio();
+    this.stopBeat();
+    this.stopReview();
+    const src = ctx.createBufferSource();
+    src.buffer = r.loop.audio;
+    src.loop = true;
+    src.connect(ctx.destination);
+    src.start();
+    this.loopSrc = src;
+    this.loopPlaying = true;
+  }
+
+  stopLoop() {
+    try {
+      this.loopSrc?.stop();
+    } catch {
+      /* not started */
+    }
+    this.loopSrc = null;
+    this.loopPlaying = false;
+  }
+
+  shareFileName(kind: 'full' | 'loop' = 'full') {
     const r = this.shareResult;
     const slug = this.shareTitle
       .toLowerCase()
@@ -363,11 +404,11 @@ export class Session {
     const d = r?.createdAt ?? new Date();
     const p = (n: number) => String(n).padStart(2, '0');
     const stamp = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
-    return `beatvox-${slug || 'beat'}-${stamp}.mp3`;
+    return `beatvox-${slug || 'beat'}-${stamp}${kind === 'loop' ? '-loop' : ''}.mp3`;
   }
 
   private shareFile() {
-    return new File([this.shareResult!.mp3], this.shareFileName(), { type: 'audio/mpeg' });
+    return new File([this.shareResult!.full.mp3], this.shareFileName(), { type: 'audio/mpeg' });
   }
 
   /** Can this device hand the file to its share sheet (phones, some laptops)? */
@@ -381,11 +422,11 @@ export class Session {
   }
 
   /** Save to the device as a download. */
-  saveMp3() {
+  saveMp3(kind: 'full' | 'loop' = 'full') {
     if (!this.shareResult) return;
     const a = document.createElement('a');
-    a.href = this.shareResult.url;
-    a.download = this.shareFileName();
+    a.href = this.shareResult[kind].url;
+    a.download = this.shareFileName(kind);
     document.body.append(a);
     a.click();
     a.remove();

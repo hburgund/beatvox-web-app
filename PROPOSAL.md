@@ -187,9 +187,10 @@ The slicer is the heart of BeatVox. It decides whether the beat sounds percussiv
 **Offline render.**
 - The logged loops are rendered with the same engine and effects, so there are no glitches from a busy phone.
 - **The mix is a seamless loop** (decided Nov 2026, replacing "voice, then remix" in one file). It's whole bars, and the effects tail after the last bar is folded back onto the start, so it can loop forever on Roundware. The raw voice is a separate asset. It's encoded to MP3 in a background worker.
-- *Built so far:* a single file of voice → ½ bar → remix → tail. It gets changed to the loop when the Roundware upload is built.
+- One offline render makes both files: the **loop** (for Roundware) and **voice → ½ bar → beat → tail** (to save on the device and send to friends; the Share tab offers both).
+- **Gapless MP3:** the encoder writes no gapless header, so `mp3Core.ts` adds the standard LAME "Info" frame with the encoder delay and padding. Chrome then decodes the loop to exactly its sample length with no gap; FFmpeg on the server reads the same header.
 - **How it's built:** the engine sends every hit, pan move, send and effects change to the audio graph as a small command (`voiceBank.ts`). Capture tapes those commands, plus the state at the first downbeat, so the render replays exactly what was heard, including any New Beat, Evolve or knob moves made during the capture. The voice is trimmed to its slices, and silence after the effects die away is cut.
-- **Format:** 192 kbps stereo MP3, peak at -1 dBFS. About 0.7–0.9 MB for 8 loops. Rendering and encoding take about 2 s on a laptop.
+- **Format:** 192 kbps stereo MP3, peak at -1 dBFS. The 8-bar loop is about 0.5 MB and the voice-plus-beat file 0.7–0.9 MB. Rendering and encoding both take about 2.5 s on a laptop.
 
 **Submit.**
 - A short form:
