@@ -178,6 +178,8 @@ export class BeatEngine {
   private pan: PanState[] = [];
   private cap: Capture | null = null;
   private queue: Action[] = [];
+  /** rows given a slice by hand: evolve leaves their slice alone and doesn't rest them */
+  private pinned = new Set<number>();
   private events: StepEvent[] = [];
   private timer: ReturnType<typeof setInterval> | undefined;
   private nextTime = 0;
@@ -391,6 +393,7 @@ export class BeatEngine {
         if (other) other.slice = v.slice;
         v.slice = a.slice;
         v.on = true;
+        this.pinned.add(a.voice);
         break;
       }
       case 'settings':
@@ -459,6 +462,7 @@ export class BeatEngine {
   }
 
   private doNewBeat(kickoff: boolean) {
+    this.pinned.clear();
     this.voices = Array.from({ length: VOICES }, () => this.blankVoice());
     this.dealSlices();
     for (const v of this.voices) {
@@ -489,6 +493,9 @@ export class BeatEngine {
     const on = this.voices.map((v, i) => (v.on ? i : -1)).filter((i) => i >= 0);
     const anyVoice = () => this.rng.int(VOICES);
     const onVoice = () => (on.length ? this.rng.pick(on) : anyVoice());
+    // a row you gave a slice to by hand keeps it
+    const free = (i: number) => !this.pinned.has(i);
+    const freeOn = on.filter(free);
     const kind = this.rng.weighted([3, 2, 1, 2, 1.5, 0.5]);
     switch (kind) {
       case 0: {
@@ -506,7 +513,8 @@ export class BeatEngine {
         this.setPattern(this.voices[onVoice()], this.presetPattern());
         break;
       case 3: {
-        const i = onVoice();
+        if (!freeOn.length) break;
+        const i = this.rng.pick(freeOn);
         const used = new Set(this.voices.filter((_, j) => j !== i).map((v) => v.slice));
         this.voices[i].slice = this.sliceFor(this.voices[i].role, used);
         break;
@@ -519,8 +527,8 @@ export class BeatEngine {
           const v = this.voices[this.rng.pick(off)];
           v.on = true;
           if (!v.pattern.some(Boolean)) this.setPattern(v, this.randomPattern());
-        } else if (!add && on.length) {
-          this.voices[this.rng.pick(on)].on = false;
+        } else if (!add && freeOn.length) {
+          this.voices[this.rng.pick(freeOn)].on = false;
         }
         break;
       }
@@ -528,6 +536,7 @@ export class BeatEngine {
         // three voices get new slices
         for (let k = 0; k < 3; k++) {
           const i = anyVoice();
+          if (!free(i)) continue;
           const used = new Set(this.voices.filter((_, j) => j !== i).map((v) => v.slice));
           this.voices[i].slice = this.sliceFor(this.voices[i].role, used);
         }
@@ -549,6 +558,7 @@ export class BeatEngine {
   }
 
   private doRecipe(r: Recipe) {
+    this.pinned.clear();
     // a recipe replaces the kickoff
     this.kickoffStart = null;
     this.kickoffStage = 3;

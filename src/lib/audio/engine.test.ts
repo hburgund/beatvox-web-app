@@ -167,6 +167,20 @@ describe('BeatEngine', () => {
     expect(new Set(engine.voices.map((v) => v.slice)).size).toBe(8);
   });
 
+  it('a row given a slice by hand keeps it, and keeps playing, through evolves', () => {
+    const { engine } = setup(7);
+    const want = engine.voices[6].slice;
+    engine.setSlice(2, want);
+    for (let i = 0; i < 300; i++) {
+      engine.evolve();
+      expect(engine.voices[2].slice).toBe(want);
+      expect(engine.voices[2].on).toBe(true);
+    }
+    engine.newBeat(); // a new beat lets it go again
+    for (let i = 0; i < 300 && engine.voices[2].slice === want; i++) engine.evolve();
+    expect(engine.voices[2].slice).not.toBe(want);
+  });
+
   it('keeps slices unique through many evolves', () => {
     const { engine } = setup(7);
     for (let i = 0; i < 300; i++) engine.evolve();
