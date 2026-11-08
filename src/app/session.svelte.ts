@@ -11,6 +11,9 @@ import { startRecording, type Recording } from '../lib/audio/recorder';
 import type { Slice } from '../lib/audio/slicer';
 import { cutInstrument, type Instrument } from '../lib/instrument';
 import { keepAwake } from '../lib/wakeLock';
+import { encodeWav } from '../lib/audio/wav';
+import { newId } from '../lib/instrument';
+import { Roundware, RW_JSON, RW_TAGS, type RwPlace, type RwProject, type SendStep, type SentMix, type SentVoice } from '../lib/roundware';
 import { STYLES } from '../lib/styles';
 
 export type Tab = 'record' | 'listen' | 'share';
@@ -38,14 +41,23 @@ export interface ShareResult {
   /** the beat as it was when capture started, and the voice it played */
   recipe: Recipe;
   instrument: Instrument;
+  /** the recording as made, before clean-up: what goes to Roundware */
+  raw: AudioBuffer;
+  recordedAt: Date;
   createdAt: Date;
 }
+
+/** idle → sending → sent (or back to idle with an error, to retry) */
+export type SendPhase = 'idle' | 'sending' | 'sent';
 
 export class Session {
   tab = $state<Tab>('record');
 
   // recording
   voice = $state.raw<AudioBuffer | null>(null);
+  /** the recording before clean-up */
+  private raw: AudioBuffer | null = null;
+  private recordedAt = new Date();
   mono = $state.raw<Float32Array | null>(null);
   slices = $state.raw<Slice[]>([]);
   /** the current voice, cut into slices (what a recipe plays) */
@@ -84,6 +96,20 @@ export class Session {
   /** the loop preview is playing */
   loopPlaying = $state(false);
   private loopSrc: AudioBufferSourceNode | null = null;
+
+  // send to Roundware
+  rw = new Roundware(newId);
+  project = $state.raw<RwProject | null>(null);
+  place = $state<RwPlace | null>(null);
+  agreed = $state(false);
+  revoxOk = $state(false);
+  send = $state<SendPhase>('idle');
+  sendStep = $state<SendStep | null>(null);
+  sendError = $state('');
+  /** the mix as it is on Roundware, once sent */
+  sentMix = $state.raw<SentMix | null>(null);
+  /** the current voice as it is on Roundware, once sent */
+  private sentVoice: SentVoice | null = null;
   /** bumps to drop a capture or render that's out of date */
   private shareRun = 0;
 
@@ -172,6 +198,9 @@ export class Session {
     const voice = prepareVoice(ctx, raw);
     const mono = voice.getChannelData(0);
     const instrument = cutInstrument(mono, voice.sampleRate);
+    this.raw = raw;
+    this.recordedAt = new Date();
+    this.sentVoice = null;
     this.voice = voice;
     this.mono = mono;
     this.instrument = instrument;
@@ -305,6 +334,8 @@ export class Session {
     const run = ++this.shareRun;
     const voice = this.voice;
     const instrument = this.instrument;
+    const raw = this.raw ?? voice;
+    const recordedAt = this.recordedAt;
     this.go();
     const taped = this.engine!.capture(SHARE_LOOPS);
     this.share = 'waiting';
@@ -335,6 +366,8 @@ export class Session {
         remixAt,
         recipe: tape.recipe,
         instrument,
+        raw,
+        recordedAt,
         createdAt: new Date(),
       };
       this.share = 'ready';
@@ -361,6 +394,10 @@ export class Session {
       URL.revokeObjectURL(this.shareResult.loop.url);
     }
     this.shareResult = null;
+    this.sentMix = null;
+    this.send = 'idle';
+    this.sendStep = null;
+    this.sendError = '';
     this.share = 'idle';
     this.shareProgress = 0;
     this.shareStatus = '';
@@ -440,6 +477,107 @@ export class Session {
     } catch (e) {
       // closing the share sheet isn't an error
       if ((e as Error).name !== 'AbortError') this.shareStatus = `Couldn't share (${(e as Error).message}). Try Save instead.`;
+    }
+  }
+
+  /** The project's settings (terms, map centre), loaded once. */
+  async loadProject() {
+    if (this.project) return;
+    try {
+      this.project = await this.rw.getProject();
+    } catch (e) {
+      this.sendError = (e as Error).message;
+    }
+  }
+
+  /**
+   * Send the BeatVox to Roundware: the raw voice, the loop (child of the
+   * voice), the instrument (child of the voice), the recipe (child of the
+   * mix). Whatever already went up (an earlier try, or an earlier mix of the
+   * same voice) isn't sent again.
+   */
+  async sendToMap() {
+    const r = this.shareResult;
+    const place = this.place;
+    if (!r || !place || !this.agreed || !this.project || this.send !== 'idle') return;
+    const terms = this.project.legal_agreement;
+    const title = this.shareTitle.trim();
+    const base = this.shareFileName('loop').replace(/-loop\.mp3$/, '');
+    this.send = 'sending';
+    this.sendError = '';
+    try {
+      let v = this.sentVoice?.instrumentId === r.instrument.id ? this.sentVoice : null;
+      if (!v) {
+        this.sendStep = 'voice';
+        const a = await this.rw.upload({
+          mediaType: 'audio',
+          file: encodeWav(r.raw),
+          fileName: `${base}-voice.wav`,
+          place,
+          tags: [RW_TAGS.source],
+          description: title,
+          agreedTerms: terms,
+          recordedAt: r.recordedAt,
+        });
+        v = this.sentVoice = { instrumentId: r.instrument.id, voiceAsset: a.id };
+      }
+      let m = this.sentMix;
+      if (!m) {
+        this.sendStep = 'mix';
+        const a = await this.rw.upload({
+          mediaType: 'audio',
+          file: r.loop.mp3,
+          fileName: `${base}.mp3`,
+          place,
+          tags: [RW_TAGS.mix],
+          parent: v.voiceAsset,
+          description: title,
+          agreedTerms: terms,
+          recordedAt: r.createdAt,
+        });
+        m = this.sentMix = { mixAsset: a.id };
+      }
+      if (!v.instrumentAsset) {
+        this.sendStep = 'instrument';
+        const inst: Instrument = {
+          ...r.instrument,
+          source: { ...r.instrument.source, assetId: v.voiceAsset },
+          revoxAllowed: this.revoxOk,
+        };
+        const a = await this.rw.upload({
+          mediaType: RW_JSON.mediaType,
+          file: new Blob([JSON.stringify(inst)], { type: RW_JSON.type }),
+          fileName: `${base}-instrument.${RW_JSON.ext}`,
+          place,
+          tags: [RW_TAGS.instrument],
+          parent: v.voiceAsset,
+          description: title,
+        });
+        v.instrumentAsset = a.id;
+      }
+      if (!m.recipeAsset) {
+        this.sendStep = 'recipe';
+        const recipe: Recipe = {
+          ...r.recipe,
+          name: title || r.recipe.name,
+          instrument: { id: r.instrument.id, assetId: v.voiceAsset },
+        };
+        const a = await this.rw.upload({
+          mediaType: RW_JSON.mediaType,
+          file: new Blob([JSON.stringify(recipe)], { type: RW_JSON.type }),
+          fileName: `${base}-recipe.${RW_JSON.ext}`,
+          place,
+          tags: [RW_TAGS.recipe],
+          parent: m.mixAsset,
+          description: title,
+        });
+        this.sentMix = m = { ...m, recipeAsset: a.id };
+      }
+      this.send = 'sent';
+      this.sendStep = null;
+    } catch (e) {
+      this.send = 'idle';
+      this.sendError = (e as Error).message;
     }
   }
 

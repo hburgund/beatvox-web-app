@@ -15,7 +15,7 @@ Ideas and requests not yet scheduled. See [PROPOSAL.md](PROPOSAL.md) for the pla
 - [ ] **reVox constellation on the map.** Every mix (the first BeatVox and all reVoxes) is a child of the same raw voice asset, so the Roundware map can draw each voice as a centre with its mixes connected to it, a constellation springing from one original recording. Needs the map client to draw parent → child lines (and possibly mixes placed where they were made, far from the voice).
 - [ ] **Each reVox is connected to its source.** Store the "reVoxed from" link (the source contribution's id), so the chain or family tree can be shown and walked in both directions.
 - [ ] **Loudness-normalize each voice (LUFS).** Today a recording is peak-normalized, so one loud plosive makes the whole voice quiet. Normalize to a loudness target with a peak ceiling, so every participant's instrument, reVoxes and MP3s in the Roundware stream sit at the same loudness. Fits Phase 2.
-- [~] **Store the original and the BeatVoxes separately.** Planned mapping in PROPOSAL §6: the voice is an audio asset, with the instrument and each beat as text assets whose parent is the voice. Still open: whether Roundware takes .json files, and whether the shared MP3 still contains original + remix or the share page plays the two parts from separate assets.
+- [x] **Store the original and the BeatVoxes separately.** Built: raw voice → mix (and its recipe) and instrument as separate Roundware assets (PROPOSAL §6).
 
 ## Beat templates and drum roles
 

@@ -16,8 +16,8 @@
 // Slice times are stored, not just the slicer settings, so that improving
 // the slicer later never changes what an old saved beat sounds like.
 //
-// In Roundware v3 the recording is an audio asset, and the instrument JSON
-// is a text asset whose parent_asset_id is that audio asset.
+// In Roundware v3 the raw recording is an audio asset, and the instrument
+// JSON is an asset whose parent_asset_id is that recording (roundware.ts).
 //
 // Example:
 // {
@@ -62,6 +62,8 @@ export interface Instrument {
   /** how the slices were found (for reference; the slice times are what count) */
   slicer: { method: SliceMethod; params: SliceParams };
   slices: InstrumentSlice[];
+  /** the owner lets others reVox this voice (set when it's sent to Roundware) */
+  revoxAllowed?: boolean;
   /** optional: Roundware participant who recorded it */
   participant?: number | string;
   createdAt?: string;

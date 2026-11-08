@@ -1,6 +1,15 @@
 <script lang="ts">
   import { SHARE_LOOPS, type Session } from './session.svelte';
+  import { SEND_STEPS } from '../lib/roundware';
+  import PlacePicker from './PlacePicker.svelte';
   let { s }: { s: Session } = $props();
+
+  const STEP_TEXT = { voice: 'your voice', mix: 'the loop', instrument: 'the slices', recipe: 'the beat' };
+  const canSend = $derived(!!s.place && s.agreed && !!s.project && s.send === 'idle');
+
+  $effect(() => {
+    if (s.share === 'ready') void s.loadProject();
+  });
 
   const ready = $derived(s.slices.length > 0);
   const busy = $derived(s.share === 'waiting' || s.share === 'capturing');
@@ -103,7 +112,41 @@
     {#if s.shareStatus}<p class="status">{s.shareStatus}</p>{/if}
   </div>
 
-  <p class="later">Sending it to BeatVox on Roundware, with where you made it and the option to let others reVox your voice, comes next.</p>
+  {#if s.share === 'ready' && s.shareResult}
+    <div class="box send">
+      <h3>Put it on the BeatVox map</h3>
+      {#if s.send === 'sent' && s.sentMix}
+        <p class="done">On the map! Your loop is BeatVox #{s.sentMix.mixAsset}.</p>
+        <p class="info">Make another beat with the same voice and it joins this one, sharing the same voice.</p>
+      {:else}
+        <p class="info">Pick where it goes: where you are, or anywhere on the map.</p>
+        <PlacePicker bind:place={s.place} center={s.project ?? { latitude: 38.33, longitude: -94.93 }} />
+        <label class="check">
+          <input type="checkbox" bind:checked={s.revoxOk} disabled={s.send !== 'idle'} />
+          <span>Let others reVox my voice (make their own beats with it)</span>
+        </label>
+        <label class="check">
+          <input type="checkbox" bind:checked={s.agreed} disabled={s.send !== 'idle'} />
+          <span>{s.project?.legal_agreement ?? 'Loading the terms…'}</span>
+        </label>
+        <div class="line">
+          <button class="pill" disabled={!canSend} onclick={() => s.sendToMap()}>
+            {s.send === 'sending' ? 'SENDING…' : 'SEND'}
+          </button>
+          <span class="hint" aria-live="polite">
+            {#if s.send === 'sending' && s.sendStep}
+              Sending {STEP_TEXT[s.sendStep]} ({SEND_STEPS.indexOf(s.sendStep) + 1} of {SEND_STEPS.length})…
+            {:else if !s.place}
+              Choose a place first.
+            {:else if !s.agreed}
+              Tick the terms to send.
+            {/if}
+          </span>
+        </div>
+      {/if}
+      {#if s.sendError}<p class="status">{s.sendError}{s.send === 'idle' && s.shareResult ? ' Press SEND to try again.' : ''}</p>{/if}
+    </div>
+  {/if}
 </section>
 
 <style>
@@ -231,11 +274,21 @@
     color: #a00;
     font-size: 12px;
   }
-  .later {
-    max-width: 480px;
-    margin: 14px auto 0;
+  .send {
+    margin-top: 14px;
+  }
+  .check {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
     font-size: 12px;
-    color: #345;
-    text-align: center;
+  }
+  .check input {
+    margin: 1px 0 0;
+    flex: none;
+  }
+  .done {
+    margin: 0;
+    font: bold 13px Arial, sans-serif;
   }
 </style>

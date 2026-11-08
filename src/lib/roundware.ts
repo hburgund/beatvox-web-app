@@ -1,0 +1,205 @@
+// Roundware v3: sending a BeatVox to the BeatVox project.
+//
+// A new BeatVox is four assets, uploaded in this order:
+//   1. the raw voice (audio, WAV)          tag beatvox-source
+//   2. the mix, a seamless loop (MP3)      tag beatvox-mix,        parent = 1
+//   3. the instrument (JSON)               tag beatvox-instrument, parent = 1
+//   4. the recipe (JSON)                   tag beatvox-recipe,     parent = 2
+// Another mix of a voice already sent (or a reVox of someone else's) is
+// steps 2 and 4 only, with the mix's parent being that same raw voice, so
+// every mix of a voice hangs off the original.
+//
+// Each device is a Roundware "participant": a device id kept in
+// localStorage, exchanged once per page load for a token that goes with
+// every request as X-Participant-Token.
+
+export const RW_API = 'https://api.roundware.app/api/3';
+export const RW_PROJECT = 103;
+
+export const RW_TAGS = {
+  source: 1124,
+  revoxMix: 1125,
+  instrument: 1126,
+  recipe: 1127,
+  mix: 1128,
+} as const;
+
+/** JSON files (instrument, recipe) go as the project's "data" media type. */
+export const RW_JSON = { mediaType: 'data', ext: 'json', type: 'application/json' } as const;
+
+const DEVICE_KEY = 'beatvox.rw.device';
+
+export interface RwProject {
+  id: number;
+  name: string;
+  latitude: number;
+  longitude: number;
+  legal_agreement: string;
+  sharing_url: string;
+  auto_submit: boolean;
+}
+
+export interface RwAsset {
+  id: number;
+  file: string | null;
+  parent_asset_id?: number | null;
+  submitted: boolean;
+}
+
+export interface RwPlace {
+  latitude: number;
+  longitude: number;
+}
+
+export class RoundwareError extends Error {
+  constructor(
+    message: string,
+    readonly status = 0,
+  ) {
+    super(message);
+  }
+}
+
+/** A device id that stays the same between visits (when storage allows). */
+function deviceId(make: () => string): string {
+  try {
+    const known = localStorage.getItem(DEVICE_KEY);
+    if (known) return known;
+    const id = make();
+    localStorage.setItem(DEVICE_KEY, id);
+    return id;
+  } catch {
+    return make();
+  }
+}
+
+export class Roundware {
+  private token: Promise<{ token: string; participant: number }> | null = null;
+  private session: Promise<number> | null = null;
+  private project: Promise<RwProject> | null = null;
+
+  constructor(
+    private newId: () => string,
+    private api = RW_API,
+    private projectId = RW_PROJECT,
+  ) {}
+
+  getProject(): Promise<RwProject> {
+    this.project ??= this.call<RwProject>('GET', `/projects/${this.projectId}/`).catch((e) => {
+      this.project = null;
+      throw e;
+    });
+    return this.project;
+  }
+
+  /** Who this device is, once per page load. */
+  private participant() {
+    this.token ??= this.call<{ id: number; participant_token: string }>('POST', '/participants/', {
+      project_id: this.projectId,
+      device_id: deviceId(this.newId),
+      client_type: 'web',
+    })
+      .then((p) => ({ token: p.participant_token, participant: p.id }))
+      .catch((e) => {
+        this.token = null;
+        throw e;
+      });
+    return this.token;
+  }
+
+  /** This visit. (No timezone: the server wants a 4-character offset and fails on a name.) */
+  private visit() {
+    this.session ??= this.participant()
+      .then(({ participant }) =>
+        this.call<{ id: number }>('POST', '/sessions/', {
+          project_id: this.projectId,
+          participant_id: participant,
+          client_type: 'web',
+          client_system: navigator.userAgent.slice(0, 120),
+        }),
+      )
+      .then((s) => s.id)
+      .catch((e) => {
+        this.session = null;
+        throw e;
+      });
+    return this.session;
+  }
+
+  async upload(fields: {
+    mediaType: string;
+    file: Blob;
+    fileName: string;
+    place: RwPlace;
+    tags: number[];
+    parent?: number;
+    description?: string;
+    agreedTerms?: string;
+    recordedAt?: Date;
+  }): Promise<RwAsset> {
+    const session = await this.visit();
+    const f = new FormData();
+    f.set('project_id', String(this.projectId));
+    f.set('session_id', String(session));
+    f.set('media_type', fields.mediaType);
+    f.set('latitude', String(fields.place.latitude));
+    f.set('longitude', String(fields.place.longitude));
+    f.set('tag_ids', fields.tags.join(','));
+    if (fields.parent !== undefined) f.set('parent_asset_id', String(fields.parent));
+    if (fields.description) f.set('description', fields.description);
+    if (fields.agreedTerms) f.set('agreed_terms', fields.agreedTerms);
+    if (fields.recordedAt) f.set('recorded_at', fields.recordedAt.toISOString());
+    f.set('file', fields.file, fields.fileName);
+    const asset = await this.call<RwAsset>('POST', '/assets/', f);
+    if (!asset.file) throw new RoundwareError(`Roundware saved ${fields.fileName} without its file (asset ${asset.id}).`);
+    return asset;
+  }
+
+  private async call<T>(method: string, path: string, body?: object | FormData, retried = false): Promise<T> {
+    const headers: Record<string, string> = {};
+    if (path !== '/participants/' && this.token) headers['X-Participant-Token'] = (await this.token).token;
+    let payload: BodyInit | undefined;
+    if (body instanceof FormData) payload = body;
+    else if (body) {
+      headers['Content-Type'] = 'application/json';
+      payload = JSON.stringify(body);
+    }
+    let res: Response;
+    try {
+      res = await fetch(this.api + path, { method, headers, body: payload });
+    } catch {
+      throw new RoundwareError("Couldn't reach Roundware. Check your connection and try again.");
+    }
+    if (res.status === 429 && !retried) {
+      const wait = Math.min(10, Number(res.headers.get('Retry-After')) || 2);
+      await new Promise((r) => setTimeout(r, wait * 1000));
+      return this.call(method, path, body, true);
+    }
+    if (!res.ok) {
+      let detail = res.statusText;
+      try {
+        const j = await res.json();
+        detail = typeof j.detail === 'string' ? j.detail : JSON.stringify(j.detail);
+      } catch {
+        /* not JSON */
+      }
+      throw new RoundwareError(`Roundware said ${res.status}: ${detail}`, res.status);
+    }
+    return res.json() as Promise<T>;
+  }
+}
+
+/** What's been sent of one voice, so a retry or a second mix doesn't send it again. */
+export interface SentVoice {
+  instrumentId: string;
+  voiceAsset: number;
+  instrumentAsset?: number;
+}
+
+export interface SentMix {
+  mixAsset: number;
+  recipeAsset?: number;
+}
+
+export type SendStep = 'voice' | 'mix' | 'instrument' | 'recipe';
+export const SEND_STEPS: SendStep[] = ['voice', 'mix', 'instrument', 'recipe'];

@@ -202,22 +202,24 @@ The slicer is the heart of BeatVox. It decides whether the beat sounds percussiv
   - **Save:** the finished MP3 is already on the device, so it saves directly. On phones it goes through the system share sheet with the file attached (Web Share API); on laptops it downloads.
   - **Share:** a link built from the project's `sharing_url` (`…[id]`), which opens Roundware's share page (`/share/<id>`, backed by `GET /api/3/assets/{id}/shared/`).
 
-**Roundware v3 mapping** (from `roundware.org/api/v3/openapi.json`):
+**Roundware v3 mapping** (built in `src/lib/roundware.ts`; project 103 on `api.roundware.app`, tested Nov 2026):
 
 | Step | Call | Key fields |
 |---|---|---|
 | Identify the device | `POST /api/3/participants/` | `project_id`, `device_id` (random, kept on the device), `client_type: "web"` → `participant_token` (sent afterwards as `X-Participant-Token`) |
 | Start a visit | `POST /api/3/sessions/` | `project_id`, `participant_id`, `client_type`, `client_system` |
-| **1. Raw voice** (the parent) | `POST /api/3/assets/` (multipart) | `media_type: audio`, `file` = the recording as made (before low cut and normalize), `latitude`, `longitude`, `tag_ids` (`beatvox-voice`, plus `revox-ok` when allowed), `agreed_terms`, `recorded_at`, optional `contributor_name` |
-| **2. BeatVox mix** (child of the voice) | `POST /api/3/assets/` | `media_type: audio`, `parent_asset_id` = the raw voice, `file` = the seamless-loop MP3, `description` (title), tag `beatvox-mix`, location |
-| **3. Instrument** (child of the voice) | `POST /api/3/assets/` | `media_type: text`, `parent_asset_id` = the raw voice, `file` = the instrument JSON with `source.assetId` set to the voice: slice times, drum-role scores, clean-up settings (`src/lib/instrument.ts`) |
-| **4. Recipe** (child of the mix) | `POST /api/3/assets/` | `media_type: text`, `parent_asset_id` = the mix, `file` = the recipe JSON naming its instrument by id and asset id (`src/lib/recipe.ts`). Sent as `.txt` if `.json` is refused |
+| **1. Raw voice** (the parent) | `POST /api/3/assets/` (multipart) | `media_type: audio`, `file` = the recording as made (before low cut and normalize), `latitude`, `longitude`, `tag_ids` = `beatvox-source` (1124), `agreed_terms` (the project's `legal_agreement`), `recorded_at`. Sent as 16-bit WAV |
+| **2. BeatVox mix** (child of the voice) | `POST /api/3/assets/` | `media_type: audio`, `parent_asset_id` = the raw voice, `file` = the seamless-loop MP3, `description` (title), tag `beatvox-mix` (1128), or `revox-mix` (1125) for a reVox, location |
+| **3. Instrument** (child of the voice) | `POST /api/3/assets/` | `media_type: data` (JSON), tag `beatvox-instrument` (1126), `revoxAllowed` in the JSON, `parent_asset_id` = the raw voice, `file` = the instrument JSON with `source.assetId` set to the voice: slice times, drum-role scores, clean-up settings (`src/lib/instrument.ts`) |
+| **4. Recipe** (child of the mix) | `POST /api/3/assets/` | `media_type: data` (JSON), tag `beatvox-recipe` (1127), `parent_asset_id` = the mix, `file` = the recipe JSON naming its instrument by id and asset id (`src/lib/recipe.ts`). |
 | **reVox** | steps 2 and 4 only | the new mix's parent is the *original* raw voice, so every reVox hangs off the same voice; no new voice or instrument. The recipe names the original instrument, and the mix carries the reVoxer's own participant, location and title |
-| Browse voices to reVox | `GET /api/3/assets/?project_id=…&tag_ids=revox-ok&paginate=true` | no geo filter in v3, so "nearby" is sorted on the device from `latitude`/`longitude` |
+| Browse voices to reVox | `GET /api/3/assets/?project_id=…&tag_ids=1126&paginate=true`, keeping instruments with `revoxAllowed` (a `revox-ok` tag would let the server filter) | no geo filter in v3, so "nearby" is sorted on the device from `latitude`/`longitude` |
 | Share page data | `GET /api/3/assets/{id}/shared/?project_id=…` | returns only `status: "pending"` until the contribution is approved, if the project holds contributions for review |
 
 Notes on the mapping:
-- **`parent_asset_id` is documented for photos and text attached to a recording**, not for audio children or grandchildren (voice → mix → recipe). To confirm on the server: audio children are accepted, play normally, and show on the map.
+- **Tested on the live server:** audio children and grandchildren (voice → mix → recipe) are accepted with their parents. The server re-encodes audio to MP3 (the voice to 64 kbps mono, the stereo mix to 128 kbps stereo) and keeps the gapless header: the mix still decodes to exactly 8 bars. Still to check: they show on the map, and the server keeps the source WAV uncompressed.
+- **Session quirk:** `POST /sessions/` returns 500 for a `timezone` name such as `America/New_York` (it wants a 4-character offset), so the app leaves it out.
+- **Sending resumes:** each step's asset id is kept, so a retry after a failed step sends only what's missing, and another mix of the same voice sends only the mix and its recipe.
 - **Looping:** the mix only loops seamlessly if Roundware's player loops it with Web Audio and handles MP3 encoder padding. A plain `<audio loop>` leaves a small gap.
 - **The server converts uploaded audio with FFmpeg,** so a WAV or FLAC voice won't stay lossless, and the conversion can shift timing by a few milliseconds. The instrument stores exact slice times plus the slicer settings, so if the converted file has shifted, reVox can re-cut the downloaded voice with those settings, or line the stored times up with it. A per-project option to keep originals as uploaded would allow exact reuse (Q1).
 - **Moderation:** with `auto_submit` off, share links show "pending" until approved. The share screen should say so.
@@ -310,7 +312,7 @@ The widgets are vector-drawn, so they stay crisp at any size. Refinements are li
 |---|---|
 | **0. Spike** ✅ (iPhone 16e tested; Android not yet) | Record on iPhone, Android and a laptop. **Slicer test page** comparing Syllables / Attacks / Mixed on the 2008 recordings. Play an 8×16 beat with basic reverb. |
 | **1. Faithful port** ✅ | v1.93 engine + FX module + Simple mode; maxkit UI in phone and laptop layouts; keep the screen awake while playing (Screen Wake Lock), since mobile browsers pause audio when the screen locks. Done when it sounds like `and_justice.mp3`. |
-| **2. Share** (capture, render, MP3 and save/share built; Roundware next) | Loop capture, offline render, MP3, Roundware v3 submit with location, built-in save/share. |
+| **2. Share** (capture, render, MP3, save/share and Roundware upload built) | Loop capture, offline render, MP3, Roundware v3 submit with location, built-in save/share. |
 | **3. Advanced + reVox** | Advanced mode, grid editing, slice view, reVox browse / remix / credit. |
 | **4. Improvements** | Craziness, swing, XY pad, word slicing, etc. |
 | Later | Kiosk mode, performance mode (quad, MIDI). |
