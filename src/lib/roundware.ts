@@ -16,6 +16,13 @@
 export const RW_API = 'https://api.roundware.app/api/3';
 export const RW_PROJECT = 103;
 
+/**
+ * The project's published Roundware web app, for the map and share links
+ * until BeatVox has its own map (see docs/LISTEN_AND_SHARE.md).
+ */
+export const BEATVOX_MAP_URL = 'https://beatvox.roundware.app/listen';
+export const beatvoxShareUrl = (assetId: number) => `https://beatvox.roundware.app/share/${assetId}`;
+
 export const RW_TAGS = {
   source: 1124,
   revoxMix: 1125,

@@ -12,7 +12,7 @@ npm run dev
 - http://localhost:5173/ is **the app**: Record, Listen, Share.
 - http://localhost:5173/slicer.html is the **slicer lab**: compares the Attacks, Syllables and Mixed slicers, plays slices and a simple beat, and tunes the slicer parameters.
 
-In dev, both pages can load the private 2008 reference recordings from `docs/beatvox-reference/` (Record tab → "dev: reference recordings"). They are served by a dev-only plugin (`dev/referenceAudio.ts`) and are never part of a build.
+In dev, both pages can load the private 2008 reference recordings from `docs/beatvox-reference/` (the "dev: reference recordings" menu in the Voice card). They are served by a dev-only plugin (`dev/referenceAudio.ts`) and are never part of a build.
 
 ## Code map
 
@@ -23,8 +23,8 @@ In dev, both pages can load the private 2008 reference recordings from `docs/bea
 - `src/lib/audio/fx.ts`: effects (delay, reverb, EQ, compression, limiter) and the Simple-mode "Space" knob.
 - `src/lib/audio/slicer.ts`, `analysis.ts`, `pitch.ts`: slicing and pitch.
 - `src/lib/audio/recorder.ts`, `prepare.ts`: mic recording and clean-up.
-- `src/lib/maxkit/`: the retro Max-style widgets.
-- `src/app/`: the app (tabs and state).
+- `src/lib/ui/`: the widgets in the "light riso" look (☒ beat grid, dials, ☒ checkbox, waveform, beat lights).
+- `src/app/`: the app: one studio screen (`VoiceCard`, `BeatCard`), the save bar along the bottom (`SaveBar`), the share sheet (`ShareSheet`) and the sending popup (`SendDialog`). `theme.css` holds the colours and Courier Prime; `session.svelte.ts` holds the state.
 
 ## Tests
 

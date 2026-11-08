@@ -145,6 +145,28 @@ describe('BeatEngine', () => {
     expect(engine.voices[0].pattern[1]).toBe(true);
   });
 
+  it('applies a tapped box at once while playing, not on the next bar', () => {
+    const { engine, ctx } = setup();
+    play(engine, ctx, 0.5); // mid-bar
+    const was = engine.voices[3].pattern[9];
+    const before = engine.version;
+    engine.toggleStep(3, 9);
+    expect(engine.voices[3].pattern[9]).toBe(!was);
+    expect(engine.version).toBe(before + 1);
+    engine.stop();
+  });
+
+  it('gives a row a new slice, swapping with the row that had it', () => {
+    const { engine } = setup();
+    const a = engine.voices[0].slice;
+    const b = engine.voices[5].slice;
+    engine.setSlice(0, b);
+    expect(engine.voices[0].slice).toBe(b);
+    expect(engine.voices[5].slice).toBe(a);
+    expect(engine.voices[0].on).toBe(true);
+    expect(new Set(engine.voices.map((v) => v.slice)).size).toBe(8);
+  });
+
   it('keeps slices unique through many evolves', () => {
     const { engine } = setup(7);
     for (let i = 0; i < 300; i++) engine.evolve();

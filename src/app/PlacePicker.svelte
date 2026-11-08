@@ -34,7 +34,7 @@
         maxZoom: 19,
         attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
       }).addTo(map);
-      pin = L.circleMarker([0, 0], { radius: 9, color: '#000', weight: 2, fillColor: '#e33', fillOpacity: 1 });
+      pin = L.circleMarker([0, 0], { radius: 9, color: '#1d1b16', weight: 2, fillColor: '#ff5c80', fillOpacity: 1 });
       if (start) pin.setLatLng([start.latitude, start.longitude]).addTo(map);
       ready = true;
       map.on('click', (e) => {
@@ -80,7 +80,7 @@
 
 <div class="picker">
   <div class="row">
-    <button class="pill" onclick={here} disabled={locating}>{locating ? 'FINDING…' : 'WHERE I AM'}</button>
+    <button class="btn" onclick={here} disabled={locating}>{locating ? 'FINDING…' : 'WHERE I AM'}</button>
     <span class="hint">{place ? `${place.latitude.toFixed(4)}, ${place.longitude.toFixed(4)}` : 'or tap the map anywhere'}</span>
   </div>
   <div class="map" bind:this={el}></div>
@@ -97,23 +97,23 @@
     align-items: center;
     gap: 10px;
   }
-  .row .pill {
-    min-width: 108px;
+  .row .btn {
     flex: none;
   }
   .hint {
-    font: 12px var(--bv-mono);
+    font: 12px var(--mono);
+    color: var(--muted);
   }
   .map {
     height: 220px;
-    border: 1px solid #888;
-    border-radius: 6px;
-    background: #ddd;
+    border: 2px solid var(--ink);
+    border-radius: 8px;
+    background: var(--soft);
     z-index: 0;
   }
   .note {
     margin: 0;
     font-size: 12px;
-    color: #a00;
+    color: var(--error);
   }
 </style>

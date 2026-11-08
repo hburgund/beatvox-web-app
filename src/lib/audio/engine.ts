@@ -107,6 +107,7 @@ export type Action =
   | { kind: 'evolve'; auto: boolean }
   | { kind: 'toggleStep'; voice: number; step: number }
   | { kind: 'toggleVoice'; voice: number }
+  | { kind: 'setSlice'; voice: number; slice: number }
   | { kind: 'settings'; settings: Partial<EngineSettings> }
   | { kind: 'recipe'; recipe: Recipe };
 
@@ -256,6 +257,10 @@ export class BeatEngine {
   toggleVoice(voice: number) {
     this.request({ kind: 'toggleVoice', voice });
   }
+  /** Give a row a different slice (a row already playing it takes this row's). */
+  setSlice(voice: number, slice: number) {
+    this.request({ kind: 'setSlice', voice, slice });
+  }
 
   /** Load a style or saved beat (on the next downbeat while playing). */
   applyRecipe(recipe: Recipe) {
@@ -344,8 +349,12 @@ export class BeatEngine {
   }
 
   private request(a: Action) {
-    if (this.playing) this.queue.push(a);
-    else this.run(a);
+    // edits to one row (tap a box, rest a row, swap a slice) apply at once, so
+    // the grid answers the tap; the sound follows from the next unscheduled
+    // step (at most LOOKAHEAD away). Whole-beat changes wait for the downbeat.
+    const now = !this.playing || a.kind === 'toggleStep' || a.kind === 'toggleVoice' || a.kind === 'setSlice';
+    if (now) this.run(a);
+    else this.queue.push(a);
   }
 
   private run(a: Action) {
@@ -372,6 +381,15 @@ export class BeatEngine {
       case 'toggleVoice':
         this.voices[a.voice].on = !this.voices[a.voice].on;
         break;
+      case 'setSlice': {
+        const v = this.voices[a.voice];
+        if (!v || a.slice < 0 || a.slice >= this.slices.length) break;
+        const other = this.voices.find((o, j) => j !== a.voice && o.slice === a.slice);
+        if (other) other.slice = v.slice;
+        v.slice = a.slice;
+        v.on = true;
+        break;
+      }
       case 'settings':
         this.applySettings(a.settings);
         break;

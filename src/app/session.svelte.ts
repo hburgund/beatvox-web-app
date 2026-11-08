@@ -7,16 +7,16 @@ import { encodeMp3 } from '../lib/audio/mp3';
 import { renderShare, voiceSpan } from '../lib/audio/render';
 import type { Recipe } from '../lib/recipe';
 import { prepareVoice } from '../lib/audio/prepare';
+import { playSlice } from '../lib/audio/beatPreview';
 import { startRecording, type Recording } from '../lib/audio/recorder';
 import type { Slice } from '../lib/audio/slicer';
 import { cutInstrument, type Instrument } from '../lib/instrument';
 import { keepAwake } from '../lib/wakeLock';
 import { encodeWav } from '../lib/audio/wav';
 import { newId } from '../lib/instrument';
-import { Roundware, RW_JSON, RW_TAGS, type RwPlace, type RwProject, type SendStep, type SentMix, type SentVoice } from '../lib/roundware';
+import { Roundware, beatvoxShareUrl, RW_JSON, RW_TAGS, type RwPlace, type RwProject, type SendStep, type SentMix, type SentVoice } from '../lib/roundware';
 import { STYLES } from '../lib/styles';
 
-export type Tab = 'record' | 'listen' | 'share';
 export const MAX_RECORD_SEC = 15;
 /** loops in a shared piece (Simple mode; Advanced will offer 4 / 8 / 16) */
 export const SHARE_LOOPS = 8;
@@ -51,8 +51,6 @@ export interface ShareResult {
 export type SendPhase = 'idle' | 'sending' | 'sent';
 
 export class Session {
-  tab = $state<Tab>('record');
-
   // recording
   voice = $state.raw<AudioBuffer | null>(null);
   /** the recording before clean-up */
@@ -83,6 +81,8 @@ export class Session {
   panning = $state(60);
   pitch = $state(1);
   space = $state(35);
+  /** the beat row a slice is being dragged over */
+  dropRow = $state<number | null>(null);
   /** name of the style the beat started from, or '' for a random beat */
   style = $state('');
 
@@ -134,7 +134,7 @@ export class Session {
     return this.ctx;
   }
 
-  // ── Record tab ────────────────────────────────────────────────────────
+  // ── Voice ─────────────────────────────────────────────────────────────
 
   async toggleRecord() {
     if (this.recording) return this.stopRecording();
@@ -212,7 +212,11 @@ export class Session {
       this.status = `${instrument.slices.length} slices`;
     }
     this.discardShare();
-    if (instrument.slices.length) this.engine!.load(voice, instrument);
+    if (instrument.slices.length) {
+      this.engine!.load(voice, instrument);
+      // one screen: the beat starts as soon as the voice is cut
+      this.go();
+    }
   }
 
   toggleReview() {
@@ -261,18 +265,9 @@ export class Session {
     this.status = '';
     this.style = '';
     this.discardShare();
-    this.tab = 'record';
   }
 
-  /** NEXT: on to the Listen tab, beat running */
-  next() {
-    if (!this.slices.length) return;
-    this.stopReview();
-    this.tab = 'listen';
-    this.go();
-  }
-
-  // ── Listen tab ────────────────────────────────────────────────────────
+  // ── Beat ──────────────────────────────────────────────────────────────
 
   go() {
     if (!this.slices.length) return;
@@ -312,6 +307,28 @@ export class Session {
     this.engine?.evolve();
   }
 
+  /** Add or remove one hit (on the next step while playing). */
+  toggleStep(voice: number, step: number) {
+    this.engine?.toggleStep(voice, step);
+  }
+
+  /** Hear one slice on its own (the beat keeps going). */
+  hearSlice(i: number) {
+    const s = this.slices[i];
+    if (!s || !this.voice) return;
+    playSlice(this.audio(), this.voice, s);
+  }
+
+  /** Make a beat row play this slice (dragged from the waveform). */
+  setSlice(voice: number, slice: number) {
+    this.engine?.setSlice(voice, slice);
+  }
+
+  /** Rest or wake one slice's row. */
+  toggleVoice(voice: number) {
+    this.engine?.toggleVoice(voice);
+  }
+
   setAutoEvolve(on: boolean) {
     this.engine?.set({ autoEvolve: on });
     this.autoEvolve = on;
@@ -324,7 +341,7 @@ export class Session {
     this.engine.setFx(spaceToParams(this.space / 100));
   }
 
-  // ── Share tab ─────────────────────────────────────────────────────────
+  // ── Save and share ────────────────────────────────────────────────────
 
   /** Capture SHARE_LOOPS bars from the next downbeat, then render the MP3. */
   async capture() {
@@ -477,6 +494,30 @@ export class Session {
     } catch (e) {
       // closing the share sheet isn't an error
       if ((e as Error).name !== 'AbortError') this.shareStatus = `Couldn't share (${(e as Error).message}). Try Save instead.`;
+    }
+  }
+
+  /** After sending: a new beat with the same voice (its voice isn't sent again). */
+  makeAnother() {
+    this.discardShare();
+    this.newBeat();
+    this.go();
+  }
+
+  /** Share the link to the sent BeatVox (share sheet, or copy it). */
+  async shareLink(): Promise<'shared' | 'copied' | 'failed'> {
+    const url = this.sentMix && beatvoxShareUrl(this.sentMix.mixAsset);
+    if (!url) return 'failed';
+    const title = this.shareTitle || 'My BeatVox';
+    try {
+      if (typeof navigator.share === 'function') {
+        await navigator.share({ url, title });
+        return 'shared';
+      }
+      await navigator.clipboard.writeText(url);
+      return 'copied';
+    } catch (e) {
+      return (e as Error).name === 'AbortError' ? 'shared' : 'failed';
     }
   }
 

@@ -187,7 +187,7 @@ The slicer is the heart of BeatVox. It decides whether the beat sounds percussiv
 **Offline render.**
 - The logged loops are rendered with the same engine and effects, so there are no glitches from a busy phone.
 - **The mix is a seamless loop** (decided Nov 2026, replacing "voice, then remix" in one file). It's whole bars, and the effects tail after the last bar is folded back onto the start, so it can loop forever on Roundware. The raw voice is a separate asset. It's encoded to MP3 in a background worker.
-- One offline render makes both files: the **loop** (for Roundware) and **voice → ½ bar → beat → tail** (to save on the device and send to friends; the Share tab offers both).
+- One offline render makes both files: the **loop** (for Roundware) and **voice → ½ bar → beat → tail** (to save on the device and send to friends; the share sheet offers both).
 - **Gapless MP3:** the encoder writes no gapless header, so `mp3Core.ts` adds the standard LAME "Info" frame with the encoder delay and padding. Chrome then decodes the loop to exactly its sample length with no gap; FFmpeg on the server reads the same header.
 - **How it's built:** the engine sends every hit, pan move, send and effects change to the audio graph as a small command (`voiceBank.ts`). Capture tapes those commands, plus the state at the first downbeat, so the render replays exactly what was heard, including any New Beat, Evolve or knob moves made during the capture. The voice is trimmed to its slices, and silence after the effects die away is cut.
 - **Format:** 192 kbps stereo MP3, peak at -1 dBFS. The 8-bar loop is about 0.5 MB and the voice-plus-beat file 0.7–0.9 MB. Rendering and encoding both take about 2.5 s on a laptop.
@@ -252,35 +252,24 @@ Notes on the mapping:
 
 ## 8. Look and feel
 
-A set of retro widgets, the "maxkit", reproducing the Max 5 look of the screenshots:
-- the ☒ toggle;
-- sliders with number boxes;
-- ring buttons (green GO / NEXT, red STOP, blue NEW / New Beat / Evolve);
-- pill buttons;
-- the LCD countdown;
-- rounded tabs;
-- the soft blue and yellow panels;
-- the 4×4 beat indicator in the header;
-- the monospaced "BEAT VOX" wordmark.
+**The look: "light riso"** (chosen in the November 2026 redesign; mock-ups on the design canvas). Retro charm kept, made modern:
+- Courier Prime throughout (a cleaner Courier), with a plain sans only for full sentences;
+- warm paper (#f4efe2) and near-black ink, with riso blue, pink and yellow as accents;
+- 2 px ink borders and hard offset shadows on the main buttons, like a slightly misaligned print;
+- the ☒ box from v1.93 for the beat grid and every checkbox;
+- the wordmark is **BEATVOX**, one word, with a pink offset shadow;
+- 4 beat lights in the header.
 
-The widgets are vector-drawn, so they stay crisp at any size. Refinements are limited to tidier spacing, cells that flash when they fire, a playhead, press states, and the slice waveform.
+**One studio screen, no tabs** (phone first). Top to bottom:
+- **Voice:** record (a big button and the 15 s countdown) or open a file; once cut, the waveform with its slices, Re-record and Hear it. The beat starts as soon as the voice is cut.
+- **Beat:** Style, the tappable 8 × 16 ☒ grid (tap a slice number to rest or wake its row), Play/Stop, New beat, Evolve, keep evolving, and dials for Vol, Tempo, Pan, Pitch and Space.
+- **The save bar** along the bottom: **SAVE 8 BARS** → the 8 bars filling in as they record (keep changing the beat; it's all in the recording) → **SHARE**.
+- **The share sheet** rises from the bottom. The beat stops and the saved loop plays. It holds the loop, a name, "your voice, then the beat" (Save MP3, Share…), and the map section (place, reVox permission, terms, **SEND TO THE MAP**).
+- **Sending** shows a popup with the four uploads ticking off, then **Global map**, **Make another** (a new beat with the same voice) and **Share your BeatVox** (the link).
 
-**Laptop (landscape).** Close to the original layout:
-- sliders on either side of the Modify panel, grid below;
-- mouse-drag drawing on the grid;
-- keyboard shortcuts (space = start/stop, N = New Beat, E = Evolve, 1–8 = select voice);
-- in Advanced, extra panels open beside the main one rather than in pop-ups.
+**Laptop.** For now the same column, centred. Next: voice and beat side by side. Keyboard: space = play/stop, N = New beat, E = Evolve; arrow keys move around the grid.
 
-**Phone (portrait).**
-- Tabs across the top.
-- Listen screen, top to bottom:
-  - ring buttons in a row;
-  - a big Modify panel;
-  - the 8×16 grid (fits at ~20 px per cell). Tapping a row zooms it to full-size touch targets;
-  - sliders horizontal, in a drawer.
-- Advanced panels stack as collapsible sections.
-
-**Tablet.** Uses the laptop layout in landscape and the phone layout in portrait.
+**Tablet.** The phone layout in portrait, the laptop layout in landscape.
 
 ---
 
