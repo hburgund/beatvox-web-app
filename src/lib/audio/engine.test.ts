@@ -251,6 +251,38 @@ describe('BeatEngine', () => {
     expect(engine.toRecipe('t').humanize).toBe(1);
   });
 
+  it('plays each hit to the end of its slice; the next hit on the row cuts it', async () => {
+    // 1 s slices: longer than v1.93's 0.45 s gate
+    const long: Slice[] = Array.from({ length: 4 }, (_, i) => ({ start: i, end: i + 1, peakDb: -6 }));
+    const inst = createInstrument({
+      slices: long,
+      scores: long.map((): RoleScores => ({ kick: 0.1, snare: 0.1, hat: 0.9, perc: 0.1, tonal: 0.1 })),
+      bestRoles: long.map(() => 'hat'),
+      duration: 4,
+      sampleRate: 44100,
+      method: 'mixed',
+      params: DEFAULT_PARAMS,
+      prepare: DEFAULT_PREPARE,
+    });
+    const { engine, ctx } = setup(42, inst);
+    engine.applyRecipe(STYLES[1]); // a style, so voices have drum roles
+    play(engine, ctx, 1);
+    const taped = engine.capture(2);
+    const c = ctx as unknown as { currentTime: number };
+    let tape: Tape | null = null;
+    void taped.then((t) => (tape = t));
+    for (let i = 0; i < 400 && !tape; i++) {
+      c.currentTime += 0.025;
+      engine.schedule(c.currentTime + 0.12);
+      await Promise.resolve();
+    }
+    engine.stop();
+    const hits = tape!.cmds.filter((x) => x.k === 'hit');
+    expect(hits.length).toBeGreaterThan(0);
+    // nothing gates them shorter (a hat used to get 0.08 s)
+    for (const h of hits) expect(h.len).toBeCloseTo(1, 9);
+  });
+
   it('captures whole loops from the next downbeat', async () => {
     const { engine, ctx, started } = setup();
     play(engine, ctx, 1); // part-way into a bar

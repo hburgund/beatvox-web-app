@@ -2,12 +2,15 @@
 // hb.voxnode, hb.quadautopan2 and the main patch's kickoff / driver logic).
 //
 // - 8 voices × 16 sixteenth-note steps, one slice per voice (urn, no repeats)
-// - each hit is gated: attack / hold / release (v1.93: 100 / 300 / 100 ms)
-//   and a new hit on a voice quickly fades out the previous one
+// - each hit plays its whole slice, with a fade in and a fade out at the
+//   edges; a new hit on the same voice quickly fades out the one before, so a
+//   lone hit rings to the end and a busy row stays tight. (v1.93 gated every
+//   hit to 100 / 300 / 100 ms; that cut long slices short.)
 // - loudness: each voice has a steady mix level, and a humanize walk on top
 //   wanders each hit between 0.45× and 1× (v1.93's brownian velocity 50–110)
 // - auto-pan: a random ramp every 2–10 s per voice (linear, sine or wobbly)
-// - New Beat, Evolve and edits land on the next downbeat
+// - New Beat, Evolve and styles land on the next downbeat; edits to one row
+//   (a box, resting a row, a new slice) apply at once
 // - kickoff: 1 voice, +1 at 5 s, +1 at 10 s, auto-evolve from 12 s every 3 s
 //
 // All randomness comes from a seeded Rng, and the audio clock drives
@@ -54,9 +57,9 @@ export interface Voice {
   reverbSend: number;
 }
 
+/** The fades at each end of a hit, seconds. */
 export interface Envelope {
   attack: number;
-  hold: number;
   release: number;
 }
 
@@ -84,7 +87,7 @@ export const DEFAULT_SETTINGS: EngineSettings = {
   evolveEvery: 3,
   swing: 0,
   // v1.93 used 100 ms in; the reference MP3's hits rise in ~50 ms
-  envelope: { attack: 0.05, hold: 0.3, release: 0.1 },
+  envelope: { attack: 0.05, release: 0.1 },
   humanize: 1,
 };
 
@@ -113,13 +116,13 @@ export type Action =
 
 const ones = () => Array<number>(STEPS).fill(1);
 
-/** Tighter gates for drum roles; 'any' keeps the v1.93 envelope. */
+/** Sharper fades for drum roles; 'any' keeps the v1.93 attack. */
 export const ROLE_ENVELOPE: Partial<Record<Role, Envelope>> = {
-  kick: { attack: 0.008, hold: 0.22, release: 0.08 },
-  snare: { attack: 0.004, hold: 0.12, release: 0.08 },
-  hat: { attack: 0.002, hold: 0.04, release: 0.04 },
-  perc: { attack: 0.004, hold: 0.08, release: 0.06 },
-  tonal: { attack: 0.02, hold: 0.3, release: 0.12 },
+  kick: { attack: 0.008, release: 0.08 },
+  snare: { attack: 0.004, release: 0.08 },
+  hat: { attack: 0.002, release: 0.04 },
+  perc: { attack: 0.004, release: 0.06 },
+  tonal: { attack: 0.02, release: 0.12 },
 };
 
 interface PanState {
@@ -761,11 +764,10 @@ export class BeatEngine {
     const rate = this.settings.pitch;
     const sliceDur = (s.end - s.start) / rate;
     const env = ROLE_ENVELOPE[v.role] ?? this.settings.envelope;
-    const full = env.attack + env.hold + env.release;
-    const len = Math.min(sliceDur, full);
-    const scale = len / full;
-    const a = Math.max(0.003, env.attack * scale);
-    const r = Math.max(0.01, env.release * scale);
+    // the whole slice; the voice's next hit cuts it off (VoiceBank chokes it)
+    const len = sliceDur;
+    const a = Math.max(0.003, Math.min(env.attack, len / 4));
+    const r = Math.max(0.01, Math.min(env.release, len / 4));
     const h = Math.max(0, len - a - r);
     const level = v.level * v.human * accent;
     this.emit({ k: 'hit', t, voice: i, offset: s.start, len, rate, level, a, h });
