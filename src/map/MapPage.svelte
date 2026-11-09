@@ -16,6 +16,7 @@
   import { ringRows, type RingRow } from '../lib/shared';
   import { clockMarker } from '../lib/clockMarker';
   import { STUDIO_PATH } from '../lib/roundware';
+  import { ShuffleBag } from '../lib/shuffleBag';
 
   let data = $state.raw<MapData | null>(null);
   let failed = $state('');
@@ -241,6 +242,8 @@
   /** silence between one mix's end and the next one's start (ms) */
   const GAP = 500;
   let pending = 0;
+  /** every mix in the pool once, in random order, before any repeats */
+  const bag = new ShuffleBag();
   /** run `f` after `ms`, unless wandering stops or something else is chosen first */
   function later(f: () => void, ms: number) {
     clearTimeout(pending);
@@ -269,13 +272,16 @@
   }
 
   function next() {
-    const pool0 = scope === 'vox' && selected ? visible.filter((m) => m.voxId === selected!.voxId) : visible;
-    const pool = pool0.length > 1 ? pool0.filter((m) => m.id !== selected?.id) : pool0;
-    if (!pool.length) {
+    const pool = scope === 'vox' && selected ? visible.filter((m) => m.voxId === selected!.voxId) : visible;
+    const id = bag.next(
+      pool.map((m) => m.id),
+      selected?.id,
+    );
+    const m = pool.find((x) => x.id === id);
+    if (!m) {
       wandering = false;
       return;
     }
-    const m = pool[Math.floor(Math.random() * pool.length)];
     selected = m;
     reveal(m, true);
     void playMix(m);
@@ -288,6 +294,7 @@
       return;
     }
     wandering = true;
+    if (selected) bag.mark(selected.id);
     if (selected && player.playing !== `mix${selected.id}`) void playMix(selected);
     else if (!selected) next();
     // a mix already looping finishes this time round, then wandering moves on
