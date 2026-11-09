@@ -192,6 +192,7 @@
 
   /** Show a mix's details; from a tap, play it too. */
   function pick(m: MapMix, play: boolean) {
+    clearTimeout(pending);
     selected = m;
     if (play) void playMix(m);
     reveal(m);
@@ -218,7 +219,9 @@
 
   async function playMix(m: MapMix) {
     const r = await loadRecipe(data?.recipeUrls.get(m.id));
-    const opts = wandering ? { loop: false, bpm: r?.bpm ?? 120, onend: next } : { loop: true, bpm: r?.bpm ?? 120 };
+    const bpm = r?.bpm ?? 120;
+    // wandering: once through, faded in and out, then a pause, then the next
+    const opts = wandering ? { loop: false, bpm, fadeIn: FADE, fadeOut: FADE, onend: () => later(next, GAP) } : { loop: true, bpm };
     void player.play(`mix${m.id}`, m.file, opts);
   }
 
@@ -226,12 +229,44 @@
   function toggleSelected() {
     if (!selected) return;
     if (player.playing === `mix${selected.id}`) {
-      player.stop();
-      wandering = false;
+      stopWander();
+      player.stop(0.3);
     } else void playMix(selected);
   }
 
   // ── Wander ────────────────────────────────────────────────────────────
+
+  /** seconds each mix fades in and out when wandering */
+  const FADE = 1;
+  /** silence between one mix's end and the next one's start (ms) */
+  const GAP = 500;
+  let pending = 0;
+  /** run `f` after `ms`, unless wandering stops or something else is chosen first */
+  function later(f: () => void, ms: number) {
+    clearTimeout(pending);
+    pending = window.setTimeout(() => wandering && f(), ms);
+  }
+
+  function stopWander() {
+    wandering = false;
+    clearTimeout(pending);
+  }
+
+  /** Skip: fade this one out quickly and go on to the next. */
+  function skip() {
+    if (!wandering) return;
+    player.stop(0.5);
+    later(next, 500);
+  }
+
+  /** Replay: start this one again from the top. */
+  function replay() {
+    if (!selected) return;
+    const m = selected;
+    clearTimeout(pending);
+    player.stop(0.3);
+    window.setTimeout(() => void playMix(m), 320);
+  }
 
   function next() {
     const pool0 = scope === 'vox' && selected ? visible.filter((m) => m.voxId === selected!.voxId) : visible;
@@ -248,8 +283,8 @@
 
   function toggleWander() {
     if (wandering) {
-      wandering = false;
-      player.stop();
+      stopWander();
+      player.stop(0.6);
       return;
     }
     wandering = true;
@@ -300,6 +335,14 @@
         <svg width="14" height="14" viewBox="0 0 18 18" aria-hidden="true"><path d="M5 2l11 7-11 7z" fill="currentColor" /></svg> WANDER
       {/if}
     </button>
+    {#if wandering}
+      <button class="btn icon-btn" aria-label="Replay this one" title="Replay" onclick={replay} disabled={!selected}>
+        <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 6.5A6.5 6.5 0 1 1 3.6 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="square" /><path d="M2.5 3v4.5H7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="square" /></svg>
+      </button>
+      <button class="btn icon-btn" aria-label="Skip to the next one" title="Skip" onclick={skip}>
+        <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 3l9 7-9 7z" fill="currentColor" /><rect x="14" y="3" width="3" height="14" fill="currentColor" /></svg>
+      </button>
+    {/if}
     <div class="scope" role="radiogroup" aria-label="Wander through">
       <button role="radio" aria-checked={scope === 'anywhere'} class:on={scope === 'anywhere'} onclick={() => (scope = 'anywhere')}>ANYWHERE</button>
       <button role="radio" aria-checked={scope === 'vox'} class:on={scope === 'vox'} disabled={!selected} onclick={() => (scope = 'vox')}>THIS VOX</button>
@@ -437,7 +480,7 @@
     padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     border-top: 2px solid var(--ink);
     background: var(--card);
     z-index: 2;
@@ -446,7 +489,13 @@
     margin-right: 400px;
   }
   .wander {
-    min-width: 116px;
+    min-width: 96px;
+    padding: 0 10px;
+  }
+  .icon-btn {
+    width: 44px;
+    padding: 0;
+    flex: none;
   }
   .scope {
     display: flex;
@@ -456,7 +505,8 @@
   }
   .scope button {
     min-height: 36px;
-    padding: 0 10px;
+    padding: 0 8px;
+    white-space: nowrap;
     border: none;
     background: var(--card);
     font: 700 12px var(--mono);

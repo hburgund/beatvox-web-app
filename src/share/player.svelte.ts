@@ -8,6 +8,10 @@ export interface PlayOpts {
   bpm?: number;
   /** a one-shot played to its end (not stopped) */
   onend?: () => void;
+  /** seconds to fade in from silence */
+  fadeIn?: number;
+  /** a one-shot: seconds to fade out before its end */
+  fadeOut?: number;
 }
 
 export class Player {
@@ -22,6 +26,7 @@ export class Player {
   private ctx: AudioContext | null = null;
   private buffers = new Map<string, Promise<AudioBuffer>>();
   private src: AudioBufferSourceNode | null = null;
+  private gain: GainNode | null = null;
   private raf = 0;
 
   private audio() {
@@ -75,8 +80,17 @@ export class Player {
     const src = ctx.createBufferSource();
     src.buffer = buf;
     src.loop = opts.loop;
-    src.connect(ctx.destination);
+    const gain = ctx.createGain();
+    src.connect(gain).connect(ctx.destination);
     const t0 = ctx.currentTime + 0.05;
+    const fadeIn = Math.min(opts.fadeIn ?? 0, buf.duration / 3);
+    const fadeOut = opts.loop ? 0 : Math.min(opts.fadeOut ?? 0, buf.duration / 3);
+    gain.gain.setValueAtTime(fadeIn ? 0 : 1, t0);
+    if (fadeIn) gain.gain.linearRampToValueAtTime(1, t0 + fadeIn);
+    if (fadeOut) {
+      gain.gain.setValueAtTime(1, t0 + buf.duration - fadeOut);
+      gain.gain.linearRampToValueAtTime(0, t0 + buf.duration);
+    }
     src.start(t0);
     src.onended = () => {
       if (this.src !== src) return;
@@ -84,6 +98,7 @@ export class Player {
       opts.onend?.();
     };
     this.src = src;
+    this.gain = gain;
     this.playing = key;
     if (opts.bpm) {
       const barLen = 240 / opts.bpm;
@@ -99,12 +114,21 @@ export class Player {
     }
   }
 
-  stop() {
+  /** Stop what's playing, at once or fading out over `fade` seconds. */
+  stop(fade = 0) {
     cancelAnimationFrame(this.raf);
     const src = this.src;
+    const gain = this.gain;
     this.src = null;
+    this.gain = null;
     try {
-      src?.stop();
+      if (src && gain && fade > 0 && this.ctx) {
+        const t = this.ctx.currentTime;
+        gain.gain.cancelScheduledValues(t);
+        gain.gain.setValueAtTime(gain.gain.value, t);
+        gain.gain.linearRampToValueAtTime(0, t + fade);
+        src.stop(t + fade + 0.02);
+      } else src?.stop();
     } catch {
       /* not started */
     }
