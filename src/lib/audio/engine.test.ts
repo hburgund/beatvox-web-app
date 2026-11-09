@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BeatEngine, STEPS, PATTERNS, type Tape } from './engine';
+import { BeatEngine, STEPS, PATTERNS, fillOf, type Tape } from './engine';
 import { FxChain } from './fx';
 import type { Slice } from './slicer';
 import { STYLES } from '../styles';
@@ -179,6 +179,48 @@ describe('BeatEngine', () => {
     engine.newBeat(); // a new beat lets it go again
     for (let i = 0; i < 300 && engine.voices[2].slice === want; i++) engine.evolve();
     expect(engine.voices[2].slice).not.toBe(want);
+  });
+
+  it('sets a row level at once, clamped, kept through evolves and saved in the recipe', () => {
+    const { engine, ctx } = setup();
+    play(engine, ctx, 0.5);
+    engine.setLevel(1, 0.3);
+    expect(engine.voices[1].level).toBe(0.3);
+    engine.setLevel(2, 1.7);
+    expect(engine.voices[2].level).toBe(1);
+    for (let i = 0; i < 100; i++) engine.evolve();
+    play(engine, ctx, 3);
+    expect(engine.voices[1].level).toBe(0.3);
+    engine.stop();
+    expect(engine.toRecipe('t').voices[1].level).toBe(0.3);
+  });
+
+  it('sets a row to a quick pattern at once and evolve leaves it', () => {
+    const { engine, ctx } = setup(5);
+    play(engine, ctx, 2);
+    engine.toggleVoice(4);
+    engine.fillRow(4, 'off');
+    expect(engine.voices[4].on).toBe(true);
+    expect(engine.voices[4].pattern).toEqual(PATTERNS.offbeats);
+    expect(fillOf(engine.voices[4].pattern)).toBe('off');
+    engine.fillRow(5, '2');
+    expect(fillOf(engine.voices[5].pattern)).toBe('2');
+    for (let i = 0; i < 300; i++) engine.evolve();
+    play(engine, ctx, 3);
+    expect(engine.voices[4].pattern).toEqual(PATTERNS.offbeats);
+    engine.fillRow(4, 'none');
+    expect(engine.voices[4].pattern.some(Boolean)).toBe(false);
+    engine.stop();
+  });
+
+  it('fills a row with 2 to 10 random hits', () => {
+    const { engine } = setup(11);
+    for (let k = 0; k < 200; k++) {
+      engine.fillRow(k % 8, 'random');
+      const n = engine.voices[k % 8].pattern.filter(Boolean).length;
+      expect(n).toBeGreaterThanOrEqual(2);
+      expect(n).toBeLessThanOrEqual(10);
+    }
   });
 
   it('keeps slices unique through many evolves', () => {

@@ -1,7 +1,11 @@
 <script lang="ts">
   // The 8 × 16 beat grid of ☒ boxes. Tap a box to add or remove a hit; tap a
   // slice number to rest or wake that row. The box under the playhead lights.
-  import type { Voice } from '../audio/engine';
+  // In the Mix view each row's boxes become one level bar; in the Pattern view,
+  // buttons that set the row to a quick pattern. The yellow strip under each
+  // slice number shows the row's level in every view.
+  import { fillOf, type RowFill, type Voice } from '../audio/engine';
+  import LevelBar from './LevelBar.svelte';
 
   interface Props {
     voices: Voice[];
@@ -10,13 +14,27 @@
     disabled?: boolean;
     /** the row a dragged slice is over */
     dropRow?: number | null;
+    /** what each row shows: its boxes, a level bar, or quick patterns */
+    view?: 'boxes' | 'mix' | 'pattern';
     ontoggle: (voice: number, step: number) => void;
     ontogglevoice: (voice: number) => void;
+    onlevel: (voice: number, level: number) => void;
+    onfill: (voice: number, fill: RowFill) => void;
   }
-  let { voices, step, firing, disabled = false, dropRow = null, ontoggle, ontogglevoice }: Props = $props();
+  let { voices, step, firing, disabled = false, dropRow = null, view = 'boxes', ontoggle, ontogglevoice, onlevel, onfill }: Props = $props();
+
+  const FILLS: { fill: RowFill; text: string; name: string }[] = [
+    { fill: '16', text: '16', name: 'every 16th note' },
+    { fill: '8', text: '8', name: 'every 8th note' },
+    { fill: '4', text: '4', name: 'every beat' },
+    { fill: '2', text: '2', name: 'every half note' },
+    { fill: 'off', text: 'OFF', name: 'off-beat 8ths' },
+    { fill: 'random', text: 'RND', name: '2 to 10 random hits' },
+    { fill: 'none', text: '×', name: 'no hits' },
+  ];
 
   // an empty grid to show before there's a voice
-  const blank = Array.from({ length: 8 }, (_, i) => ({ on: true, slice: i, pattern: Array(16).fill(false) }));
+  const blank = Array.from({ length: 8 }, (_, i) => ({ on: true, slice: i, level: 1, pattern: Array(16).fill(false) }));
   const rows = $derived(voices.length ? voices : blank);
 
   // arrow keys move between boxes (only one box per row is a Tab stop)
@@ -41,9 +59,33 @@
         class="slice"
         {disabled}
         aria-pressed={v.on}
-        aria-label="Row {i + 1} plays slice {v.slice + 1}, {v.on ? 'playing' : 'resting'}"
-        onclick={() => ontogglevoice(i)}>{v.slice + 1}</button
+        aria-label="Row {i + 1} plays slice {v.slice + 1}, {v.on ? 'playing' : 'resting'}, level {Math.round(v.level * 100)}%"
+        onclick={() => ontogglevoice(i)}
+        >{v.slice + 1}<span class="lvl" style="width:{v.level * 100}%" aria-hidden="true"></span></button
       >
+      {#if view === 'pattern'}
+        {@const cur = fillOf(v.pattern)}
+        <div class="fills" role="group" aria-label="Row {i + 1} pattern">
+          {#each FILLS as f (f.fill)}
+            <button
+              class="fill"
+              class:on={cur === f.fill}
+              {disabled}
+              aria-pressed={cur === f.fill}
+              aria-label="Row {i + 1}: {f.name}"
+              onclick={() => onfill(i, f.fill)}>{f.text}</button
+            >
+          {/each}
+        </div>
+      {:else if view === 'mix'}
+        <LevelBar
+          label="Row {i + 1} level"
+          value={v.level}
+          lit={v.on && firing.includes(i)}
+          {disabled}
+          onchange={(x) => onlevel(i, x)}
+        />
+      {:else}
       <div class="steps">
         {#each v.pattern as on, s (s)}
           <button
@@ -62,6 +104,7 @@
           ></button>
         {/each}
       </div>
+      {/if}
     </div>
   {/each}
 </div>
@@ -90,11 +133,20 @@
     color: #fff;
     font: 700 12px var(--mono);
     cursor: pointer;
+    position: relative;
+    overflow: hidden;
   }
   .row.drop {
     outline: 2px dashed var(--pink);
     outline-offset: 2px;
     border-radius: 3px;
+  }
+  .lvl {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 3px;
+    background: var(--yellow);
   }
   .resting .slice {
     background: transparent;
@@ -149,10 +201,39 @@
   .cell.fire {
     background: var(--yellow);
   }
-  .resting .cell {
+  .fills {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 3px;
+  }
+  .fill {
+    height: 24px;
+    padding: 0;
+    border: 1.5px solid var(--ink);
+    border-radius: 3px;
+    background: var(--card);
+    color: var(--ink);
+    font: 700 11px var(--mono);
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .fill.on {
+    background: var(--blue);
+    border-color: var(--blue);
+    color: #fff;
+  }
+  .fill:active {
+    background: var(--yellow);
+    color: var(--ink);
+  }
+  .resting .cell,
+  .resting .fills,
+  .resting :global(.level) {
     opacity: 0.4;
   }
   .cell:disabled,
+  .fill:disabled,
   .slice:disabled {
     cursor: default;
   }

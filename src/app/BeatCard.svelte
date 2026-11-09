@@ -9,11 +9,16 @@
   let { s }: { s: Session } = $props();
   const ready = $derived(s.slices.length > 0);
   const pct = (v: number) => `${Math.round(v)}%`;
+  /** boxes, level bars (MIX) or quick patterns (PATTERN) */
+  let view = $state<'boxes' | 'mix' | 'pattern'>('boxes');
+  const flip = (v: 'mix' | 'pattern') => (view = view === v ? 'boxes' : v);
 </script>
 
 <section class="card beat" aria-label="Beat">
   <div class="head">
     <span class="label">BEAT</span>
+    <button class="btn mix" class:on={view === 'mix'} aria-pressed={view === 'mix'} disabled={!ready} onclick={() => flip('mix')}>MIX</button>
+    <button class="btn mix" class:on={view === 'pattern'} aria-pressed={view === 'pattern'} disabled={!ready} onclick={() => flip('pattern')}>PATTERN</button>
     <label class="style">
       <span class="meta">STYLE</span>
       <select value={s.style} disabled={!ready} onchange={(e) => s.applyStyle(e.currentTarget.value)}>
@@ -29,11 +34,18 @@
     firing={s.firing}
     disabled={!ready}
     dropRow={s.dropRow}
+    {view}
+    onlevel={(v, x) => s.setLevel(v, x)}
+    onfill={(v, f) => s.fillRow(v, f)}
     ontoggle={(v, i) => s.toggleStep(v, i)}
     ontogglevoice={(v) => s.toggleVoice(v)}
   />
   {#if !ready}
     <p class="empty">Your beat shows up here. Tap a box to add or remove a hit.</p>
+  {:else if view === 'mix'}
+    <p class="empty">Drag along a row to set its level. Tap MIX to go back to the boxes.</p>
+  {:else if view === 'pattern'}
+    <p class="empty">Set a row to hits on every 16th, 8th, beat or half note, the off-beats, 2–10 random hits, or none. Evolve leaves those rows alone.</p>
   {/if}
 
   <div class="transport">
@@ -76,10 +88,29 @@
     align-items: center;
     gap: 8px;
   }
+  .mix {
+    min-height: 36px;
+    padding: 0 10px;
+    font-size: 13px;
+  }
+  .mix + .mix {
+    margin-right: auto;
+  }
   .style {
     display: flex;
     align-items: center;
     gap: 6px;
+    min-width: 0;
+  }
+  /* on a phone the menu itself says what it is */
+  @media (max-width: 440px) {
+    .meta {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
   }
   .meta {
     font-size: 13px;
@@ -87,7 +118,9 @@
   }
   select {
     min-height: 36px;
-    max-width: 180px;
+    max-width: 150px;
+    min-width: 0;
+    width: 100%;
     border: 2px solid var(--ink);
     border-radius: var(--radius);
     background: var(--card);

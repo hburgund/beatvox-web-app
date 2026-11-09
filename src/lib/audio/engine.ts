@@ -10,7 +10,7 @@
 //   wanders each hit between 0.45× and 1× (v1.93's brownian velocity 50–110)
 // - auto-pan: a random ramp every 2–10 s per voice (linear, sine or wobbly)
 // - New Beat, Evolve and styles land on the next downbeat; edits to one row
-//   (a box, resting a row, a new slice) apply at once
+//   (a box, resting a row, a new slice, its level) apply at once
 // - kickoff: 1 voice, +1 at 5 s, +1 at 10 s, auto-evolve from 12 s every 3 s
 //
 // All randomness comes from a seeded Rng, and the audio clock drives
@@ -37,7 +37,28 @@ export const PATTERNS = {
   quarters: bits('1000100010001000'),
   groove: bits('1001011000010111'),
   allOff: bits('0000000000000000'),
+  offbeats: bits('0010001000100010'),
+  halves: bits('1000000010000000'),
 };
+
+/** The quick patterns a row can be set to: every 16th, 8th, quarter or half
+ * note, the off-beat 8ths, 2–10 random hits, or nothing. */
+export const ROW_FILLS = ['16', '8', '4', '2', 'off', 'random', 'none'] as const;
+export type RowFill = (typeof ROW_FILLS)[number];
+const FILL_PATTERNS: Record<Exclude<RowFill, 'random'>, boolean[]> = {
+  '16': PATTERNS.allOn,
+  '8': PATTERNS.eighths,
+  '4': PATTERNS.quarters,
+  '2': PATTERNS.halves,
+  off: PATTERNS.offbeats,
+  none: PATTERNS.allOff,
+};
+
+/** Which quick pattern a row's hits match, if any ('random' never matches). */
+export function fillOf(pattern: boolean[]): RowFill | null {
+  for (const [k, p] of Object.entries(FILL_PATTERNS)) if (p.every((b, i) => b === pattern[i])) return k as RowFill;
+  return null;
+}
 const PRESET_LIST = [PATTERNS.allOn, PATTERNS.eighths, PATTERNS.quarters, PATTERNS.groove, PATTERNS.allOff];
 
 export type PanShape = 'linear' | 'sine' | 'wobble';
@@ -111,6 +132,8 @@ export type Action =
   | { kind: 'toggleStep'; voice: number; step: number }
   | { kind: 'toggleVoice'; voice: number }
   | { kind: 'setSlice'; voice: number; slice: number }
+  | { kind: 'setLevel'; voice: number; level: number }
+  | { kind: 'fillRow'; voice: number; fill: RowFill }
   | { kind: 'settings'; settings: Partial<EngineSettings> }
   | { kind: 'recipe'; recipe: Recipe };
 
@@ -180,6 +203,8 @@ export class BeatEngine {
   private queue: Action[] = [];
   /** rows given a slice by hand: evolve leaves their slice alone and doesn't rest them */
   private pinned = new Set<number>();
+  /** rows given a quick pattern by hand: evolve leaves their hits alone */
+  private held = new Set<number>();
   private events: StepEvent[] = [];
   private timer: ReturnType<typeof setInterval> | undefined;
   private nextTime = 0;
@@ -261,6 +286,14 @@ export class BeatEngine {
   }
   toggleVoice(voice: number) {
     this.request({ kind: 'toggleVoice', voice });
+  }
+  /** Set a row's mix level, 0..1 (1 = the recording's natural level). */
+  setLevel(voice: number, level: number) {
+    this.request({ kind: 'setLevel', voice, level });
+  }
+  /** Set a row to a quick pattern (see ROW_FILLS). */
+  fillRow(voice: number, fill: RowFill) {
+    this.request({ kind: 'fillRow', voice, fill });
   }
   /** Give a row a different slice (a row already playing it takes this row's). */
   setSlice(voice: number, slice: number) {
@@ -357,7 +390,7 @@ export class BeatEngine {
     // edits to one row (tap a box, rest a row, swap a slice) apply at once, so
     // the grid answers the tap; the sound follows from the next unscheduled
     // step (at most LOOKAHEAD away). Whole-beat changes wait for the downbeat.
-    const now = !this.playing || a.kind === 'toggleStep' || a.kind === 'toggleVoice' || a.kind === 'setSlice';
+    const now = !this.playing || a.kind === 'toggleStep' || a.kind === 'toggleVoice' || a.kind === 'setSlice' || a.kind === 'setLevel' || a.kind === 'fillRow';
     if (now) this.run(a);
     else this.queue.push(a);
   }
@@ -386,6 +419,26 @@ export class BeatEngine {
       case 'toggleVoice':
         this.voices[a.voice].on = !this.voices[a.voice].on;
         break;
+      case 'setLevel': {
+        const v = this.voices[a.voice];
+        if (v) v.level = Math.min(1, Math.max(0, a.level));
+        break;
+      }
+      case 'fillRow': {
+        const v = this.voices[a.voice];
+        if (!v) break;
+        if (a.fill === 'random') {
+          const hits = Array<boolean>(STEPS).fill(false);
+          const n = 2 + this.rng.int(9);
+          this.rng.shuffle([...Array(STEPS).keys()]).slice(0, n).forEach((i) => (hits[i] = true));
+          this.setPattern(v, hits);
+        } else {
+          this.setPattern(v, [...FILL_PATTERNS[a.fill]]);
+        }
+        if (a.fill !== 'none') v.on = true;
+        this.held.add(a.voice);
+        break;
+      }
       case 'setSlice': {
         const v = this.voices[a.voice];
         if (!v || a.slice < 0 || a.slice >= this.slices.length) break;
@@ -463,6 +516,7 @@ export class BeatEngine {
 
   private doNewBeat(kickoff: boolean) {
     this.pinned.clear();
+    this.held.clear();
     this.voices = Array.from({ length: VOICES }, () => this.blankVoice());
     this.dealSlices();
     for (const v of this.voices) {
@@ -492,7 +546,8 @@ export class BeatEngine {
     if (!this.slices.length) return;
     const on = this.voices.map((v, i) => (v.on ? i : -1)).filter((i) => i >= 0);
     const anyVoice = () => this.rng.int(VOICES);
-    const onVoice = () => (on.length ? this.rng.pick(on) : anyVoice());
+    // a row you set to a quick pattern keeps its hits
+    const loose = on.filter((i) => !this.held.has(i));
     // a row you gave a slice to by hand keeps it
     const free = (i: number) => !this.pinned.has(i);
     const freeOn = on.filter(free);
@@ -500,17 +555,18 @@ export class BeatEngine {
     switch (kind) {
       case 0: {
         // flip one step
-        const v = this.voices[onVoice()];
+        if (!loose.length) break;
+        const v = this.voices[this.rng.pick(loose)];
         const s = this.rng.int(STEPS);
         v.pattern[s] = !v.pattern[s];
         v.accent[s] = 1;
         break;
       }
       case 1:
-        this.setPattern(this.voices[onVoice()], this.randomPattern());
+        if (loose.length) this.setPattern(this.voices[this.rng.pick(loose)], this.randomPattern());
         break;
       case 2:
-        this.setPattern(this.voices[onVoice()], this.presetPattern());
+        if (loose.length) this.setPattern(this.voices[this.rng.pick(loose)], this.presetPattern());
         break;
       case 3: {
         if (!freeOn.length) break;
@@ -559,6 +615,7 @@ export class BeatEngine {
 
   private doRecipe(r: Recipe) {
     this.pinned.clear();
+    this.held.clear();
     // a recipe replaces the kickoff
     this.kickoffStart = null;
     this.kickoffStage = 3;

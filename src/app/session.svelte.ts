@@ -1,7 +1,7 @@
 // App state: the voice recording, its slices, the engine and what the UI shows.
 // The audio engine is plain TypeScript; this class connects it to Svelte.
 
-import { BeatEngine, VOICES, STEPS, type Voice } from '../lib/audio/engine';
+import { BeatEngine, VOICES, STEPS, type RowFill, type Voice } from '../lib/audio/engine';
 import { FxChain, spaceToParams } from '../lib/audio/fx';
 import { encodeMp3 } from '../lib/audio/mp3';
 import { renderShare, voiceSpan } from '../lib/audio/render';
@@ -322,6 +322,16 @@ export class Session {
   /** Make a beat row play this slice (dragged from the waveform). */
   setSlice(voice: number, slice: number) {
     this.engine?.setSlice(voice, slice);
+  }
+
+  /** Set one row's level, 0..1 (the Mix view). */
+  setLevel(voice: number, level: number) {
+    this.engine?.setLevel(voice, level);
+  }
+
+  /** Set one row to a quick pattern (the Pattern view). */
+  fillRow(voice: number, fill: RowFill) {
+    this.engine?.fillRow(voice, fill);
   }
 
   /** Rest or wake one slice's row. */
