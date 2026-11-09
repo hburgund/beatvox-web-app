@@ -42,6 +42,8 @@
   const live = $derived(data?.status === 'live' ? data : null);
   const rows = $derived(ringRows(live?.mix.recipe ?? null));
   const ringSize = $derived(Math.min(340, width));
+  // a reVox names the beat whose vox it plays
+  const source = $derived(live?.mix.recipe?.revoxOf ? (live.family.find((m) => m.id === live.mix.recipe!.revoxOf) ?? null) : null);
   const places = $derived(live ? new Set(live.family.map((m) => `${m.latitude.toFixed(1)},${m.longitude.toFixed(1)}`)).size : 0);
 
   const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
@@ -114,8 +116,9 @@
     {:else if live}
       <div class="title">
         <div>
-          <p class="label kicker">A BEATVOX · {day(live.mix.createdAt).toUpperCase()}</p>
+          <p class="label kicker">{source ? 'A REVOX' : 'A BEATVOX'} · {day(live.mix.createdAt).toUpperCase()}</p>
           <h1>{live.mix.title}</h1>
+          {#if source}<p class="sub from">made with the vox from <a href="/b/{source.id}">{source.title}</a></p>{/if}
         </div>
         <button class="btn icon" aria-label="Share this BeatVox" onclick={share}>
           <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"
@@ -290,6 +293,13 @@
   }
   .sub {
     font: 13px/1.35 var(--sans);
+  }
+  .from {
+    margin-top: 4px;
+  }
+  .from a {
+    color: var(--ink);
+    font-weight: 600;
   }
   .btn.icon {
     width: 44px;

@@ -40,11 +40,16 @@
 
 <section class="card voice" aria-label="Voice">
   <div class="head">
-    <span class="label">VOICE</span>
+    <span class="label">{s.revoxOf ? 'REVOX' : 'VOICE'}</span>
     <span class="meta">{meta}</span>
   </div>
+  {#if s.revoxOf && hasVoice}
+    <p class="revox">The vox from <a href="/b/{s.revoxOf.mixId}">{s.revoxOf.title}</a>, with its beat to start from. Change the beat, make a new one, then save and send yours.</p>
+  {/if}
 
-  {#if hasVoice}
+  {#if s.revoxLoading}
+    <p class="intro" aria-live="polite">Loading the vox…</p>
+  {:else if hasVoice}
     <Wave
       mono={s.mono}
       sampleRate={s.voice?.sampleRate ?? 44100}
@@ -58,7 +63,7 @@
     />
     <p class="tip">Tap a slice to hear it. Drag it onto a beat row to play it there.</p>
     <div class="row">
-      <button class="btn" onclick={() => s.toggleRecord()}><span class="dot"></span>RE-RECORD</button>
+      <button class="btn" onclick={() => s.toggleRecord()}><span class="dot"></span>{s.revoxOf ? 'RECORD YOURS' : 'RE-RECORD'}</button>
       <button class="btn" class:on={s.reviewing} onclick={() => s.toggleReview()}>
         {#if s.reviewing}
           <svg width="14" height="14" viewBox="0 0 18 18" aria-hidden="true"><rect x="3" y="3" width="12" height="12" fill="currentColor" /></svg>STOP
@@ -105,6 +110,14 @@
 </section>
 
 <style>
+  .revox {
+    margin: 0;
+    font: 14px/1.4 var(--sans);
+  }
+  .revox a {
+    color: var(--ink);
+    font-weight: 600;
+  }
   .voice {
     display: flex;
     flex-direction: column;

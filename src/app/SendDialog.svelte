@@ -16,7 +16,9 @@
     } else if (!open && dlg.open) dlg.close();
   });
 
-  const at = $derived(s.sendStep ? SEND_STEPS.indexOf(s.sendStep) : s.send === 'sent' ? SEND_STEPS.length : -1);
+  // a reVox sends only its loop and beat: the vox and slices are already there
+  const steps = $derived(s.revoxOf ? SEND_STEPS.filter((x) => x === 'mix' || x === 'recipe') : SEND_STEPS);
+  const at = $derived(s.sendStep ? steps.indexOf(s.sendStep) : s.send === 'sent' ? steps.length : -1);
 
   async function shareIt() {
     const r = await s.shareLink();
@@ -45,7 +47,7 @@
   {:else if s.send === 'sending'}
     <h2 id="send-title">SENDING YOUR BEATVOX</h2>
     <ol>
-      {#each SEND_STEPS as st, i (st)}
+      {#each steps as st, i (st)}
         <li class:done={i < at} class:now={i === at}><span class="box" aria-hidden="true"></span>{STEP_TEXT[st]}</li>
       {/each}
     </ol>

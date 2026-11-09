@@ -9,6 +9,7 @@
 // recipe is always sent right after its mix.
 import { parseRecipe, parsePattern, type Recipe, type Role } from './recipe';
 import { RW_API, RW_PROJECT, RW_TAGS } from './roundware';
+import { validateInstrument, type Instrument } from './instrument';
 
 export interface SharedMix {
   id: number;
@@ -30,6 +31,9 @@ export type Shared =
       /** every beat made from this vox, oldest first (this one included) */
       family: SharedMix[];
       revoxAllowed: boolean;
+      /** how the vox was cut, and its asset (what a reVox plays) */
+      instrument: Instrument | null;
+      instrumentAsset: number | null;
     };
 
 /** an asset as the list returns it (the fields used here) */
@@ -136,7 +140,11 @@ export async function loadShared(id: number, api = RW_API, project = RW_PROJECT)
         }
       }),
     ),
-    instrumentAsset ? getJson<{ revoxAllowed?: boolean }>(instrumentAsset.file!).catch(() => null) : null,
+    instrumentAsset
+      ? getJson(instrumentAsset.file!)
+          .then(validateInstrument)
+          .catch(() => null)
+      : null,
   ]);
   const mixesBase = mixAssets.map((a) => ({ id: a.id, createdAt: a.created_at }));
   const matched = matchRecipes(mixesBase, recipes.filter((r) => r !== null));
@@ -162,5 +170,7 @@ export async function loadShared(id: number, api = RW_API, project = RW_PROJECT)
     vox: { id: root.id, file: root.file, latitude: root.latitude, longitude: root.longitude },
     family,
     revoxAllowed: instrument?.revoxAllowed === true,
+    instrument,
+    instrumentAsset: instrument ? instrumentAsset!.id : null,
   };
 }

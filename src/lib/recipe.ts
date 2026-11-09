@@ -83,6 +83,8 @@ export interface Recipe {
   seed?: number;
   /** beats sent to Roundware: the mix asset this recipe made (from Nov 2026) */
   mixAssetId?: number;
+  /** a reVox: the mix asset whose vox it plays (the share page it came from) */
+  revoxOf?: number;
   /** optional: Roundware participant who made it */
   participant?: number | string;
   createdAt?: string;

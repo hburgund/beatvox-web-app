@@ -146,7 +146,9 @@
           {#if open}
             <PlacePicker bind:place={s.place} center={s.project ?? { latitude: 38.33, longitude: -94.93 }} />
           {/if}
-          <Check bind:checked={s.revoxOk} disabled={s.send !== 'idle'}>Others can reVox my voice (make their own beats with it)</Check>
+          {#if !s.revoxOf}
+            <Check bind:checked={s.revoxOk} disabled={s.send !== 'idle'}>Others can reVox my voice (make their own beats with it)</Check>
+          {/if}
           <Check bind:checked={s.agreed} disabled={s.send !== 'idle'}>{s.project?.legal_agreement ?? 'Loading the terms…'}</Check>
           <button class="btn primary send" disabled={!canSend} onclick={send}>SEND TO THE MAP</button>
           <p class="meta hint" aria-live="polite">

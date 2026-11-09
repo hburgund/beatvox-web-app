@@ -12,6 +12,10 @@
   const s = new Session();
   let sheet = $state(false);
 
+  // /?revox=<mix id>: open that BeatVox's vox to make your own beat with it
+  const revox = Number(new URLSearchParams(location.search).get('revox'));
+  if (revox > 0) void s.loadRevox(revox);
+
   // push dial changes into the engine and effects
   $effect(() => {
     void [s.volume, s.bpm, s.pitch, s.panning, s.space];

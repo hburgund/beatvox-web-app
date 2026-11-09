@@ -16,6 +16,7 @@ import { encodeWav } from '../lib/audio/wav';
 import { newId } from '../lib/instrument';
 import { Roundware, beatvoxShareUrl, RW_JSON, RW_TAGS, type RwPlace, type RwProject, type SendStep, type SentMix, type SentVoice } from '../lib/roundware';
 import { STYLES } from '../lib/styles';
+import { loadShared } from '../lib/shared';
 
 export const MAX_RECORD_SEC = 15;
 /** loops in a shared piece (Simple mode; Advanced will offer 4 / 8 / 16) */
@@ -110,6 +111,10 @@ export class Session {
   sentMix = $state.raw<SentMix | null>(null);
   /** the current voice as it is on Roundware, once sent */
   private sentVoice: SentVoice | null = null;
+  /** a reVox: someone else's vox, from the BeatVox it was shared in */
+  revoxOf = $state.raw<{ mixId: number; title: string } | null>(null);
+  /** loading a vox to reVox */
+  revoxLoading = $state(false);
   /** bumps to drop a capture or render that's out of date */
   private shareRun = 0;
 
@@ -193,14 +198,20 @@ export class Session {
     return out;
   }
 
-  private setVoice(raw: AudioBuffer) {
+  /**
+   * Use a voice: cut it into slices (or use the slices it came with, for a
+   * reVox) and start the beat. A reVox starts from the beat it was shared
+   * with and waits for Play, since it opens without a tap.
+   */
+  private setVoice(raw: AudioBuffer, revox?: { instrument: Instrument; sent: SentVoice; of: { mixId: number; title: string }; recipe: Recipe | null }) {
     const ctx = this.audio();
     const voice = prepareVoice(ctx, raw);
     const mono = voice.getChannelData(0);
-    const instrument = cutInstrument(mono, voice.sampleRate);
+    const instrument = revox?.instrument ?? cutInstrument(mono, voice.sampleRate);
     this.raw = raw;
     this.recordedAt = new Date();
-    this.sentVoice = null;
+    this.sentVoice = revox?.sent ?? null;
+    this.revoxOf = revox?.of ?? null;
     this.voice = voice;
     this.mono = mono;
     this.instrument = instrument;
@@ -212,10 +223,49 @@ export class Session {
       this.status = `${instrument.slices.length} slices`;
     }
     this.discardShare();
-    if (instrument.slices.length) {
-      this.engine!.load(voice, instrument);
-      // one screen: the beat starts as soon as the voice is cut
-      this.go();
+    if (!instrument.slices.length) return;
+    const recipe = revox?.recipe ?? undefined;
+    if (recipe) {
+      if (recipe.bpm !== undefined) this.bpm = recipe.bpm;
+      if (recipe.pitch !== undefined) this.pitch = recipe.pitch;
+      if (recipe.panning !== undefined) this.panning = recipe.panning;
+      if (recipe.space !== undefined) this.space = recipe.space;
+    }
+    this.engine!.load(voice, instrument, recipe);
+    // one screen: the beat starts as soon as the voice is cut
+    if (!revox) this.go();
+  }
+
+  /**
+   * Open someone else's vox to make your own beat with it (a reVox), from the
+   * BeatVox a share page showed. Sending it later adds only your mix and
+   * recipe, under their vox.
+   */
+  async loadRevox(mixId: number) {
+    this.revoxLoading = true;
+    this.status = '';
+    try {
+      const d = await loadShared(mixId);
+      if (d.status !== 'live') {
+        this.status = d.status === 'pending' ? "That BeatVox isn't approved yet, so its vox can't be reVoxed." : "Couldn't find that BeatVox.";
+        return;
+      }
+      if (!d.revoxAllowed || !d.instrument || d.instrumentAsset === null) {
+        this.status = 'The maker kept that vox to themselves. Record your own instead!';
+        return;
+      }
+      const data = await (await fetch(d.vox.file)).arrayBuffer();
+      const raw = await this.audio().decodeAudioData(data);
+      this.setVoice(raw, {
+        instrument: d.instrument,
+        sent: { instrumentId: d.instrument.id, voiceAsset: d.vox.id, instrumentAsset: d.instrumentAsset },
+        of: { mixId: d.mix.id, title: d.mix.title },
+        recipe: d.mix.recipe,
+      });
+    } catch {
+      this.status = "Couldn't load that vox. Check your connection and try again.";
+    } finally {
+      this.revoxLoading = false;
     }
   }
 
@@ -258,6 +308,8 @@ export class Session {
   newPerson() {
     this.stopBeat();
     this.stopReview();
+    this.revoxOf = null;
+    this.sentVoice = null;
     this.voice = null;
     this.mono = null;
     this.instrument = null;
@@ -580,7 +632,7 @@ export class Session {
           file: r.loop.mp3,
           fileName: `${base}.mp3`,
           place,
-          tags: [RW_TAGS.mix],
+          tags: [this.revoxOf ? RW_TAGS.revoxMix : RW_TAGS.mix],
           parent: v.voiceAsset,
           description: title,
           agreedTerms: terms,
@@ -613,6 +665,7 @@ export class Session {
           name: title || r.recipe.name,
           instrument: { id: r.instrument.id, assetId: v.voiceAsset },
           mixAssetId: m.mixAsset,
+          ...(this.revoxOf ? { revoxOf: this.revoxOf.mixId } : {}),
         };
         const a = await this.rw.upload({
           mediaType: RW_JSON.mediaType,
