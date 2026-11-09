@@ -82,6 +82,8 @@ export class Session {
   panning = $state(60);
   pitch = $state(1);
   space = $state(35);
+  /** 0..100: how much each hit varies (start, pitch, loudness, timing) */
+  humanize = $state(60);
   /** the beat row a slice is being dragged over */
   dropRow = $state<number | null>(null);
   /** name of the style the beat started from, or '' for a random beat */
@@ -230,6 +232,7 @@ export class Session {
       if (recipe.pitch !== undefined) this.pitch = recipe.pitch;
       if (recipe.panning !== undefined) this.panning = recipe.panning;
       if (recipe.space !== undefined) this.space = recipe.space;
+      if (recipe.humanize !== undefined) this.humanize = Math.round(recipe.humanize * 100);
     }
     this.engine!.load(voice, instrument, recipe);
     // one screen: the beat starts as soon as the voice is cut
@@ -350,6 +353,7 @@ export class Session {
     this.style = name;
     if (r.bpm !== undefined) this.bpm = r.bpm;
     if (r.space !== undefined) this.space = r.space;
+    if (r.humanize !== undefined) this.humanize = Math.round(r.humanize * 100);
     if (r.panning !== undefined) this.panning = r.panning;
     this.engine?.applyRecipe(r);
   }
@@ -398,7 +402,7 @@ export class Session {
 
   applyMix() {
     if (!this.engine || !this.fx) return;
-    this.engine.set({ bpm: this.bpm, pitch: this.pitch, panning: this.panning / 100 });
+    this.engine.set({ bpm: this.bpm, pitch: this.pitch, panning: this.panning / 100, humanize: this.humanize / 100 });
     this.fx.setVolume(Math.pow(this.volume / 100, 2) * 1.25);
     this.engine.setFx(spaceToParams(this.space / 100));
   }

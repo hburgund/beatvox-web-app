@@ -130,7 +130,7 @@
         </div>
         <div class="row">
           <button class="btn" onclick={() => s.saveMp3()}>SAVE MP3</button>
-          {#if canShare}<button class="btn" onclick={() => s.shareMp3()}>SHARE…</button>{/if}
+          {#if canShare}<button class="btn" onclick={() => s.shareMp3()}>SHARE MP3…</button>{/if}
         </div>
         <button class="link" onclick={() => s.saveMp3('loop')}>save the loop too</button>
         {#if s.shareStatus}<p class="error">{s.shareStatus}</p>{/if}

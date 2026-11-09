@@ -280,9 +280,12 @@ describe('BeatEngine', () => {
     const t0 = started[0].when;
     const late = started.filter((s) => Math.round((s.when - t0) / step) % 2 === 1);
     expect(late.length).toBeGreaterThan(0);
+    // (humanize may add up to 4 ms more, never less)
     for (const s of late) {
       const k = (s.when - t0) / step;
-      expect(k - Math.floor(k)).toBeCloseTo(0.05, 5);
+      const frac = k - Math.floor(k);
+      expect(frac).toBeGreaterThanOrEqual(0.05 - 1e-6);
+      expect(frac).toBeLessThanOrEqual(0.05 + 0.004 / step + 1e-6);
     }
     engine.stop();
   });
@@ -305,16 +308,50 @@ describe('BeatEngine', () => {
     for (const p of peaks) expect(p).toBeCloseTo(0.5, 9);
     expect(engine.voices[0].level).toBe(0.5);
 
-    // humanize 1 (v1.93): hits wander between 0.45× and 1× of the level
+    // humanize 1: the v1.93 walk (0.45–1×), a ±8% wobble, and the weak hand
+    // of running 16ths 14% quieter
     peaks.length = 0;
     engine.applyRecipe(one(0.8, 1));
     play(engine, ctx, 8);
     engine.stop();
-    expect(Math.min(...peaks)).toBeGreaterThanOrEqual(0.8 * 0.45 - 1e-9);
-    expect(Math.max(...peaks)).toBeLessThanOrEqual(0.8 + 1e-9);
+    expect(Math.min(...peaks)).toBeGreaterThanOrEqual(0.8 * 0.45 * 0.92 * 0.86 - 1e-9);
+    expect(Math.max(...peaks)).toBeLessThanOrEqual(0.8 * 1.08 + 1e-9);
     expect(new Set(peaks.map((p) => p.toFixed(3))).size).toBeGreaterThan(10);
     expect(engine.voices[0].level).toBe(0.8);
     expect(engine.toRecipe('t').humanize).toBe(1);
+  });
+
+  it('humanize varies each hit a little, and 0 is machine-steady', () => {
+    const { engine, ctx, started, instrument } = setup(3);
+    const one = (humanize: number) => ({
+      format: 'beatvox-recipe' as const,
+      version: 1,
+      name: 'one',
+      kind: 'style' as const,
+      bpm: 120,
+      humanize,
+      voices: [{ pattern: 'x'.repeat(16) }],
+    });
+    const step = 60 / 120 / 4;
+    const check = (h: number) => {
+      started.length = 0;
+      engine.applyRecipe(one(h));
+      play(engine, ctx, 4);
+      engine.stop();
+      const t0 = started[0].when;
+      const starts = instrument.slices[engine.voices[0].slice].start;
+      const late = started.map((s) => (s.when - t0) / step - Math.round((s.when - t0) / step));
+      const skips = started.map((s) => s.offset - starts);
+      return { late, skips };
+    };
+    const machine = check(0);
+    for (const x of machine.late) expect(Math.abs(x)).toBeLessThan(1e-6);
+    for (const x of machine.skips) expect(Math.abs(x)).toBeLessThan(1e-9);
+    const human = check(1);
+    expect(human.late.some((x) => x > 1e-4)).toBe(true);
+    for (const x of human.late) expect(x * step).toBeLessThanOrEqual(0.004 + 1e-6);
+    expect(new Set(human.skips.map((x) => x.toFixed(5))).size).toBeGreaterThan(5);
+    for (const x of human.skips) expect(x).toBeLessThanOrEqual(0.006 + 1e-9);
   });
 
   it('plays each hit to the end of its slice; the next hit on the row cuts it', async () => {
@@ -345,8 +382,12 @@ describe('BeatEngine', () => {
     engine.stop();
     const hits = tape!.cmds.filter((x) => x.k === 'hit');
     expect(hits.length).toBeGreaterThan(0);
-    // nothing gates them shorter (a hat used to get 0.08 s)
-    for (const h of hits) expect(h.len).toBeCloseTo(1, 9);
+    // nothing gates them shorter (a hat used to get 0.08 s); humanize only
+    // skips up to 6 ms of the start and detunes a few cents
+    for (const h of hits) {
+      expect(h.len).toBeGreaterThan(0.97);
+      expect(h.len).toBeLessThan(1.03);
+    }
   });
 
   it('captures whole loops from the next downbeat', async () => {

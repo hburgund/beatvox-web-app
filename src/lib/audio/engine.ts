@@ -8,6 +8,11 @@
 //   hit to 100 / 300 / 100 ms; that cut long slices short.)
 // - loudness: each voice has a steady mix level, and a humanize walk on top
 //   wanders each hit between 0.45× and 1× (v1.93's brownian velocity 50–110)
+// - humanize also keeps a fast row from sounding like a machine gun: each hit
+//   starts a few ms into its slice, is detuned a few cents, wobbles in
+//   loudness, alternates strong-weak on running 16ths, and lands up to 4 ms
+//   late (never on a beat); each row has its own slight tuning (v1.93 tuned
+//   each voice at random). All of it scales with `humanize`: 0 = machine.
 // - auto-pan: a random ramp every 2–10 s per voice (linear, sine or wobbly)
 // - New Beat, Evolve and styles land on the next downbeat; edits to one row
 //   (a box, resting a row, a new slice, its level) apply at once
@@ -74,6 +79,11 @@ export interface Voice {
   level: number;
   /** humanize multiplier, wanders between HUMAN_FLOOR and 1 on each hit */
   human: number;
+  /** this row's own slight tuning, cents at full humanize */
+  cents: number;
+  /** the step this row last played (to alternate hands on running 16ths) */
+  lastAbs: number;
+  hand: number;
   delaySend: number;
   reverbSend: number;
   /** the quick pattern this row was last set to, until its hits change */
@@ -98,7 +108,7 @@ export interface EngineSettings {
   /** 0..0.5 of a step: how late the off-beat sixteenths land */
   swing: number;
   envelope: Envelope;
-  /** 0..1: how much the per-hit loudness wanders (1 = v1.93, 0 = steady) */
+  /** 0..1: how much each hit varies (loudness, start, pitch, timing); 0 = machine-steady */
   humanize: number;
 }
 
@@ -111,13 +121,26 @@ export const DEFAULT_SETTINGS: EngineSettings = {
   swing: 0,
   // v1.93 used 100 ms in; the reference MP3's hits rise in ~50 ms
   envelope: { attack: 0.05, release: 0.1 },
-  humanize: 1,
+  humanize: 0.6,
 };
 
 // Humanize at full strength reproduces v1.93's velocity walk: 50–110 out of
 // 127 (×1.15) is 0.45–1.0 of full level, in steps of up to ±8/127×1.15.
 const HUMAN_FLOOR = 0.45;
 const HUMAN_STEP = 0.072;
+// the rest of humanize, at full strength
+/** each hit starts up to this far into its slice (seconds) */
+const HUMAN_START = 0.006;
+/** each hit detuned by up to ± this (cents) */
+const HUMAN_CENTS = 15;
+/** each row tuned by up to ± this (cents) */
+const ROW_CENTS = 20;
+/** quick loudness wobble per hit, ± */
+const HUMAN_WOBBLE = 0.08;
+/** the weak hand of running 16ths, this much quieter */
+const HUMAN_HAND = 0.14;
+/** each hit off the beat lands up to this late (seconds) */
+const HUMAN_LATE = 0.004;
 
 /** One step as heard: which voices fired. The UI reads these to flash the grid. */
 export interface StepEvent {
@@ -194,6 +217,9 @@ export class BeatEngine {
   onChange: () => void = () => {};
 
   private rng: Rng;
+  /** humanize's own random stream, so beats, evolves and slice choices come
+   *  out the same for a seed whatever humanize does */
+  private hr: Rng;
   private buffer: AudioBuffer | null = null;
   private slices: Slice[] = [];
   /** drum-role scores per slice */
@@ -222,6 +248,7 @@ export class BeatEngine {
     seed?: number,
   ) {
     this.rng = new Rng(seed);
+    this.hr = new Rng((this.rng.seed ^ 0x9e3779b9) >>> 0);
     this.bank = new VoiceBank(ctx, fx);
     for (let v = 0; v < VOICES; v++) this.pan.push({ nextAt: 0, value: 0 });
     this.applySettings({});
@@ -476,7 +503,7 @@ export class BeatEngine {
   }
 
   private blankVoice(): Voice {
-    return { on: false, slice: 0, pattern: [...PATTERNS.allOff], accent: ones(), role: 'any', level: 1, human: 1, delaySend: 0, reverbSend: 0 };
+    return { on: false, slice: 0, pattern: [...PATTERNS.allOff], accent: ones(), role: 'any', level: 1, human: 1, cents: 0, lastAbs: -2, hand: 0, delaySend: 0, reverbSend: 0 };
   }
 
   /** replace a voice's pattern (accents back to normal) */
@@ -526,6 +553,7 @@ export class BeatEngine {
     this.dealSlices();
     for (const v of this.voices) {
       v.human = this.randomHuman();
+      v.cents = this.hr.range(-ROW_CENTS, ROW_CENTS);
       v.delaySend = this.rng.range(0, 1);
       v.reverbSend = this.rng.range(0.4, 1);
       this.setPattern(v, this.rng.chance(0.3) ? this.presetPattern() : this.randomPattern());
@@ -672,8 +700,10 @@ export class BeatEngine {
       }
       return v;
     });
+    // each row's own slight tuning, drawn last so slice matching is unchanged
+    for (const v of this.voices) v.cents = this.hr.range(-ROW_CENTS, ROW_CENTS);
     this.applySends();
-    const s: Partial<EngineSettings> = { swing: r.swing ?? 0, humanize: r.humanize ?? 1, autoEvolve: r.evolve?.auto ?? false };
+    const s: Partial<EngineSettings> = { swing: r.swing ?? 0, humanize: r.humanize ?? this.settings.humanize, autoEvolve: r.evolve?.auto ?? false };
     if (r.bpm !== undefined) s.bpm = r.bpm;
     if (r.pitch !== undefined) s.pitch = r.pitch;
     if (r.panning !== undefined) s.panning = r.panning / 100;
@@ -753,7 +783,9 @@ export class BeatEngine {
       const hits: number[] = [];
       this.voices.forEach((v, i) => {
         if (v.on && v.pattern[this.step]) {
-          this.hit(i, v, ht, v.accent[this.step] ?? 1);
+          // humanize: off the beat, a hit may land a touch late
+          const late = this.step % 4 === 0 ? 0 : this.hr.range(0, HUMAN_LATE) * this.settings.humanize;
+          this.hit(i, v, ht + late, v.accent[this.step] ?? 1);
           hits.push(i);
         }
       });
@@ -829,19 +861,30 @@ export class BeatEngine {
   private hit(i: number, v: Voice, t: number, accent = 1) {
     const s = this.slices[v.slice];
     if (!s || !this.buffer) return;
-    // humanize: brownian walk, one step per hit
     const hz = this.settings.humanize;
+    // loudness: the slow brownian walk (v1.93), a quick wobble on top, and
+    // the second of two running 16ths a little weaker, like a second hand
     const floor = 1 - (1 - HUMAN_FLOOR) * hz;
     v.human = Math.min(1, Math.max(floor, v.human + this.rng.range(-HUMAN_STEP, HUMAN_STEP) * hz));
-    const rate = this.settings.pitch;
-    const sliceDur = (s.end - s.start) / rate;
+    v.hand = this.absStep - v.lastAbs === 1 ? 1 - v.hand : 0;
+    v.lastAbs = this.absStep;
+    const wobble = 1 + this.hr.range(-HUMAN_WOBBLE, HUMAN_WOBBLE) * hz;
+    const hand = 1 - v.hand * HUMAN_HAND * hz;
+    // pitch: the row's own tuning plus a few cents per hit
+    const cents = (v.cents + this.hr.range(-HUMAN_CENTS, HUMAN_CENTS)) * hz;
+    const rate = this.settings.pitch * Math.pow(2, cents / 1200);
+    // start a few ms into the slice, so no two attacks are identical
+    const sliceLen = s.end - s.start;
+    const skip = Math.min(HUMAN_START, sliceLen * 0.1) * this.hr.range(0, 1) * hz;
+    const sliceDur = (sliceLen - skip) / rate;
     const env = ROLE_ENVELOPE[v.role] ?? this.settings.envelope;
     // the whole slice; the voice's next hit cuts it off (VoiceBank chokes it)
     const len = sliceDur;
     const a = Math.max(0.003, Math.min(env.attack, len / 4));
     const r = Math.max(0.01, Math.min(env.release, len / 4));
     const h = Math.max(0, len - a - r);
-    const level = v.level * v.human * accent;
-    this.emit({ k: 'hit', t, voice: i, offset: s.start, len, rate, level, a, h });
+    const level = Math.min(1, v.level * v.human * accent * wobble * hand);
+    this.emit({ k: 'hit', t, voice: i, offset: s.start + skip, len, rate, level, a, h });
   }
+
 }
