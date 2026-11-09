@@ -223,6 +223,16 @@ describe('BeatEngine', () => {
     }
   });
 
+  it('remembers a row\'s quick pattern until its hits change', () => {
+    const { engine } = setup(12);
+    engine.fillRow(0, 'random');
+    expect(engine.voices[0].fill).toBe('random');
+    engine.toggleStep(0, 3);
+    expect(engine.voices[0].fill).toBeUndefined();
+    engine.fillRow(0, '8');
+    expect(engine.voices[0].fill).toBe('8');
+  });
+
   it('keeps slices unique through many evolves', () => {
     const { engine } = setup(7);
     for (let i = 0; i < 300; i++) engine.evolve();

@@ -45,7 +45,7 @@
   {:else if view === 'mix'}
     <p class="empty">Drag along a row to set its level. Tap MIX to go back to the boxes.</p>
   {:else if view === 'pattern'}
-    <p class="empty">Set a row to hits on every 16th, 8th, beat or half note, the upbeats (UP), 2–10 random hits, or none. Evolve leaves those rows alone.</p>
+    <p class="empty">Pick a pattern for any row from its menu. Evolve leaves those rows alone. Tap PATTERN to put the menus away.</p>
   {/if}
 
   <div class="transport">

@@ -1,10 +1,10 @@
 <script lang="ts">
   // The 8 × 16 beat grid of ☒ boxes. Tap a box to add or remove a hit; tap a
   // slice number to rest or wake that row. The box under the playhead lights.
-  // In the Mix view each row's boxes become one level bar; in the Pattern view,
-  // buttons that set the row to a quick pattern. The yellow strip under each
-  // slice number shows the row's level in every view.
-  import { fillOf, fillPattern, type RowFill, type Voice } from '../audio/engine';
+  // In the Mix view each row's boxes become one level bar. The Pattern view
+  // slides a menu in before each row's boxes to set a quick pattern. The yellow
+  // strip under each slice number shows the row's level in every view.
+  import { fillOf, type RowFill, type Voice } from '../audio/engine';
   import LevelBar from './LevelBar.svelte';
 
   interface Props {
@@ -23,22 +23,20 @@
   }
   let { voices, step, firing, disabled = false, dropRow = null, view = 'boxes', ontoggle, ontogglevoice, onlevel, onfill }: Props = $props();
 
-  const FILLS: { fill: RowFill; text: string; name: string }[] = [
-    { fill: '16', text: '16', name: 'every 16th note' },
-    { fill: '8', text: '8', name: 'every 8th note' },
-    { fill: '4', text: '4', name: 'every beat' },
-    { fill: '2', text: '2', name: 'every half note' },
-    { fill: 'off', text: 'UP', name: 'upbeat 8ths (between the beats)' },
-    { fill: 'random', text: 'RND', name: '2 to 10 random hits' },
-    { fill: 'none', text: '×', name: 'no hits' },
+  // the menu's choices; '···' shows when the row's hits match none of them
+  const FILLS: { fill: RowFill; text: string }[] = [
+    { fill: '16', text: '1/16' },
+    { fill: '8', text: '1/8' },
+    { fill: '4', text: '1/4' },
+    { fill: '2', text: '1/2' },
+    { fill: 'off', text: 'UP' },
+    { fill: 'random', text: 'RND' },
+    { fill: 'none', text: 'none' },
   ];
 
   // an empty grid to show before there's a voice
-  const blank = Array.from({ length: 8 }, (_, i) => ({ on: true, slice: i, level: 1, pattern: Array(16).fill(false) }));
+  const blank: Pick<Voice, 'on' | 'slice' | 'level' | 'pattern' | 'fill'>[] = Array.from({ length: 8 }, (_, i) => ({ on: true, slice: i, level: 1, pattern: Array(16).fill(false) }));
   const rows = $derived(voices.length ? voices : blank);
-
-  /** the row and pattern under the pointer in the Pattern view (a preview) */
-  let hover = $state<{ row: number; fill: RowFill } | null>(null);
 
   // arrow keys move between boxes (only one box per row is a Tab stop)
   function move(e: KeyboardEvent) {
@@ -55,8 +53,9 @@
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-<div class="grid" class:disabled role="group" aria-label="Beat: {rows.filter((v) => v.on).length} of {rows.length} slices playing" onkeydown={move}>
+<div class="grid" class:disabled class:patterns={view === 'pattern'} role="group" aria-label="Beat: {rows.filter((v) => v.on).length} of {rows.length} slices playing" onkeydown={move}>
   {#each rows as v, i (i)}
+    {@const shown = v.fill ?? fillOf(v.pattern) ?? ''}
     <div class="row" class:resting={!v.on} class:drop={dropRow === i} data-row={i}>
       <button
         class="slice"
@@ -66,32 +65,26 @@
         onclick={() => ontogglevoice(i)}
         >{v.slice + 1}<span class="lvl" style="width:{v.level * 100}%" aria-hidden="true"></span></button
       >
-      {#if view === 'pattern'}
-        {@const cur = fillOf(v.pattern)}
-        {@const preview = hover?.row === i ? fillPattern(hover.fill) : null}
-        <div class="pick">
-          <div class="fills" role="group" aria-label="Row {i + 1} pattern">
-            {#each FILLS as f (f.fill)}
-              <button
-                class="fill"
-                class:on={cur === f.fill}
-                {disabled}
-                aria-pressed={cur === f.fill}
-                aria-label="Row {i + 1}: {f.name}"
-                onpointerenter={(e) => e.pointerType === 'mouse' && (hover = { row: i, fill: f.fill })}
-                onpointerleave={() => (hover = null)}
-                onclick={() => onfill(i, f.fill)}>{f.text}</button
-              >
-            {/each}
-          </div>
-          <!-- the row's hits, small, lined up with the boxes; a hovered button previews its pattern -->
-          <div class="ghost" class:preview aria-hidden="true">
-            {#each preview ?? v.pattern as on, s (s)}
-              <span class:on class:now={s === step} class:downbeat={s % 4 === 0}></span>
-            {/each}
-          </div>
-        </div>
-      {:else if view === 'mix'}
+      <!-- the Pattern view slides a menu in here; the boxes squeeze over and show each pick at once -->
+      <div class="pick" inert={view !== 'pattern'}>
+        <select
+          class:set={shown !== ''}
+          value={shown}
+          {disabled}
+          aria-label="Row {i + 1} pattern"
+          onchange={(e) => {
+            const f = e.currentTarget.value;
+            onfill(i, (f === 'again' ? 'random' : f) as RowFill);
+            // show RND again so the next re-roll is a change too
+            if (f === 'again') e.currentTarget.value = 'random';
+          }}
+        >
+          <option value="" disabled>···</option>
+          {#each FILLS as f (f.fill)}<option value={f.fill}>{f.text}</option>{/each}
+          {#if v.fill === 'random'}<option value="again">RND again</option>{/if}
+        </select>
+      </div>
+      {#if view === 'mix'}
         <LevelBar
           label="Row {i + 1} level"
           value={v.level}
@@ -215,70 +208,48 @@
   .cell.fire {
     background: var(--yellow);
   }
+  /* the pattern menu: no width until the Pattern view, then it slides in */
   .pick {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
+    flex: none;
+    width: 0;
+    margin-left: -6px;
+    overflow: hidden;
+    opacity: 0;
+    transition:
+      width 220ms ease,
+      margin 220ms ease,
+      opacity 160ms ease;
   }
-  .ghost {
-    display: grid;
-    grid-template-columns: repeat(16, minmax(0, 1fr));
-    column-gap: 2px;
-    height: 5px;
-  }
-  .ghost span {
-    border-radius: 1px;
-    background: var(--soft);
-    opacity: 0.45;
-  }
-  .ghost span.downbeat:not(:first-child) {
-    margin-left: 4px;
-  }
-  .ghost span.on {
-    background: var(--blue);
-    opacity: 0.7;
-  }
-  .ghost.preview span.on {
-    background: var(--pink);
+  .patterns .pick {
+    width: 62px;
+    margin-left: 0;
     opacity: 1;
   }
-  .ghost span.now {
-    outline: 1px solid var(--ink);
-  }
-  .fills {
-    display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: 3px;
-  }
-  .fill {
-    height: 17px;
-    padding: 0;
+  .pick select {
+    width: 62px;
+    height: 24px;
+    box-sizing: border-box;
+    padding: 0 2px;
     border: 1.5px solid var(--ink);
     border-radius: 3px;
     background: var(--card);
     color: var(--ink);
-    font: 700 11px var(--mono);
+    font: 700 12px var(--mono);
     cursor: pointer;
-    touch-action: manipulation;
   }
-  .fill.on {
-    background: var(--blue);
-    border-color: var(--blue);
-    color: #fff;
-  }
-  .fill:active {
+  .pick select.set {
     background: var(--yellow);
-    color: var(--ink);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pick {
+      transition: none;
+    }
   }
   .resting .cell,
-  .resting .fills,
   .resting :global(.level) {
     opacity: 0.4;
   }
   .cell:disabled,
-  .fill:disabled,
   .slice:disabled {
     cursor: default;
   }

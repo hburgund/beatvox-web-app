@@ -54,11 +54,6 @@ const FILL_PATTERNS: Record<Exclude<RowFill, 'random'>, boolean[]> = {
   none: PATTERNS.allOff,
 };
 
-/** The hits a quick pattern gives (null for 'random'). */
-export function fillPattern(fill: RowFill): boolean[] | null {
-  return fill === 'random' ? null : FILL_PATTERNS[fill];
-}
-
 /** Which quick pattern a row's hits match, if any ('random' never matches). */
 export function fillOf(pattern: boolean[]): RowFill | null {
   for (const [k, p] of Object.entries(FILL_PATTERNS)) if (p.every((b, i) => b === pattern[i])) return k as RowFill;
@@ -81,6 +76,8 @@ export interface Voice {
   human: number;
   delaySend: number;
   reverbSend: number;
+  /** the quick pattern this row was last set to, until its hits change */
+  fill?: RowFill;
 }
 
 /** The fades at each end of a hit, seconds. */
@@ -419,6 +416,7 @@ export class BeatEngine {
         const v = this.voices[a.voice];
         v.pattern[a.step] = !v.pattern[a.step];
         v.accent[a.step] = 1;
+        v.fill = undefined;
         break;
       }
       case 'toggleVoice':
@@ -441,6 +439,7 @@ export class BeatEngine {
           this.setPattern(v, [...FILL_PATTERNS[a.fill]]);
         }
         if (a.fill !== 'none') v.on = true;
+        v.fill = a.fill;
         this.held.add(a.voice);
         break;
       }
@@ -482,6 +481,7 @@ export class BeatEngine {
 
   /** replace a voice's pattern (accents back to normal) */
   private setPattern(v: Voice, hits: boolean[]) {
+    v.fill = undefined;
     v.pattern = hits;
     v.accent = ones();
   }
