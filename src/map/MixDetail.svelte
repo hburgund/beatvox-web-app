@@ -6,7 +6,7 @@
   import MiniClock from '../lib/ui/MiniClock.svelte';
   import { loadShared, ringRows, type Shared, type SharedMix } from '../lib/shared';
   import { beatvoxShareUrl, revoxUrl, STUDIO_PATH } from '../lib/roundware';
-  import type { Player } from '../share/player.svelte';
+  import { Player } from '../share/player.svelte';
   import type { MapMix } from '../lib/mapData';
 
   interface Props {
@@ -21,6 +21,8 @@
   }
   let { mix, player, wandering, ringSize, onplay, onpick, onclose }: Props = $props();
 
+  /** the source vox plays on its own, so it can be heard over the beat */
+  const vp = new Player();
   let info = $state<Shared | null>(null);
   let failed = $state(false);
 
@@ -39,6 +41,12 @@
     return () => {
       gone = true;
     };
+  });
+
+  // a different vox (or closing the panel) stops this one's source vox
+  $effect(() => {
+    void mix.voxId;
+    return () => vp.stop();
   });
 
   const live = $derived(info?.status === 'live' ? info : null);
@@ -92,11 +100,11 @@
       <div class="vox">
         <button
           class="vox-play"
-          aria-label={player.playing === `vox${live.vox.id}` ? 'Stop the source vox' : 'Hear the source vox'}
-          aria-pressed={player.playing === `vox${live.vox.id}`}
-          onclick={() => player.toggle(`vox${live.vox.id}`, live.vox.file, { loop: false })}
+          aria-label={vp.playing === 'vox' ? 'Stop the source vox' : 'Hear the source vox'}
+          aria-pressed={vp.playing === 'vox'}
+          onclick={() => vp.toggle('vox', live.vox.file, { loop: false })}
         >
-          {#if player.playing === `vox${live.vox.id}`}
+          {#if vp.playing === 'vox'}
             <svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="2" width="10" height="10" fill="currentColor" /></svg>
           {:else}
             <svg width="14" height="14" viewBox="0 0 18 18" aria-hidden="true"><path d="M5 2l11 7-11 7z" fill="currentColor" /></svg>

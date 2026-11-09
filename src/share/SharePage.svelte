@@ -18,6 +18,8 @@
   let note = $state('');
   let dialog = $state<HTMLDialogElement>();
   const p = new Player();
+  /** the source vox plays on its own, so it can be heard over the beat */
+  const vp = new Player();
 
   $effect(() => {
     let gone = false;
@@ -36,6 +38,7 @@
     return () => {
       gone = true;
       p.stop();
+      vp.stop();
     };
   });
 
@@ -53,7 +56,7 @@
     if (live) void p.toggle('main', live.mix.file, { loop: true, bpm: bpmOf(live.mix) });
   }
   function playVox() {
-    if (live) void p.toggle('vox', live.vox.file, { loop: false });
+    if (live) void vp.toggle('vox', live.vox.file, { loop: false });
   }
   function playFamily(m: SharedMix) {
     void p.toggle(m.id === live?.mix.id ? 'main' : `mix${m.id}`, m.file, { loop: true, bpm: bpmOf(m) });
@@ -153,8 +156,8 @@
       {/if}
 
       <div class="vox">
-        <button class="vox-play" aria-label={p.playing === 'vox' ? 'Stop the source vox' : 'Hear the source vox'} aria-pressed={p.playing === 'vox'} onclick={playVox}>
-          {#if p.playing === 'vox'}
+        <button class="vox-play" aria-label={vp.playing === 'vox' ? 'Stop the source vox' : 'Hear the source vox'} aria-pressed={vp.playing === 'vox'} onclick={playVox}>
+          {#if vp.playing === 'vox'}
             <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="2" width="10" height="10" fill="currentColor" /></svg>
           {:else}
             <svg width="16" height="16" viewBox="0 0 18 18" aria-hidden="true"><path d="M5 2l11 7-11 7z" fill="currentColor" /></svg>
