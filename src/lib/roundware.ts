@@ -17,11 +17,19 @@ export const RW_API = 'https://api.roundware.app/api/3';
 export const RW_PROJECT = 103;
 
 /**
- * The project's published Roundware web app, for the map and share links
- * until BeatVox has its own map (see docs/LISTEN_AND_SHARE.md).
+ * The project's published Roundware web app, for the map until BeatVox has
+ * its own (see docs/LISTEN_AND_SHARE.md).
  */
 export const BEATVOX_MAP_URL = 'https://beatvox.roundware.app/listen';
-export const beatvoxShareUrl = (assetId: number) => `https://beatvox.roundware.app/share/${assetId}`;
+
+/** A BeatVox's own share page, on whatever site this app is served from. */
+export const beatvoxShareUrl = (assetId: number, origin = globalThis.location?.origin ?? '') => `${origin}/b/${assetId}`;
+
+/** The id in a share page's path (/b/<id>), or null for any other page. */
+export function sharePageId(path: string): number | null {
+  const m = /^\/b\/(\d+)\/?$/.exec(path);
+  return m ? Number(m[1]) : null;
+}
 
 export const RW_TAGS = {
   source: 1124,

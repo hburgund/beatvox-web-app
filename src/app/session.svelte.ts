@@ -612,6 +612,7 @@ export class Session {
           ...r.recipe,
           name: title || r.recipe.name,
           instrument: { id: r.instrument.id, assetId: v.voiceAsset },
+          mixAssetId: m.mixAsset,
         };
         const a = await this.rw.upload({
           mediaType: RW_JSON.mediaType,

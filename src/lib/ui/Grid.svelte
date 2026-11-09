@@ -1,6 +1,8 @@
 <script lang="ts">
-  // The 8 × 16 beat grid of ☒ boxes. Tap a box to add or remove a hit; tap a
-  // slice number to rest or wake that row. The box under the playhead lights.
+  // The 8 × 16 beat grid. Tap a box to add or remove a hit; tap a slice number
+  // to rest or wake that row. A hit is filled with the color of its slice's
+  // sound (kick blue, snare pink, hat yellow, anything else ink), the same
+  // colors the share image uses. The column under the playhead lights.
   // In the Mix view each row's boxes become one level bar. The Pattern view
   // slides a menu in before each row's boxes to set a quick pattern. The yellow
   // strip under each slice number shows the row's level in every view.
@@ -14,6 +16,8 @@
     disabled?: boolean;
     /** the row a dragged slice is over */
     dropRow?: number | null;
+    /** each slice's sound ('kick', 'snare', 'hat', 'perc', 'tonal'), by slice number */
+    sounds?: (string | undefined)[];
     /** what each row shows: its boxes, a level bar, or quick patterns */
     view?: 'boxes' | 'mix' | 'pattern';
     ontoggle: (voice: number, step: number) => void;
@@ -21,7 +25,7 @@
     onlevel: (voice: number, level: number) => void;
     onfill: (voice: number, fill: RowFill) => void;
   }
-  let { voices, step, firing, disabled = false, dropRow = null, view = 'boxes', ontoggle, ontogglevoice, onlevel, onfill }: Props = $props();
+  let { voices, step, firing, disabled = false, dropRow = null, sounds = [], view = 'boxes', ontoggle, ontogglevoice, onlevel, onfill }: Props = $props();
 
   // the menu's choices; '···' shows when the row's hits match none of them
   const FILLS: { fill: RowFill; text: string }[] = [
@@ -33,6 +37,9 @@
     { fill: 'random', text: 'RND' },
     { fill: 'none', text: 'none' },
   ];
+
+  // sound → the color class of a hit
+  const COLOR: Record<string, string> = { kick: 'kick', snare: 'snare', hat: 'hat' };
 
   // an empty grid to show before there's a voice
   const blank: Pick<Voice, 'on' | 'slice' | 'level' | 'pattern' | 'fill'>[] = Array.from({ length: 8 }, (_, i) => ({ on: true, slice: i, level: 1, pattern: Array(16).fill(false) }));
@@ -96,7 +103,7 @@
       <div class="steps">
         {#each v.pattern as on, s (s)}
           <button
-            class="cell"
+            class="cell {on ? `hit-${COLOR[sounds[v.slice] ?? ''] ?? 'other'}` : ''}"
             class:on
             class:now={s === step}
             class:fire={s === step && on && v.on && firing.includes(i)}
@@ -189,24 +196,27 @@
   .cell.on {
     border-color: var(--ink);
   }
-  .cell.on::before,
-  .cell.on::after {
-    content: '';
-    position: absolute;
-    left: 50%;
-    top: 3px;
-    bottom: 3px;
-    width: 2px;
+  .cell.hit-kick {
+    background: var(--blue);
+  }
+  .cell.hit-snare {
+    background: var(--pink);
+  }
+  .cell.hit-hat {
+    background: var(--yellow);
+  }
+  .cell.hit-other {
     background: var(--ink);
   }
-  .cell.on::before {
-    transform: translateX(-50%) rotate(40deg);
-  }
-  .cell.on::after {
-    transform: translateX(-50%) rotate(-40deg);
+  /* the playhead: empty boxes light, hits get a ring */
+  .cell.now.on {
+    box-shadow: 0 0 0 2px var(--now);
   }
   .cell.fire {
-    background: var(--yellow);
+    box-shadow:
+      0 0 0 2px var(--card),
+      0 0 0 4px var(--ink);
+    z-index: 1;
   }
   /* the pattern menu: no width until the Pattern view, then it slides in */
   .pick {

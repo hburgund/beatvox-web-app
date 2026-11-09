@@ -23,7 +23,8 @@ In dev, both pages can load the private 2008 reference recordings from `docs/bea
 - `src/lib/audio/fx.ts`: effects (delay, reverb, EQ, compression, limiter) and the Simple-mode "Space" knob.
 - `src/lib/audio/slicer.ts`, `analysis.ts`, `pitch.ts`: slicing and pitch.
 - `src/lib/audio/recorder.ts`, `prepare.ts`: mic recording and clean-up.
-- `src/lib/ui/`: the widgets in the "light riso" look (☒ beat grid, dials, ☒ checkbox, waveform, beat lights).
+- `src/lib/ui/`: the widgets in the "light riso" look (beat grid with hits colored by sound, the beat ring and its small clock button, dials, ☒ checkbox, waveform, beat lights).
+- `src/share/`: a BeatVox's share page at `/b/<id>`: the beat as a ring that is also its gapless loop player, the source vox, and a map of every beat made from the same vox. `src/lib/shared.ts` loads it all from Roundware's public endpoints (no sign-in). In production the host must serve `index.html` for `/b/*`.
 - `src/app/`: the app: one studio screen (`VoiceCard`, `BeatCard`), the save bar along the bottom (`SaveBar`), the share sheet (`ShareSheet`) and the sending popup (`SendDialog`). `theme.css` holds the colours and Courier Prime; `session.svelte.ts` holds the state.
 
 ## Tests

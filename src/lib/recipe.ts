@@ -81,6 +81,8 @@ export interface Recipe {
   /** up to 8; missing voices are off */
   voices: RecipeVoice[];
   seed?: number;
+  /** beats sent to Roundware: the mix asset this recipe made (from Nov 2026) */
+  mixAssetId?: number;
   /** optional: Roundware participant who made it */
   participant?: number | string;
   createdAt?: string;

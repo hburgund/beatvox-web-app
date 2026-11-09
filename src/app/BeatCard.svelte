@@ -34,6 +34,7 @@
     firing={s.firing}
     disabled={!ready}
     dropRow={s.dropRow}
+    sounds={s.instrument?.slices.map((x) => x.role) ?? []}
     {view}
     onlevel={(v, x) => s.setLevel(v, x)}
     onfill={(v, f) => s.fillRow(v, f)}
