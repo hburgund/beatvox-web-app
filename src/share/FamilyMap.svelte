@@ -38,7 +38,15 @@
           .map((f) => ({ type: 'Feature', properties: { id: f.id, title: f.title, here: f.id === current }, geometry: { type: 'Point', coordinates: [f.longitude, f.latitude] } }));
         map!.addSource('lines', { type: 'geojson', data: { type: 'FeatureCollection', features: lines } });
         map!.addSource('dots', { type: 'geojson', data: { type: 'FeatureCollection', features: dots } });
-        map!.addLayer({ id: 'lines', type: 'line', source: 'lines', paint: { 'line-color': '#1d1b16', 'line-width': 2, 'line-dasharray': ['case', ['get', 'solid'], ['literal', [1, 0]], ['literal', [3, 2]]] } });
+        // dashes can't vary by feature in MapLibre, so solid and dashed lines are two layers
+        map!.addLayer({ id: 'lines', type: 'line', source: 'lines', filter: ['get', 'solid'], paint: { 'line-color': '#1d1b16', 'line-width': 2 } });
+        map!.addLayer({
+          id: 'lines-dashed',
+          type: 'line',
+          source: 'lines',
+          filter: ['!', ['get', 'solid']],
+          paint: { 'line-color': '#1d1b16', 'line-width': 2, 'line-dasharray': [3, 2] },
+        });
         map!.addLayer({
           id: 'dots',
           type: 'circle',

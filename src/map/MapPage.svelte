@@ -56,7 +56,6 @@
       if (gone) return r.map.remove();
       map = r.map;
       ml = r.ml;
-      map.addControl(new ml.NavigationControl({ showCompass: false }), 'top-right');
       map.on('zoomend', () => (zoom = map!.getZoom()));
       map.on('load', () => {
         // the lines joining mixes of the same vox: dashed ink, or solid pink for the chosen vox
@@ -326,7 +325,17 @@
     </div>
   </header>
 
-  <div class="map" bind:this={el} role="region" aria-label="Map of BeatVoxes"></div>
+  <div class="map-wrap">
+    <div class="map" bind:this={el} role="region" aria-label="Map of BeatVoxes"></div>
+    <div class="zoom" role="group" aria-label="Zoom">
+      <button class="btn" aria-label="Zoom in" onclick={() => map?.zoomIn()}>
+        <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M9 3v12M3 9h12" stroke="currentColor" stroke-width="2.6" /></svg>
+      </button>
+      <button class="btn" aria-label="Zoom out" onclick={() => map?.zoomOut()}>
+        <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M3 9h12" stroke="currentColor" stroke-width="2.6" /></svg>
+      </button>
+    </div>
+  </div>
 
   {#if failed}
     <p class="toast" role="alert">{failed}</p>
@@ -427,6 +436,27 @@
     text-decoration: none;
     color: var(--ink);
     padding: 0 10px;
+  }
+  .map-wrap {
+    flex: 1;
+    position: relative;
+    display: flex;
+    min-height: 0;
+  }
+  /* zoom buttons on the left, where the side panel never covers them */
+  .zoom {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .zoom .btn {
+    width: 44px;
+    padding: 0;
+    box-shadow: 2px 2px 0 var(--ink);
   }
   .map {
     flex: 1;
