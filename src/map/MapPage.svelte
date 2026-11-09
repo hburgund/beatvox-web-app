@@ -17,6 +17,7 @@
   import { clockMarker } from '../lib/clockMarker';
   import { STUDIO_PATH } from '../lib/roundware';
   import { ShuffleBag } from '../lib/shuffleBag';
+  import { greatCircle } from '../lib/greatCircle';
 
   let data = $state.raw<MapData | null>(null);
   let failed = $state('');
@@ -158,13 +159,8 @@
         features.push({
           type: 'Feature',
           properties: { mine: sel?.voxId === f[0].voxId },
-          geometry: {
-            type: 'LineString',
-            coordinates: [
-              [f[0].longitude, f[0].latitude],
-              [m.longitude, m.latitude],
-            ],
-          },
+          // the shortest route over the globe, not a straight line on the flat map
+          geometry: { type: 'LineString', coordinates: greatCircle([f[0].longitude, f[0].latitude], [m.longitude, m.latitude]) },
         });
       }
     }
