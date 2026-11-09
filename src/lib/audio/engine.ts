@@ -54,6 +54,11 @@ const FILL_PATTERNS: Record<Exclude<RowFill, 'random'>, boolean[]> = {
   none: PATTERNS.allOff,
 };
 
+/** The hits a quick pattern gives (null for 'random'). */
+export function fillPattern(fill: RowFill): boolean[] | null {
+  return fill === 'random' ? null : FILL_PATTERNS[fill];
+}
+
 /** Which quick pattern a row's hits match, if any ('random' never matches). */
 export function fillOf(pattern: boolean[]): RowFill | null {
   for (const [k, p] of Object.entries(FILL_PATTERNS)) if (p.every((b, i) => b === pattern[i])) return k as RowFill;

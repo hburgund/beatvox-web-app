@@ -4,7 +4,7 @@
   // In the Mix view each row's boxes become one level bar; in the Pattern view,
   // buttons that set the row to a quick pattern. The yellow strip under each
   // slice number shows the row's level in every view.
-  import { fillOf, type RowFill, type Voice } from '../audio/engine';
+  import { fillOf, fillPattern, type RowFill, type Voice } from '../audio/engine';
   import LevelBar from './LevelBar.svelte';
 
   interface Props {
@@ -28,7 +28,7 @@
     { fill: '8', text: '8', name: 'every 8th note' },
     { fill: '4', text: '4', name: 'every beat' },
     { fill: '2', text: '2', name: 'every half note' },
-    { fill: 'off', text: 'OFF', name: 'off-beat 8ths' },
+    { fill: 'off', text: 'UP', name: 'upbeat 8ths (between the beats)' },
     { fill: 'random', text: 'RND', name: '2 to 10 random hits' },
     { fill: 'none', text: '×', name: 'no hits' },
   ];
@@ -36,6 +36,9 @@
   // an empty grid to show before there's a voice
   const blank = Array.from({ length: 8 }, (_, i) => ({ on: true, slice: i, level: 1, pattern: Array(16).fill(false) }));
   const rows = $derived(voices.length ? voices : blank);
+
+  /** the row and pattern under the pointer in the Pattern view (a preview) */
+  let hover = $state<{ row: number; fill: RowFill } | null>(null);
 
   // arrow keys move between boxes (only one box per row is a Tab stop)
   function move(e: KeyboardEvent) {
@@ -65,17 +68,28 @@
       >
       {#if view === 'pattern'}
         {@const cur = fillOf(v.pattern)}
-        <div class="fills" role="group" aria-label="Row {i + 1} pattern">
-          {#each FILLS as f (f.fill)}
-            <button
-              class="fill"
-              class:on={cur === f.fill}
-              {disabled}
-              aria-pressed={cur === f.fill}
-              aria-label="Row {i + 1}: {f.name}"
-              onclick={() => onfill(i, f.fill)}>{f.text}</button
-            >
-          {/each}
+        {@const preview = hover?.row === i ? fillPattern(hover.fill) : null}
+        <div class="pick">
+          <div class="fills" role="group" aria-label="Row {i + 1} pattern">
+            {#each FILLS as f (f.fill)}
+              <button
+                class="fill"
+                class:on={cur === f.fill}
+                {disabled}
+                aria-pressed={cur === f.fill}
+                aria-label="Row {i + 1}: {f.name}"
+                onpointerenter={(e) => e.pointerType === 'mouse' && (hover = { row: i, fill: f.fill })}
+                onpointerleave={() => (hover = null)}
+                onclick={() => onfill(i, f.fill)}>{f.text}</button
+              >
+            {/each}
+          </div>
+          <!-- the row's hits, small, lined up with the boxes; a hovered button previews its pattern -->
+          <div class="ghost" class:preview aria-hidden="true">
+            {#each preview ?? v.pattern as on, s (s)}
+              <span class:on class:now={s === step} class:downbeat={s % 4 === 0}></span>
+            {/each}
+          </div>
         </div>
       {:else if view === 'mix'}
         <LevelBar
@@ -201,14 +215,45 @@
   .cell.fire {
     background: var(--yellow);
   }
-  .fills {
+  .pick {
     flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .ghost {
+    display: grid;
+    grid-template-columns: repeat(16, minmax(0, 1fr));
+    column-gap: 2px;
+    height: 5px;
+  }
+  .ghost span {
+    border-radius: 1px;
+    background: var(--soft);
+    opacity: 0.45;
+  }
+  .ghost span.downbeat:not(:first-child) {
+    margin-left: 4px;
+  }
+  .ghost span.on {
+    background: var(--blue);
+    opacity: 0.7;
+  }
+  .ghost.preview span.on {
+    background: var(--pink);
+    opacity: 1;
+  }
+  .ghost span.now {
+    outline: 1px solid var(--ink);
+  }
+  .fills {
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: 3px;
   }
   .fill {
-    height: 24px;
+    height: 17px;
     padding: 0;
     border: 1.5px solid var(--ink);
     border-radius: 3px;
