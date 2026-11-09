@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BeatVox map styles (dev)</title>
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.css" />
+    <script src="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.js"></script>
+    <style>
+      body {
+        margin: 0;
+        background: #f4efe2;
+        color: #1d1b16;
+        font: 14px/1.4 'Courier Prime', 'Courier New', monospace;
+      }
+      header {
+        padding: 16px 20px 8px;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 6px;
+        font-size: 26px;
+        text-shadow: 2px 2px 0 #ff5c80;
+      }
+      header p {
+        margin: 4px 0;
+        font-family: system-ui, sans-serif;
+        max-width: 900px;
+      }
+      h2.group {
+        max-width: 1400px;
+        margin: 18px auto 6px;
+        padding: 0 20px;
+        font-size: 15px;
+        letter-spacing: 0.1em;
+      }
+      .grid {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 0 20px 20px;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 16px;
+      }
+      figure {
+        margin: 0;
+        border: 2px solid #1d1b16;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #fffcf4;
+      }
+      .m {
+        height: 340px;
+        position: relative;
+        z-index: 0;
+      }
+      figcaption {
+        padding: 8px 10px 10px;
+        border-top: 2px solid #1d1b16;
+      }
+      figcaption b {
+        display: block;
+        font-size: 14px;
+      }
+      figcaption span {
+        font: 12.5px/1.4 system-ui, sans-serif;
+        color: #5d584c;
+      }
+      .tag {
+        display: inline-block;
+        margin-top: 4px;
+        padding: 1px 6px;
+        border: 1.5px solid #1d1b16;
+        border-radius: 3px;
+        font: 700 11px 'Courier New', monospace;
+      }
+      .tag.vec {
+        background: #ffd23f;
+      }
+      .bv-pin {
+        background: none;
+        border: none;
+      }
+      .now .leaflet-tile-pane {
+        filter: grayscale(0.55) sepia(0.12) contrast(0.92) brightness(1.04);
+      }
+      .duo .leaflet-tile-pane {
+        filter: url(#duotone);
+      }
+      .maplibregl-marker {
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- riso duotone: dark → riso blue, light → paper -->
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <filter id="duotone" color-interpolation-filters="sRGB">
+        <feColorMatrix type="matrix" values="0.33 0.33 0.33 0 0  0.33 0.33 0.33 0 0  0.33 0.33 0.33 0 0  0 0 0 1 0" />
+        <feComponentTransfer>
+          <feFuncR type="gamma" exponent="2.6" />
+          <feFuncG type="gamma" exponent="2.6" />
+          <feFuncB type="gamma" exponent="2.6" />
+        </feComponentTransfer>
+        <feComponentTransfer>
+          <feFuncR type="table" tableValues="0.165 0.957" />
+          <feFuncG type="table" tableValues="0.208 0.937" />
+          <feFuncB type="table" tableValues="0.788 0.886" />
+        </feComponentTransfer>
+      </filter>
+    </svg>
+
+    <header>
+      <h1>BEATVOX · MAP STYLES</h1>
+      <p>Every map is live and they move together: drag or zoom any one. The clocks are your real mixes. Zoom in past street level on a few to compare how roads and labels behave.</p>
+    </header>
+
+    <h2 class="group">PICTURE TILES · choose a look, tint it in the browser</h2>
+    <div class="grid" id="raster"></div>
+    <h2 class="group">VECTOR TILES · BeatVox's own style, drawn in the browser (MapLibre)</h2>
+    <div class="grid" id="vector"></div>
+
+    <script type="module">
+      import L from 'leaflet';
+      import 'leaflet/dist/leaflet.css';
+      import { loadMap, loadRecipe } from '/src/lib/mapData.ts';
+      import { ringRows } from '/src/lib/shared.ts';
+      import { clockMarker } from '/src/lib/clockMarker.ts';
+      import { risoStyle, RISO_LIGHT, RISO_DARK, halftone } from '/src/map/risoStyle.ts';
+
+      const START = { lat: 39.5, lng: -77, z: 5 }; // Leaflet zoom; MapLibre = this − 1
+      const OSM = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+      const STADIA = '© <a href="https://stadiamaps.com/">Stadia Maps</a> © <a href="https://stamen.com/">Stamen</a> ' + OSM;
+
+      const RASTER = [
+        { key: 'now', title: 'Now: OpenStreetMap, softened', note: 'What the map uses today, greyed and warmed with a CSS filter. openstreetmap.org tiles can’t back a public app, so this goes either way.', url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attr: OSM, cls: 'now' },
+        { key: 'smooth', title: 'Stadia Alidade Smooth', note: 'Pale and quiet, made to sit under data (CARTO’s similar Positron tiles now need an API key). Free tier on Stadia; a key once public.', url: 'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png', attr: STADIA },
+        { key: 'toner', title: 'Stamen Toner Lite (Stadia)', note: 'Black-and-white print look. Free tier on Stadia; an API key once it’s public.', url: 'https://tiles.stadiamaps.com/tiles/stamen_toner_lite/{z}/{x}/{y}{r}.png', attr: STADIA },
+        { key: 'watercolor', title: 'Stamen Watercolor (Stadia)', note: 'Hand-painted. Lovely, but busy under colored clocks, and has no labels or roads.', url: 'https://tiles.stadiamaps.com/tiles/stamen_watercolor/{z}/{x}/{y}.jpg', attr: STADIA },
+        { key: 'duo', title: 'Riso duotone (picture tiles + filter)', note: 'Any picture tiles (Alidade Smooth here) turned into two inks, riso blue and paper, by an SVG filter. Cheap, but it tints everything at once: water, roads and labels alike.', url: 'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png', attr: STADIA, cls: 'duo' },
+      ];
+      const VECTOR = [
+        { key: 'positron', title: 'Stock vector style: Positron (OpenFreeMap)', note: 'A ready-made vector style, for comparison: crisp at every zoom and on any screen, but someone else’s look. The three below are the same data in BeatVox’s own style.', style: () => 'https://tiles.openfreemap.org/styles/positron' },
+        { key: 'riso', title: 'Riso, light', note: 'Paper land, blue water with a halftone dot, ink coastlines and dashed borders, a few pale roads, small caps labels. Every color and layer is BeatVox’s to set.', style: () => risoStyle(RISO_LIGHT), dots: RISO_LIGHT.dots },
+        { key: 'riso-dark', title: 'Riso, night', note: 'The same style with the inks swapped: ink ground, deep blue water, yellow labels. The clocks glow on it.', style: () => risoStyle(RISO_DARK), dots: RISO_DARK.dots },
+        { key: 'riso-globe', title: 'Riso globe, no roads', note: 'The light style on MapLibre’s globe, roads left out. Zoom out to see the curve; zoomed in it turns flat.', style: () => risoStyle(RISO_LIGHT, { globe: true, roads: false }), dots: RISO_LIGHT.dots },
+      ];
+
+      const maps = []; // { setView(lat,lng,lz), addClock(m, html) }
+      let syncing = false;
+      function follow(from, lat, lng, lz) {
+        if (syncing) return;
+        syncing = true;
+        for (const m of maps) if (m !== from) m.setView(lat, lng, lz);
+        syncing = false;
+      }
+
+      function figure(parent, p, kind) {
+        const f = document.createElement('figure');
+        f.innerHTML = `<div class="m ${p.cls ?? ''}"></div><figcaption><b>${p.title}</b><span>${p.note}</span><br><span class="tag ${kind === 'vector' ? 'vec' : ''}">${kind === 'vector' ? 'VECTOR · OPENFREEMAP' : 'PICTURE TILES'}</span></figcaption>`;
+        parent.append(f);
+        return f.querySelector('.m');
+      }
+
+      for (const p of RASTER) {
+        const el = figure(document.getElementById('raster'), p, 'raster');
+        const map = L.map(el, { zoomControl: true, minZoom: 2 }).setView([START.lat, START.lng], START.z);
+        L.tileLayer(p.url, { attribution: p.attr, maxZoom: 18 }).addTo(map);
+        const me = {
+          setView: (lat, lng, lz) => map.setView([lat, lng], lz, { animate: false }),
+          addClock: (m, html) => L.marker([m.latitude, m.longitude], { icon: L.divIcon({ className: 'bv-pin', html, iconSize: [36, 36] }), title: m.title }).addTo(map),
+        };
+        map.on('move', () => {
+          const c = map.getCenter();
+          follow(me, c.lat, c.lng, map.getZoom());
+        });
+        maps.push(me);
+      }
+
+      for (const p of VECTOR) {
+        const el = figure(document.getElementById('vector'), p, 'vector');
+        const map = new maplibregl.Map({ container: el, style: p.style(), center: [START.lng, START.lat], zoom: START.z - 1, attributionControl: { compact: true } });
+        map.addControl(new maplibregl.NavigationControl({ showCompass: false }));
+        map.on('styleimagemissing', (e) => {
+          if (e.id === 'halftone' && p.dots) map.addImage('halftone', halftone(p.dots));
+        });
+        const me = {
+          setView: (lat, lng, lz) => map.jumpTo({ center: [lng, lat], zoom: lz - 1 }),
+          addClock: (m, html) => {
+            const d = document.createElement('div');
+            d.innerHTML = html;
+            d.title = m.title;
+            new maplibregl.Marker({ element: d }).setLngLat([m.longitude, m.latitude]).addTo(map);
+          },
+        };
+        map.on('move', () => {
+          const c = map.getCenter();
+          follow(me, c.lat, c.lng, map.getZoom() + 1);
+        });
+        maps.push(me);
+      }
+
+      // your mixes, as clocks, on every map
+      const data = await loadMap();
+      for (const m of data.mixes) {
+        const r = await loadRecipe(data.recipeUrls.get(m.id));
+        const html = clockMarker(r ? ringRows(r) : null, { size: 36, selected: m.id === data.mixes[0].id });
+        for (const map of maps) map.addClock(m, html);
+      }
+    </script>
+  </body>
+</html>

@@ -1,9 +1,11 @@
 <script lang="ts">
   // A map of the beats made from one vox, each where its maker put it, with
   // a line from the first one (the original BeatVox) to each of the others,
-  // as on the big map. This beat is pink. Leaflet loads only when shown.
-  import type { Map as LMap } from 'leaflet';
+  // as on the big map. This beat is pink. Same riso style as the home map;
+  // MapLibre loads only when this is shown.
+  import type { Map as MlMap } from 'maplibre-gl';
   import type { SharedMix } from '../lib/shared';
+  import { risoMap } from '../map/risoMap';
 
   interface Props {
     family: SharedMix[];
@@ -17,52 +19,53 @@
   let el: HTMLDivElement;
 
   $effect(() => {
-    let map: LMap | null = null;
+    let map: MlMap | null = null;
     let gone = false;
-    (async () => {
-      const L = await import('leaflet');
-      await import('leaflet/dist/leaflet.css');
-      if (gone) return;
-      map = L.map(el, {
-        zoomControl: interactive,
-        attributionControl: interactive,
-        dragging: interactive,
-        scrollWheelZoom: interactive,
-        doubleClickZoom: interactive,
-        touchZoom: interactive,
-        boxZoom: interactive,
-        keyboard: interactive,
-      });
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-      }).addTo(map);
-      const pts: [number, number][] = family.map((m) => [m.latitude, m.longitude]);
-      const first = pts[0];
-      family.slice(1).forEach((m, i) => {
-        const solid = m.id === current || family[0].id === current;
-        L.polyline([first, pts[i + 1]], { color: '#1d1b16', weight: 2, dashArray: solid ? undefined : '5 4' }).addTo(map!);
-      });
-      // this beat's dot last, so it sits on top
-      const top = (m: SharedMix) => (m.id === current ? 1 : 0);
-      for (const m of [...family].sort((a, b) => top(a) - top(b))) {
-        const dot = L.circleMarker([m.latitude, m.longitude], {
-          radius: m.id === current ? 10 : 7,
-          color: '#1d1b16',
-          weight: 2,
-          fillColor: m.id === current ? '#ff5c80' : '#2a35c9',
-          fillOpacity: 1,
-        }).addTo(map);
+    const pts = family.map((m) => [m.longitude, m.latitude] as [number, number]);
+    if (!pts.length) return;
+    risoMap(el, { interactive, center: pts[0], zoom: 9, foldCredit: true }).then(({ map: m, ml }) => {
+      if (gone) return m.remove();
+      map = m;
+      map.on('load', () => {
+        const lines: GeoJSON.Feature[] = family.slice(1).map((f, i) => ({
+          type: 'Feature',
+          properties: { solid: f.id === current || family[0].id === current },
+          geometry: { type: 'LineString', coordinates: [pts[0], pts[i + 1]] },
+        }));
+        // this beat's dot last, so it sits on top
+        const dots: GeoJSON.Feature[] = [...family]
+          .sort((a, b) => Number(a.id === current) - Number(b.id === current))
+          .map((f) => ({ type: 'Feature', properties: { id: f.id, title: f.title, here: f.id === current }, geometry: { type: 'Point', coordinates: [f.longitude, f.latitude] } }));
+        map!.addSource('lines', { type: 'geojson', data: { type: 'FeatureCollection', features: lines } });
+        map!.addSource('dots', { type: 'geojson', data: { type: 'FeatureCollection', features: dots } });
+        map!.addLayer({ id: 'lines', type: 'line', source: 'lines', paint: { 'line-color': '#1d1b16', 'line-width': 2, 'line-dasharray': ['case', ['get', 'solid'], ['literal', [1, 0]], ['literal', [3, 2]]] } });
+        map!.addLayer({
+          id: 'dots',
+          type: 'circle',
+          source: 'dots',
+          paint: {
+            'circle-radius': ['case', ['get', 'here'], 9, 6],
+            'circle-color': ['case', ['get', 'here'], '#ff5c80', '#2a35c9'],
+            'circle-stroke-color': '#1d1b16',
+            'circle-stroke-width': 2,
+          },
+        });
         if (interactive) {
-          dot.bindTooltip(m.title);
-          dot.on('click', () => onpick?.(m.id));
+          map!.on('click', 'dots', (e) => {
+            const id = e.features?.[0]?.properties?.id;
+            if (typeof id === 'number') onpick?.(id);
+          });
+          map!.on('mouseenter', 'dots', () => (map!.getCanvas().style.cursor = 'pointer'));
+          map!.on('mouseleave', 'dots', () => (map!.getCanvas().style.cursor = ''));
         }
-      }
-      if (!pts.length) return;
-      const bounds = L.latLngBounds(pts);
-      if (bounds.getNorthEast().distanceTo(bounds.getSouthWest()) < 2000) map.setView(first, interactive ? 12 : 10);
-      else map.fitBounds(bounds, { padding: interactive ? [40, 40] : [18, 18], maxZoom: 12 });
-    })();
+        const b = new ml.LngLatBounds();
+        pts.forEach((p) => b.extend(p));
+        const ne = b.getNorthEast();
+        const sw = b.getSouthWest();
+        if (Math.abs(ne.lng - sw.lng) + Math.abs(ne.lat - sw.lat) < 0.02) map!.jumpTo({ center: pts[0], zoom: interactive ? 11 : 9 });
+        else map!.fitBounds(b, { padding: interactive ? 40 : 18, maxZoom: 11, duration: 0 });
+      });
+    });
     return () => {
       gone = true;
       map?.remove();
@@ -76,10 +79,9 @@
   .map {
     width: 100%;
     height: 100%;
-    background: #f7f4ea;
+    background: var(--paper);
   }
   .still {
     pointer-events: none;
   }
-
 </style>

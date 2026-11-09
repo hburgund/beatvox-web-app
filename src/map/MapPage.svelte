@@ -1,12 +1,14 @@
 <script lang="ts">
-  // BeatVox's home page: every BeatVox and reVox where its maker put it.
+  // BeatVox's home page: every BeatVox and reVox where its maker put it, on
+  // a riso-styled globe (MapLibre, OpenStreetMap data via OpenFreeMap).
   // Mixes made from the same vox are joined by lines from the first one, so
   // a vox's travels show. Zoomed out a mix is a dot; zoomed in, a small clock
   // showing its rhythm. Tap one to hear it and see its details (a sheet on a
   // phone, a side panel on a bigger screen). Wander plays one mix after
   // another, at random, from anywhere or from the same vox, and pans to each.
-  import type { Map as LMap, LayerGroup } from 'leaflet';
+  import type { Map as MlMap, Marker, GeoJSONSource } from 'maplibre-gl';
   import { untrack } from 'svelte';
+  import { risoMap, type Maplibre } from './risoMap';
   import MixDetail from './MixDetail.svelte';
   import Check from '../lib/ui/Check.svelte';
   import { Player } from '../share/player.svelte';
@@ -27,9 +29,9 @@
   let scope = $state<'anywhere' | 'vox'>('anywhere');
   let filterDlg = $state<HTMLDialogElement>();
   let el: HTMLDivElement;
-  let map: LMap | null = null;
-  let layer: LayerGroup | null = null;
-  let L: typeof import('leaflet') | null = null;
+  let map: MlMap | null = null;
+  let ml: Maplibre | null = null;
+  let markers: Marker[] = [];
   /** the map is up (markers wait for it) */
   let ready = $state(false);
   const player = new Player();
@@ -46,27 +48,41 @@
     return () => mq.removeEventListener('change', on);
   });
 
-  // the map itself, once
+  // the map itself, once: a globe, roads left out so the beats stand out
   $effect(() => {
     let gone = false;
-    (async () => {
-      L = await import('leaflet');
-      await import('leaflet/dist/leaflet.css');
-      if (gone) return;
-      map = L.map(el, { zoomControl: false, worldCopyJump: true, minZoom: 2 }).setView([30, 0], 2);
-      L.control.zoom({ position: 'topright' }).addTo(map);
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 18,
-        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-      }).addTo(map);
-      layer = L.layerGroup().addTo(map);
+    risoMap(el, { globe: true, roads: false, center: [-30, 30], zoom: 1, maxZoom: 16, renderWorldCopies: false }).then((r) => {
+      if (gone) return r.map.remove();
+      map = r.map;
+      ml = r.ml;
+      map.addControl(new ml.NavigationControl({ showCompass: false }), 'top-right');
       map.on('zoomend', () => (zoom = map!.getZoom()));
-      zoom = map.getZoom();
-      ready = true;
-      if (untrack(() => data)) place();
-    })();
+      map.on('load', () => {
+        // the lines joining mixes of the same vox: dashed ink, or solid pink for the chosen vox
+        map!.addSource('family', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+        map!.addLayer({
+          id: 'family',
+          type: 'line',
+          source: 'family',
+          filter: ['!', ['get', 'mine']],
+          paint: { 'line-color': '#1d1b16', 'line-width': 1.5, 'line-opacity': 0.7, 'line-dasharray': [3, 3] },
+        });
+        map!.addLayer({
+          id: 'family-mine',
+          type: 'line',
+          source: 'family',
+          filter: ['get', 'mine'],
+          paint: { 'line-color': '#ff5c80', 'line-width': 3 },
+        });
+        zoom = map!.getZoom();
+        ready = true;
+        if (untrack(() => data)) place();
+      });
+    });
     return () => {
       gone = true;
+      markers.forEach((m) => m.remove());
+      markers = [];
       map?.remove();
       map = null;
     };
@@ -93,14 +109,18 @@
 
   /** First view: the mix in ?m=, or every mix. */
   function place() {
-    if (!map || !data || !L) return;
+    if (!map || !data || !ml || !ready) return;
     const want = Number(new URLSearchParams(location.search).get('m'));
     const m = data.mixes.find((x) => x.id === want);
     if (m) {
       selected = m;
-      map.setView([m.latitude, m.longitude], 6);
+      map.jumpTo({ center: [m.longitude, m.latitude], zoom: 5 });
+    } else if (data.mixes.length > 1) {
+      const b = new ml.LngLatBounds();
+      data.mixes.forEach((x) => b.extend([x.longitude, x.latitude]));
+      map.fitBounds(b, { padding: 60, maxZoom: 5, duration: 0 });
     } else if (data.mixes.length) {
-      map.fitBounds(L.latLngBounds(data.mixes.map((x) => [x.latitude, x.longitude])), { padding: [40, 40], maxZoom: 6 });
+      map.jumpTo({ center: [data.mixes[0].longitude, data.mixes[0].latitude], zoom: 4 });
     }
   }
 
@@ -124,45 +144,49 @@
 
   // markers and family lines, redrawn when what's shown changes
   $effect(() => {
-    if (!ready || !layer || !L || !data) return;
-    const Lf = L;
+    if (!ready || !map || !ml || !data) return;
     const show = visible;
     const sel = selected;
     const z = zoom;
     const mk = marks;
-    layer.clearLayers();
     const ids = new Set(show.map((m) => m.id));
     // lines: from a vox's first shown mix to each of its others
+    const features: GeoJSON.Feature[] = [];
     for (const fam of data.families.values()) {
       const f = fam.filter((m) => ids.has(m.id));
-      if (f.length < 2) continue;
-      const mine = sel?.voxId === f[0].voxId;
       for (const m of f.slice(1)) {
-        Lf.polyline(
-          [
-            [f[0].latitude, f[0].longitude],
-            [m.latitude, m.longitude],
-          ],
-          { color: mine ? '#ff5c80' : '#1d1b16', weight: mine ? 3 : 1.5, dashArray: mine ? undefined : '4 4', opacity: mine ? 1 : 0.7, interactive: false },
-        ).addTo(layer);
+        features.push({
+          type: 'Feature',
+          properties: { mine: sel?.voxId === f[0].voxId },
+          geometry: {
+            type: 'LineString',
+            coordinates: [
+              [f[0].longitude, f[0].latitude],
+              [m.longitude, m.latitude],
+            ],
+          },
+        });
       }
     }
-    const clocks = z >= 5;
-    // the selected one last, so it sits on top
+    (map.getSource('family') as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features });
+    // zoomed out a dot, zoomed in a clock; the chosen one drawn last, on top
+    markers.forEach((m) => m.remove());
+    markers = [];
+    const clocks = z >= 4;
     for (const m of [...show].sort((a, b) => Number(a.id === sel?.id) - Number(b.id === sel?.id))) {
       const on = m.id === sel?.id;
-      const size = clocks ? (on ? 52 : 40) : on ? 18 : 12;
-      const html = clocks
-        ? clockMarker(mk.get(m.id) ?? null, { size, selected: on })
+      const el = document.createElement('button');
+      el.className = `bv-pin${on ? ' on' : ''}`;
+      el.setAttribute('aria-label', `${m.title}${on ? ' (open)' : ''}`);
+      el.title = m.title;
+      el.innerHTML = clocks
+        ? clockMarker(mk.get(m.id) ?? null, { size: on ? 52 : 40, selected: on })
         : `<span class="bv-dot${on ? ' on' : ''}${m.revox ? ' revox' : ''}"></span>`;
-      const marker = Lf.marker([m.latitude, m.longitude], {
-        icon: Lf.divIcon({ className: 'bv-pin', html, iconSize: [size, size] }),
-        title: m.title,
-        keyboard: true,
-        riseOnHover: true,
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        pick(m, true);
       });
-      marker.on('click', () => pick(m, true));
-      marker.addTo(layer);
+      markers.push(new ml.Marker({ element: el }).setLngLat([m.longitude, m.latitude]).addTo(map));
     }
   });
 
@@ -180,18 +204,15 @@
 
   /** Move the map so a mix sits in the part the sheet or panel doesn't cover. */
   function reveal(m: MapMix, fly = false) {
-    if (!map) return;
-    const z = fly ? Math.max(map.getZoom(), 4) : map.getZoom();
     // wait a frame for the sheet to lay out
     requestAnimationFrame(() => {
       if (!map) return;
       const sheet = document.querySelector('.panel') as HTMLElement | null;
-      const size = map.getSize();
-      const shift = !sheet ? [0, 0] : wide ? [sheet.offsetWidth / 2, 0] : [0, Math.min(sheet.offsetHeight, size.y * 0.7) / 2];
-      const pt = map.project([m.latitude, m.longitude], z).add(shift as [number, number]);
-      const target = map.unproject(pt, z);
-      if (fly) map.flyTo(target, z, { duration: 1.6 });
-      else map.panTo(target);
+      const h = map.getContainer().clientHeight;
+      const offset: [number, number] = !sheet ? [0, 0] : wide ? [-sheet.offsetWidth / 2, 0] : [0, -Math.min(sheet.offsetHeight, h * 0.7) / 2];
+      const center: [number, number] = [m.longitude, m.latitude];
+      if (fly) map.flyTo({ center, offset, zoom: Math.max(map.getZoom(), 3.5), duration: 2200, essential: true });
+      else map.easeTo({ center, offset, duration: 500 });
     });
   }
 
@@ -359,23 +380,30 @@
   }
   .map {
     flex: 1;
-    background: #e9ebff;
+    background: var(--paper);
     /* keep Leaflet's own layers (z-index 400+) below the bar and panel */
     position: relative;
     z-index: 0;
   }
-  /* soften the map so the beats stand out */
-  .map :global(.leaflet-tile-pane) {
-    filter: grayscale(0.55) sepia(0.12) contrast(0.92) brightness(1.04);
-  }
   .map :global(.bv-pin) {
+    padding: 0;
     background: none;
     border: none;
+    cursor: pointer;
+    line-height: 0;
+  }
+  .map :global(.bv-pin svg) {
+    display: block;
+  }
+  .map :global(.bv-pin:focus-visible) {
+    outline: 3px solid var(--blue);
+    outline-offset: 2px;
+    border-radius: 50%;
   }
   .map :global(.bv-dot) {
     display: block;
-    width: 100%;
-    height: 100%;
+    width: 12px;
+    height: 12px;
     box-sizing: border-box;
     border-radius: 50%;
     background: var(--blue);
@@ -385,6 +413,8 @@
     background: var(--yellow);
   }
   .map :global(.bv-dot.on) {
+    width: 18px;
+    height: 18px;
     background: var(--pink);
   }
   .toast {
