@@ -1,19 +1,18 @@
 <script lang="ts">
-  // A map of one vox and the beats made from it: the vox is a yellow diamond
-  // where it was recorded, each beat a dot where it was made, with a line
-  // from the vox to each. This beat is pink. Leaflet loads only when shown.
+  // A map of the beats made from one vox, each where its maker put it, with
+  // a line from the first one (the original BeatVox) to each of the others,
+  // as on the big map. This beat is pink. Leaflet loads only when shown.
   import type { Map as LMap } from 'leaflet';
   import type { SharedMix } from '../lib/shared';
 
   interface Props {
-    vox: { latitude: number; longitude: number };
     family: SharedMix[];
     current: number;
     /** pan and zoom (the overlay), or a still picture (the small map) */
     interactive?: boolean;
     onpick?: (id: number) => void;
   }
-  let { vox, family, current, interactive = false, onpick }: Props = $props();
+  let { family, current, interactive = false, onpick }: Props = $props();
 
   let el: HTMLDivElement;
 
@@ -38,13 +37,12 @@
         maxZoom: 19,
         attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
       }).addTo(map);
-      const v: [number, number] = [vox.latitude, vox.longitude];
-      const pts: [number, number][] = [v];
-      for (const m of family) {
-        const p: [number, number] = [m.latitude, m.longitude];
-        pts.push(p);
-        L.polyline([v, p], { color: '#1d1b16', weight: 2, dashArray: m.id === current ? undefined : '5 4' }).addTo(map);
-      }
+      const pts: [number, number][] = family.map((m) => [m.latitude, m.longitude]);
+      const first = pts[0];
+      family.slice(1).forEach((m, i) => {
+        const solid = m.id === current || family[0].id === current;
+        L.polyline([first, pts[i + 1]], { color: '#1d1b16', weight: 2, dashArray: solid ? undefined : '5 4' }).addTo(map!);
+      });
       // this beat's dot last, so it sits on top
       const top = (m: SharedMix) => (m.id === current ? 1 : 0);
       for (const m of [...family].sort((a, b) => top(a) - top(b))) {
@@ -60,12 +58,9 @@
           dot.on('click', () => onpick?.(m.id));
         }
       }
-      L.marker(v, {
-        interactive: false,
-        icon: L.divIcon({ className: 'bv-vox', iconSize: [18, 18], html: '<span></span>' }),
-      }).addTo(map);
+      if (!pts.length) return;
       const bounds = L.latLngBounds(pts);
-      if (bounds.getNorthEast().distanceTo(bounds.getSouthWest()) < 2000) map.setView(v, interactive ? 12 : 10);
+      if (bounds.getNorthEast().distanceTo(bounds.getSouthWest()) < 2000) map.setView(first, interactive ? 12 : 10);
       else map.fitBounds(bounds, { padding: interactive ? [40, 40] : [18, 18], maxZoom: 12 });
     })();
     return () => {
@@ -86,14 +81,5 @@
   .still {
     pointer-events: none;
   }
-  :global(.bv-vox span) {
-    display: block;
-    width: 14px;
-    height: 14px;
-    margin: 2px;
-    box-sizing: border-box;
-    background: var(--yellow);
-    border: 2px solid var(--ink);
-    transform: rotate(45deg);
-  }
+
 </style>

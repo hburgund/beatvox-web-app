@@ -609,6 +609,11 @@ export class Session {
     this.send = 'sending';
     this.sendError = '';
     try {
+      // reVox permission is also a tag, on the vox and on every mix of it,
+      // so the map can filter by it; sent only once the live server has it
+      const known = await this.rw.tagIds().catch(() => new Set<number>());
+      const allowed = this.revoxOf ? true : this.revoxOk;
+      const permit = allowed && known.has(RW_TAGS.revoxAllowed) ? [RW_TAGS.revoxAllowed] : [];
       let v = this.sentVoice?.instrumentId === r.instrument.id ? this.sentVoice : null;
       if (!v) {
         this.sendStep = 'voice';
@@ -617,7 +622,7 @@ export class Session {
           file: encodeWav(r.raw),
           fileName: `${base}-voice.wav`,
           place,
-          tags: [RW_TAGS.source],
+          tags: [RW_TAGS.source, ...permit],
           description: title,
           agreedTerms: terms,
           recordedAt: r.recordedAt,
@@ -632,7 +637,7 @@ export class Session {
           file: r.loop.mp3,
           fileName: `${base}.mp3`,
           place,
-          tags: [this.revoxOf ? RW_TAGS.revoxMix : RW_TAGS.mix],
+          tags: [this.revoxOf ? RW_TAGS.revoxMix : RW_TAGS.mix, ...permit],
           parent: v.voiceAsset,
           description: title,
           agreedTerms: terms,

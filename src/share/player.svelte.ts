@@ -3,6 +3,13 @@
 // While a loop plays, `step` follows it from the audio clock, so the ring's
 // wedge stays on the beat.
 
+export interface PlayOpts {
+  loop: boolean;
+  bpm?: number;
+  /** a one-shot played to its end (not stopped) */
+  onend?: () => void;
+}
+
 export class Player {
   /** what's playing: a key the page chose, or null */
   playing = $state<string | null>(null);
@@ -42,8 +49,13 @@ export class Player {
    * Start or stop `key`. A loop with `bpm` drives `step`: the saved loop is
    * whole bars, so its length divided into bars gives the bar.
    */
-  async toggle(key: string, url: string, opts: { loop: boolean; bpm?: number }) {
+  async toggle(key: string, url: string, opts: PlayOpts) {
     if (this.playing === key) return this.stop();
+    return this.play(key, url, opts);
+  }
+
+  /** Start `key` (stopping anything else). `onend` runs when a one-shot finishes by itself. */
+  async play(key: string, url: string, opts: PlayOpts) {
     this.stop();
     const ctx = this.audio();
     void ctx.resume();
@@ -67,11 +79,13 @@ export class Player {
     const t0 = ctx.currentTime + 0.05;
     src.start(t0);
     src.onended = () => {
-      if (this.src === src) this.stop();
+      if (this.src !== src) return;
+      this.stop();
+      opts.onend?.();
     };
     this.src = src;
     this.playing = key;
-    if (opts.loop && opts.bpm) {
+    if (opts.bpm) {
       const barLen = 240 / opts.bpm;
       const bars = Math.max(1, Math.round(buf.duration / barLen));
       const bar = buf.duration / bars;

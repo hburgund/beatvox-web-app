@@ -16,11 +16,13 @@
 export const RW_API = 'https://api.roundware.app/api/3';
 export const RW_PROJECT = 103;
 
-/**
- * The project's published Roundware web app, for the map until BeatVox has
- * its own (see docs/LISTEN_AND_SHARE.md).
- */
-export const BEATVOX_MAP_URL = 'https://beatvox.roundware.app/listen';
+/** BeatVox's own pages: the map is the home page. */
+export const MAP_PATH = '/';
+export const STUDIO_PATH = '/studio';
+/** the map, opened on one mix */
+export const mapUrl = (mixId?: number) => (mixId ? `${MAP_PATH}?m=${mixId}` : MAP_PATH);
+/** the studio, opening that mix's vox to make your own beat with it */
+export const revoxUrl = (mixId: number) => `${STUDIO_PATH}?revox=${mixId}`;
 
 /** A BeatVox's own share page, on whatever site this app is served from. */
 export const beatvoxShareUrl = (assetId: number, origin = globalThis.location?.origin ?? '') => `${origin}/b/${assetId}`;
@@ -37,6 +39,9 @@ export const RW_TAGS = {
   instrument: 1126,
   recipe: 1127,
   mix: 1128,
+  /** on a vox, and on mixes of it, whose maker lets others reVox it.
+   *  Only sent once the live server lists the tag (see Session.sendToMap). */
+  revoxAllowed: 1129,
 } as const;
 
 /** JSON files (instrument, recipe) go as the project's "data" media type. */
@@ -105,6 +110,12 @@ export class Roundware {
       throw e;
     });
     return this.project;
+  }
+
+  /** The ids of the project's tags the live server knows. */
+  async tagIds(): Promise<Set<number>> {
+    const tags = await this.call<{ id: number }[]>('GET', `/tags/?project_id=${this.projectId}`);
+    return new Set(tags.map((t) => t.id));
   }
 
   /** Who this device is, once per page load. */

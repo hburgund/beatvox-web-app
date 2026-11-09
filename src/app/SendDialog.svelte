@@ -1,6 +1,6 @@
 <script lang="ts">
   // The popup while a BeatVox goes to the map, then what to do next.
-  import { BEATVOX_MAP_URL, SEND_STEPS } from '../lib/roundware';
+  import { mapUrl, SEND_STEPS } from '../lib/roundware';
   import type { Session } from './session.svelte';
 
   let { s, open, onclose, onanother }: { s: Session; open: boolean; onclose: () => void; onanother: () => void } = $props();
@@ -38,7 +38,7 @@
     <h2 id="send-title">ON THE MAP!</h2>
     <p>Your loop is BeatVox #{s.sentMix.mixAsset}.</p>
     <div class="actions">
-      <a class="btn primary" href={BEATVOX_MAP_URL} target="_blank" rel="noopener">GLOBAL MAP</a>
+      <a class="btn primary" href={mapUrl(s.sentMix.mixAsset)}>GLOBAL MAP</a>
       <button class="btn" onclick={onanother}>MAKE ANOTHER</button>
       <button class="btn" onclick={shareIt}>SHARE YOUR BEATVOX</button>
     </div>

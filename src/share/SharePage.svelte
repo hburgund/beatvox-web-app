@@ -7,7 +7,7 @@
   import FamilyMap from './FamilyMap.svelte';
   import { Player } from './player.svelte';
   import { loadShared, ringRows, type Shared, type SharedMix } from '../lib/shared';
-  import { BEATVOX_MAP_URL, beatvoxShareUrl } from '../lib/roundware';
+  import { MAP_PATH, STUDIO_PATH, beatvoxShareUrl, mapUrl, revoxUrl } from '../lib/roundware';
 
   let { id }: { id: number } = $props();
 
@@ -86,8 +86,8 @@
 
 <div class="page">
   <header>
-    <a class="brand" href="/">BEATVOX</a>
-    <a class="btn" href={BEATVOX_MAP_URL} target="_blank" rel="noopener">MAP</a>
+    <a class="brand" href={MAP_PATH}>BEATVOX</a>
+    <a class="btn" href={live ? mapUrl(live.mix.id) : MAP_PATH}>MAP</a>
   </header>
 
   <main bind:clientWidth={width}>
@@ -105,14 +105,14 @@
         <h1>This BeatVox isn't on the map yet.</h1>
         <p>Every new BeatVox is checked by a person before it goes public. This link will play it as soon as it's approved.</p>
       </section>
-      <a class="btn primary big" href="/">MAKE YOUR OWN</a>
+      <a class="btn primary big" href={STUDIO_PATH}>MAKE YOUR OWN</a>
     {:else if data.status === 'missing'}
       <section class="card notice">
         <p class="label">NOT FOUND</p>
         <h1>There's no BeatVox here.</h1>
         <p>It may have been taken down, or the link is incomplete.</p>
       </section>
-      <a class="btn primary big" href="/">MAKE YOUR OWN</a>
+      <a class="btn primary big" href={STUDIO_PATH}>MAKE YOUR OWN</a>
     {:else if live}
       <div class="title">
         <div>
@@ -167,7 +167,7 @@
       </div>
 
       <button class="mini-map" onclick={openSheet} aria-label="This vox around the world: {live.family.length} beats. Open the map.">
-        <div class="tiles"><FamilyMap vox={live.vox} family={live.family} current={live.mix.id} /></div>
+        <div class="tiles"><FamilyMap family={live.family} current={live.mix.id} /></div>
         <div class="strip">
           <span class="label">THIS VOX · {live.family.length} {live.family.length === 1 ? 'BEAT' : 'BEATS'} · {places} {places === 1 ? 'PLACE' : 'PLACES'}</span>
           <span class="open">open</span>
@@ -181,10 +181,10 @@
 {#if live}
   <div class="bar">
     {#if live.revoxAllowed}
-      <a class="btn primary" href="/?revox={live.mix.id}">REVOX THIS VOX</a>
-      <p>Make your own beat with this vox, or <a href="/">record your own</a>.</p>
+      <a class="btn primary" href={revoxUrl(live.mix.id)}>REVOX THIS VOX</a>
+      <p>Make your own beat with this vox, or <a href={STUDIO_PATH}>record your own</a>.</p>
     {:else}
-      <a class="btn primary" href="/">MAKE YOUR OWN</a>
+      <a class="btn primary" href={STUDIO_PATH}>MAKE YOUR OWN</a>
       <p>Record your voice and BeatVox makes a beat from it.</p>
     {/if}
   </div>
@@ -201,7 +201,7 @@
     </div>
     <div class="big-map">
       {#if sheetOpen}
-        <FamilyMap vox={live.vox} family={live.family} current={live.mix.id} interactive onpick={(mid) => {
+        <FamilyMap family={live.family} current={live.mix.id} interactive onpick={(mid) => {
           const m = live.family.find((f) => f.id === mid);
           if (m) playFamily(m);
         }} />
@@ -233,8 +233,8 @@
       {/each}
     </ul>
     <div class="sheet-foot">
-      <a class="btn" href={BEATVOX_MAP_URL} target="_blank" rel="noopener">THE WHOLE MAP</a>
-      <a class="btn primary" href={live.revoxAllowed ? `/?revox=${live.mix.id}` : '/'}>ADD YOURS</a>
+      <a class="btn" href={mapUrl(live.mix.id)}>THE WHOLE MAP</a>
+      <a class="btn primary" href={live.revoxAllowed ? revoxUrl(live.mix.id) : STUDIO_PATH}>ADD YOURS</a>
     </div>
   </dialog>
 {/if}

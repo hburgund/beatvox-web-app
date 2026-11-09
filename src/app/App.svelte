@@ -6,13 +6,13 @@
   import BeatCard from './BeatCard.svelte';
   import SaveBar from './SaveBar.svelte';
   import ShareSheet from './ShareSheet.svelte';
-  import { BEATVOX_MAP_URL } from '../lib/roundware';
+  import { MAP_PATH } from '../lib/roundware';
   import { Session } from './session.svelte';
 
   const s = new Session();
   let sheet = $state(false);
 
-  // /?revox=<mix id>: open that BeatVox's vox to make your own beat with it
+  // /studio?revox=<mix id>: open that BeatVox's vox to make your own beat with it
   const revox = Number(new URLSearchParams(location.search).get('revox'));
   if (revox > 0) void s.loadRevox(revox);
 
@@ -48,7 +48,7 @@
       <h1>BEATVOX</h1>
       <Leds step={s.step} />
     </div>
-    <a class="btn" href={BEATVOX_MAP_URL} target="_blank" rel="noopener">MAP</a>
+    <a class="btn" href={MAP_PATH}>MAP</a>
   </header>
   <main>
     <VoiceCard {s} />
