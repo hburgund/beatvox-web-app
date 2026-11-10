@@ -1,9 +1,9 @@
 <script lang="ts">
   // A map of the beats made from one vox, each where its maker put it, with
   // a line from the first one (the original BeatVox) to each of the others
-  // along the shortest route, pink as on the big map when a family is
-  // chosen, on a globe like the big map's. This beat's dot is pink. Same riso style as the home map;
-  // MapLibre loads only when this is shown.
+  // along the shortest route (as on the big map), pink as on the big map
+  // when a family is chosen. This beat's dot is pink. Same riso style as the
+  // home map, but flat; MapLibre loads only when this is shown.
   import type { Map as MlMap } from 'maplibre-gl';
   import type { SharedMix } from '../lib/shared';
   import { risoMap } from '../map/risoMap';
@@ -20,13 +20,14 @@
 
   let el: HTMLDivElement;
 
+
   $effect(() => {
     let map: MlMap | null = null;
     let gone = false;
     const pts = family.map((m) => [m.longitude, m.latitude] as [number, number]);
     if (!pts.length) return;
-    // a globe, like the home map: routes over the earth look right on it
-    risoMap(el, { interactive, center: pts[0], zoom: 9, foldCredit: true, renderWorldCopies: false, globe: true, roads: false }).then(({ map: m, ml }) => {
+    // flat; the world repeats sideways so a route across the date line has land under it
+    risoMap(el, { interactive, center: pts[0], zoom: 9, foldCredit: true, renderWorldCopies: true, globe: false, roads: false }).then(({ map: m, ml }) => {
       if (gone) return m.remove();
       map = m;
       map.on('load', () => {
@@ -67,14 +68,26 @@
           map!.on('mouseenter', 'dots', () => (map!.getCanvas().style.cursor = 'pointer'));
           map!.on('mouseleave', 'dots', () => (map!.getCanvas().style.cursor = ''));
         }
-        // frame the whole of each arc, which can rise well above both dots
-        const b = new ml.LngLatBounds();
-        for (const p of at.values()) b.extend(p);
-        for (const l of lines) for (const p of (l.geometry as GeoJSON.LineString).coordinates) b.extend(p as [number, number]);
-        const ne = b.getNorthEast();
-        const sw = b.getSouthWest();
+        // frame the dots and the whole of each route, which can rise well
+        // above both dots; if the routes would take it out past one world
+        // wide (a family all over the world, in a short box), just the dots,
+        // the long routes running off the top; the world never repeats
+        const dotsBox = new ml.LngLatBounds();
+        for (const p of at.values()) dotsBox.extend(p);
+        const all = new ml.LngLatBounds(dotsBox.getSouthWest(), dotsBox.getNorthEast());
+        for (const l of lines) for (const p of (l.geometry as GeoJSON.LineString).coordinates) all.extend(p as [number, number]);
+        const ne = dotsBox.getNorthEast();
+        const sw = dotsBox.getSouthWest();
+        const pad = interactive ? 40 : 18;
+        const oneWorld = Math.log2(el.clientWidth / 512);
         if (Math.abs(ne.lng - sw.lng) + Math.abs(ne.lat - sw.lat) < 0.02) map!.jumpTo({ center: pts[0], zoom: interactive ? 4.5 : 3.5 }); // where in the world, not the street
-        else map!.fitBounds(b, { padding: interactive ? 40 : 18, maxZoom: 11, duration: 0 });
+        else {
+          map!.fitBounds(all, { padding: pad, maxZoom: 11, duration: 0 });
+          if (map!.getZoom() < oneWorld) map!.fitBounds(dotsBox, { padding: pad, maxZoom: 11, duration: 0 });
+          // still more than one world (dots far north and south): one world,
+          // centred on them, so nothing shows twice
+          if (map!.getZoom() < oneWorld) map!.jumpTo({ center: dotsBox.getCenter(), zoom: oneWorld });
+        }
       });
     });
     return () => {

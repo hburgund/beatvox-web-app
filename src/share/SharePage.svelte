@@ -48,6 +48,11 @@
   // a reVox names the beat whose vox it plays
   const source = $derived(live?.mix.recipe?.revoxOf ? (live.family.find((m) => m.id === live.mix.recipe!.revoxOf) ?? null) : null);
   const places = $derived(live ? new Set(live.family.map((m) => `${m.latitude.toFixed(1)},${m.longitude.toFixed(1)}`)).size : 0);
+  // spread over much of the world (north to south), so the small map needs more height
+  const worldwide = $derived.by(() => {
+    const lats = (live?.family ?? []).map((m) => m.latitude);
+    return lats.length > 1 && Math.max(...lats) - Math.min(...lats) > 45;
+  });
 
   const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
   const bpmOf = (m: SharedMix) => m.recipe?.bpm ?? 120;
@@ -170,7 +175,7 @@
       </div>
 
       <button class="mini-map" onclick={openSheet} aria-label="This vox around the world: {live.family.length} beats. Open the map.">
-        <div class="tiles"><FamilyMap family={live.family} current={live.mix.id} /></div>
+        <div class="tiles" class:world={worldwide}><FamilyMap family={live.family} current={live.mix.id} /></div>
         <div class="strip">
           <span class="label">THIS VOX · {live.family.length} {live.family.length === 1 ? 'BEAT' : 'BEATS'} · {places} {places === 1 ? 'PLACE' : 'PLACES'}</span>
           <span class="open">open</span>
@@ -392,6 +397,10 @@
   }
   .tiles {
     height: 110px;
+  }
+  /* a family far north and far south: a flat world needs more height */
+  .tiles.world {
+    height: 160px;
   }
   .strip {
     display: flex;

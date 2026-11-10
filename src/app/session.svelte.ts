@@ -97,6 +97,12 @@ export class Session {
   shareResult = $state.raw<ShareResult | null>(null);
   shareTitle = $state('');
   shareStatus = $state('');
+  /** the share card (animated ring GIF) for the current title, once drawn */
+  card = $state.raw<{ title: string; gif: Blob; url: string } | null>(null);
+  /** the card is being drawn */
+  cardBusy = $state(false);
+  private cardRun: Promise<Blob> | null = null;
+  private cardRunTitle = '';
   /** the loop preview is playing */
   loopPlaying = $state(false);
   private loopSrc: AudioBufferSourceNode | null = null;
@@ -477,6 +483,9 @@ export class Session {
       URL.revokeObjectURL(this.shareResult.full.url);
       URL.revokeObjectURL(this.shareResult.loop.url);
     }
+    if (this.card) URL.revokeObjectURL(this.card.url);
+    this.card = null;
+    this.cardRun = null;
     this.shareResult = null;
     this.sentMix = null;
     this.send = 'idle';
@@ -514,7 +523,7 @@ export class Session {
     this.loopPlaying = false;
   }
 
-  shareFileName(kind: 'full' | 'loop' = 'full') {
+  shareFileName(kind: 'full' | 'loop' | 'gif' = 'full') {
     const r = this.shareResult;
     const slug = this.shareTitle
       .toLowerCase()
@@ -525,7 +534,7 @@ export class Session {
     const d = r?.createdAt ?? new Date();
     const p = (n: number) => String(n).padStart(2, '0');
     const stamp = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
-    return `beatvox-${slug || 'beat'}-${stamp}${kind === 'loop' ? '-loop' : ''}.mp3`;
+    return `beatvox-${slug || 'beat'}-${stamp}${kind === 'loop' ? '-loop.mp3' : kind === 'gif' ? '.gif' : '.mp3'}`;
   }
 
   private shareFile() {
@@ -561,6 +570,61 @@ export class Session {
     } catch (e) {
       // closing the share sheet isn't an error
       if ((e as Error).name !== 'AbortError') this.shareStatus = `Couldn't share (${(e as Error).message}). Try Save instead.`;
+    }
+  }
+
+  /**
+   * The share card for the title as it is now: drawn once per title (the
+   * sheet shows it, SAVE GIF saves it, sending uploads it).
+   */
+  cardGif(): Promise<Blob> {
+    const r = this.shareResult;
+    if (!r) return Promise.reject(new Error('nothing captured'));
+    const title = this.shareTitle.trim();
+    if (this.card?.title === title) return Promise.resolve(this.card.gif);
+    if (this.cardRun && this.cardRunTitle === title) return this.cardRun;
+    const run = makeCardGif(ringRows(r.recipe), { title: title || r.recipe.name, revox: !!this.revoxOf }, r.recipe.bpm ?? this.bpm);
+    this.cardRun = run;
+    this.cardRunTitle = title;
+    this.cardBusy = true;
+    run
+      .then((gif) => {
+        // a newer title (or a new capture) took over meanwhile
+        if (this.cardRun !== run) return;
+        if (this.card) URL.revokeObjectURL(this.card.url);
+        this.card = { title, gif, url: URL.createObjectURL(gif) };
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (this.cardRun === run) {
+          this.cardRun = null;
+          this.cardBusy = false;
+        }
+      });
+    return run;
+  }
+
+  private gifFile(gif: Blob) {
+    return new File([gif], this.shareFileName('gif'), { type: 'image/gif' });
+  }
+
+  /** Save the share card: the share sheet on a phone (Save Image, Messages…), else a download. */
+  async saveGif() {
+    try {
+      const file = this.gifFile(await this.cardGif());
+      if (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: this.shareTitle || 'My BeatVox' });
+        return;
+      }
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(file);
+      a.download = file.name;
+      document.body.append(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    } catch (e) {
+      if ((e as Error).name !== 'AbortError') this.shareStatus = "Couldn't save the GIF. Try again.";
     }
   }
 
@@ -672,7 +736,7 @@ export class Session {
       if (!m.cardUrl && known.has(RW_TAGS.card)) {
         this.sendStep = 'card';
         try {
-          const gif = await makeCardGif(ringRows(r.recipe), { title: title || r.recipe.name, revox: !!this.revoxOf }, r.recipe.bpm ?? this.bpm);
+          const gif = await this.cardGif();
           const a = await this.rw.upload({
             mediaType: 'photo',
             file: gif,

@@ -1,7 +1,7 @@
 <script lang="ts">
   // The share sheet: rises from the bottom once the bars are saved. The beat
-  // stops and the saved loop plays, so you hear what you made. Then save the
-  // MP3, share it, or put it on the BeatVox map.
+  // stops; the saved loop waits for its play button. Then save the MP3 or
+  // the GIF, share them, or put it on the BeatVox map.
   import PlacePicker from './PlacePicker.svelte';
   import SendDialog from './SendDialog.svelte';
   import Check from '../lib/ui/Check.svelte';
@@ -25,7 +25,6 @@
       dlg.showModal();
       s.stopBeat();
       void s.loadProject();
-      if (!s.loopPlaying) s.toggleLoop();
     } else if (!open && dlg.open) {
       // slide down, then close
       closing = true;
@@ -35,6 +34,14 @@
         closing = false;
       }, 260);
     }
+  });
+
+  // the share card, redrawn a moment after the name stops changing
+  $effect(() => {
+    if (!open || !s.shareResult) return;
+    void s.shareTitle;
+    const t = setTimeout(() => void s.cardGif().catch(() => {}), s.card ? 700 : 0);
+    return () => clearTimeout(t);
   });
 
   function stopAll() {
@@ -133,6 +140,16 @@
           {#if canShare}<button class="btn" onclick={() => s.shareMp3()}>SHARE MP3…</button>{/if}
         </div>
         <button class="link" onclick={() => s.saveMp3('loop')}>save the loop too</button>
+        <div class="line gif">
+          <div class="thumb" class:busy={s.cardBusy}>
+            {#if s.card}<img src={s.card.url} alt="Your beat drawn as a ring, going round" width="1200" height="630" />{/if}
+          </div>
+          <div>
+            <div class="strong">The GIF</div>
+            <div class="meta">Your beat going round. It's the picture when you share your link.</div>
+          </div>
+        </div>
+        <button class="btn" disabled={!s.card && !s.cardBusy} onclick={() => s.saveGif()}>SAVE GIF</button>
         {#if s.shareStatus}<p class="error">{s.shareStatus}</p>{/if}
       </section>
 
@@ -276,6 +293,27 @@
   }
   .mp3 .link {
     align-self: flex-start;
+  }
+  .gif {
+    margin-top: 6px;
+  }
+  .thumb {
+    flex: none;
+    width: 160px;
+    aspect-ratio: 1200 / 630;
+    border: 2px solid var(--ink);
+    border-radius: 6px;
+    background: var(--card);
+    overflow: hidden;
+    transition: opacity 200ms;
+  }
+  .thumb.busy {
+    opacity: 0.45;
+  }
+  .thumb img {
+    display: block;
+    width: 100%;
+    height: 100%;
   }
   .map {
     border-top: 2px dashed var(--soft);
