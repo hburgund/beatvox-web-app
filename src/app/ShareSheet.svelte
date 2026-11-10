@@ -7,6 +7,7 @@
   import SendDialog from './SendDialog.svelte';
   import VideoBox from './VideoBox.svelte';
   import Check from '../lib/ui/Check.svelte';
+  import { about } from '../about/aboutState.svelte';
   import { mapUrl } from '../lib/roundware';
   import type { Shape } from '../lib/video/draw';
   import type { Session } from './session.svelte';
@@ -156,6 +157,7 @@
           <Check bind:checked={s.revoxOk} disabled={s.send !== 'idle'}>Others can reVox my voice (make their own beats with it)</Check>
         {/if}
         <Check bind:checked={s.agreed} disabled={s.send !== 'idle'}>{s.project?.legal_agreement ?? 'Loading the terms…'}</Check>
+        <button class="link terms" onclick={() => about.show('terms')}>Read the terms</button>
         <button class="btn primary send" disabled={!canSend} onclick={send}>SEND TO THE MAP</button>
         <p class="meta hint" aria-live="polite">
           {#if !s.place}Choose a place first.{:else if !s.agreed}Tick the terms to send.{/if}
@@ -367,6 +369,13 @@
   }
   .skip {
     align-self: center;
+  }
+  /* under the terms checkbox, lined up with its text */
+  .terms {
+    align-self: flex-start;
+    margin: -14px 0 0 30px;
+    font-size: 13px;
+    font-weight: 700;
   }
   .onmap {
     margin: 0;

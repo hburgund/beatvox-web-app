@@ -1,3 +1,4 @@
 # The app's own pages all load index.html; the app picks the page from the path.
 /studio   /index.html   200
 /b/*      /index.html   200
+/about    /index.html   200

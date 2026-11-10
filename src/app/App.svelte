@@ -6,6 +6,9 @@
   import BeatCard from './BeatCard.svelte';
   import SaveBar from './SaveBar.svelte';
   import ShareSheet from './ShareSheet.svelte';
+  import About from '../about/About.svelte';
+  import AboutButton from '../about/AboutButton.svelte';
+  import { about } from '../about/aboutState.svelte';
   import { MAP_PATH } from '../lib/roundware';
   import { Session } from './session.svelte';
 
@@ -29,7 +32,7 @@
 
   function key(e: KeyboardEvent) {
     const t = e.target as HTMLElement;
-    if (sheet || t.closest('input, select, textarea, button, [role="slider"]')) return;
+    if (sheet || about.open || t.closest('input, select, textarea, button, [role="slider"]')) return;
     if (!s.slices.length) return;
     if (e.key === ' ') {
       e.preventDefault();
@@ -47,6 +50,7 @@
     <div class="brand">
       <h1>BEATVOX</h1>
       <Leds step={s.step} />
+      <AboutButton />
     </div>
     <a class="btn" href={MAP_PATH}>MAP</a>
   </header>
@@ -58,6 +62,7 @@
 
 <SaveBar {s} onshare={() => (sheet = true)} />
 <ShareSheet {s} open={sheet} onclose={() => (sheet = false)} />
+<About />
 
 <style>
   .app {

@@ -10,6 +10,10 @@
   import { untrack } from 'svelte';
   import { risoMap, type Maplibre } from './risoMap';
   import MixDetail from './MixDetail.svelte';
+  import Welcome from './Welcome.svelte';
+  import About from '../about/About.svelte';
+  import AboutButton from '../about/AboutButton.svelte';
+  import { about } from '../about/aboutState.svelte';
   import Check from '../lib/ui/Check.svelte';
   import { Player } from '../share/player.svelte';
   import { loadMap, loadRecipe, passes, type MapData, type MapMix } from '../lib/mapData';
@@ -37,6 +41,36 @@
   /** the map is up (markers wait for it) */
   let ready = $state(false);
   const player = new Player();
+
+  // A first visit gets the welcome card, once. Not when a link opened a mix
+  // or About: those already say what this is.
+  const WELCOMED = 'beatvox.welcomed';
+  let welcome = $state(firstVisit());
+  function firstVisit() {
+    if (new URLSearchParams(location.search).has('m') || about.open) return false;
+    try {
+      return !localStorage.getItem(WELCOMED);
+    } catch {
+      return true;
+    }
+  }
+  function dismissWelcome() {
+    welcome = false;
+    try {
+      localStorage.setItem(WELCOMED, '1');
+    } catch {
+      // private mode: it just shows again next time
+    }
+  }
+  // tapping a beat or opening About counts as having seen it
+  $effect(() => {
+    if (welcome && (selected || about.open)) dismissWelcome();
+  });
+  /** The card's LISTEN: start Wander. */
+  function listen() {
+    dismissWelcome();
+    if (!wandering) toggleWander();
+  }
 
   const visible = $derived(data ? data.mixes.filter((m) => passes(m, data!.filters, chosen)) : []);
   const chosenCount = $derived(chosen.size);
@@ -312,7 +346,10 @@
 
 <div class="page">
   <header>
-    <span class="brand">BEATVOX</span>
+    <div class="left">
+      <span class="brand">BEATVOX</span>
+      <AboutButton />
+    </div>
     <div class="tools">
       <button class="btn" class:on={chosenCount > 0} onclick={() => filterDlg?.showModal()} aria-haspopup="dialog">
         FILTER{chosenCount ? ` · ${chosenCount}` : ''}
@@ -375,7 +412,24 @@
       />
     </aside>
   {/if}
+
+  {#if welcome}
+    <Welcome canListen={visible.length > 0} onlisten={listen} onclose={dismissWelcome} />
+  {/if}
 </div>
+
+<About
+  wander={wandering && selected
+    ? {
+        title: selected.title,
+        skip,
+        stop: () => {
+          stopWander();
+          player.stop(0.6);
+        },
+      }
+    : null}
+/>
 
 <dialog bind:this={filterDlg} class="filters" aria-label="Filter the map">
   <div class="f-head">
@@ -419,6 +473,11 @@
     background: var(--paper);
     z-index: 2;
   }
+  .left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
   .brand {
     font: 700 26px/1 var(--mono);
     letter-spacing: 0.03em;
@@ -432,6 +491,7 @@
     text-decoration: none;
     color: var(--ink);
     padding: 0 10px;
+    white-space: nowrap;
   }
   .map-wrap {
     flex: 1;
@@ -641,8 +701,20 @@
     align-items: center;
   }
   @media (max-width: 400px) {
+    header {
+      padding: 0 10px 0 12px;
+      gap: 6px;
+    }
     .brand {
       font-size: 22px;
+    }
+    .left,
+    .tools {
+      gap: 6px;
+    }
+    .tools .btn {
+      padding: 0 8px;
+      font-size: 13px;
     }
     .count {
       display: none;

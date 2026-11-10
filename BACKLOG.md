@@ -50,7 +50,7 @@ Ideas and requests not yet scheduled. See [PROPOSAL.md](PROPOSAL.md) for the pla
 
 ## About and legal
 
-- [ ] **An About page.** Who made BeatVox (Halsey, and its 2008 history), the project's goals, and mainly a FAQ on using what you make:
+- [~] **An About page.** Built (Nov 2026, design round 9) as an overlay over any page, so a beat or Wander keeps going: a sheet on a phone, a side panel on a laptop, opened by the round ? beside the wordmark, at `/about` or `#about-<section>`, and from "Read the terms" on the send step. The copy is in `src/about/AboutContent.svelte`; still to do: rewrite it in Halsey's voice and fill the highlighted placeholders (bio, photo, where it was shown, contact email, Roundware terms link, hosting and analytics). A first visit to the map also gets a welcome card (`src/map/Welcome.svelte`), shown once. Original idea: Who made BeatVox (Halsey, and its 2008 history), the project's goals, and mainly a FAQ on using what you make:
   - **You own what you make.** Your voice, your BeatVoxes and the MP3s and GIFs are yours to use however you like.
   - **The project may use them too:** share them, highlight them, and host them (on the map, the share pages and in Roundware).
   - **Credit is appreciated, not required.**

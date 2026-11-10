@@ -5,6 +5,8 @@
   import Ring from '../lib/ui/Ring.svelte';
   import MiniClock from '../lib/ui/MiniClock.svelte';
   import FamilyMap from './FamilyMap.svelte';
+  import About from '../about/About.svelte';
+  import AboutButton from '../about/AboutButton.svelte';
   import { Player } from './player.svelte';
   import { loadShared, ringRows, type Shared, type SharedMix } from '../lib/shared';
   import { MAP_PATH, STUDIO_PATH, beatvoxShareUrl, mapUrl, revoxUrl } from '../lib/roundware';
@@ -94,7 +96,10 @@
 
 <div class="page">
   <header>
-    <a class="brand" href={MAP_PATH}>BEATVOX</a>
+    <div class="left">
+      <a class="brand" href={MAP_PATH}>BEATVOX</a>
+      <AboutButton />
+    </div>
     <a class="btn" href={live ? mapUrl(live.mix.id) : MAP_PATH}>MAP</a>
   </header>
 
@@ -247,6 +252,8 @@
   </dialog>
 {/if}
 
+<About />
+
 <style>
   .page {
     max-width: 560px;
@@ -258,6 +265,11 @@
     align-items: center;
     justify-content: space-between;
     height: 64px;
+  }
+  .left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
   }
   .brand {
     font: 700 28px/1 var(--mono);
