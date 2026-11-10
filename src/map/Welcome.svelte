@@ -8,12 +8,9 @@
 
   // the tiny "your voice → sliced → a beat" picture
   const wave = [3, 6, 11, 8, 4, 9, 12, 5, 3, 7, 10, 4];
-  const slices: [number, number, string, number][] = [
-    [0, 9, 'var(--blue)', -8],
-    [12, 3, 'var(--pink)', 6],
-    [24, 12, 'var(--yellow)', -4],
-    [36, 5, 'var(--blue)', 10],
-  ];
+  // the same waveform cut into three slices: pulled apart, one color each
+  const SLICE_COLORS = ['var(--blue)', 'var(--pink)', 'var(--yellow)'];
+  const sliced = wave.map((h, i) => ({ x: i * 4 + Math.floor(i / 4) * 5, h, fill: SLICE_COLORS[Math.floor(i / 4)] }));
   const clock = Array.from({ length: 16 }, (_, k) => ({
     x: 15 + 12 * Math.sin((k * Math.PI) / 8) - 2,
     y: 15 - 12 * Math.cos((k * Math.PI) / 8) - 2,
@@ -39,10 +36,8 @@
     </span>
     <svg class="arrow" width="18" height="10" viewBox="0 0 18 10"><path d="M1 5h14M11 1l4 4-4 4" stroke="var(--muted)" stroke-width="1.8" fill="none" /></svg>
     <span class="step">
-      <svg width="48" height="24" viewBox="0 0 48 24">
-        {#each slices as [x, y, c, r] (x)}
-          <rect {x} {y} width="9" height="9" rx="1.5" fill={c} stroke="var(--ink)" stroke-width="1.3" transform="rotate({r} {x + 4.5} {y + 4.5})" />
-        {/each}
+      <svg width="58" height="28" viewBox="0 0 58 28">
+        {#each sliced as b, i (i)}<rect x={b.x} y={14 - b.h} width="2.4" height={2 * b.h} fill={b.fill} stroke="var(--ink)" stroke-width="0.6" />{/each}
       </svg>
       SLICED
     </span>
