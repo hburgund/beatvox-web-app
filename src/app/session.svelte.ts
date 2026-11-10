@@ -618,17 +618,12 @@ export class Session {
     return new File([gif], this.shareFileName('gif'), { type: 'image/gif' });
   }
 
-  /** Save the share card: the share sheet on a phone (Save Image, Messages…), else a download. */
+  /** Save the share card as a download, like the other save links. */
   async saveGif() {
     try {
-      const file = this.gifFile(await this.cardGif());
-      if (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: this.shareTitle || 'My BeatVox' });
-        return;
-      }
-      download(file);
-    } catch (e) {
-      if ((e as Error).name !== 'AbortError') this.shareStatus = "Couldn't save the GIF. Try again.";
+      download(this.gifFile(await this.cardGif()));
+    } catch {
+      this.shareStatus = "Couldn't save the GIF. Try again.";
     }
   }
 
