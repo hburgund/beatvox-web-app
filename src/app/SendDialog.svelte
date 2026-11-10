@@ -1,17 +1,16 @@
 <script lang="ts">
-  // The popup while a BeatVox goes to the map, then what to do next.
-  import { mapUrl, SEND_STEPS } from '../lib/roundware';
+  // The popup while a BeatVox goes to the map (or why it didn't). Once it's
+  // there, the sheet moves on to sharing it.
+  import { SEND_STEPS } from '../lib/roundware';
   import type { Session } from './session.svelte';
 
-  let { s, open, onclose, onanother }: { s: Session; open: boolean; onclose: () => void; onanother: () => void } = $props();
+  let { s, open, onclose }: { s: Session; open: boolean; onclose: () => void } = $props();
 
   const STEP_TEXT = { voice: 'Your voice', mix: 'The loop', instrument: 'The slices', card: 'The picture', recipe: 'The beat' };
   let dlg: HTMLDialogElement;
-  let note = $state('');
 
   $effect(() => {
     if (open && !dlg.open) {
-      note = '';
       dlg.showModal();
     } else if (!open && dlg.open) dlg.close();
   });
@@ -19,11 +18,6 @@
   // a reVox sends only its loop and beat: the vox and slices are already there
   const steps = $derived(s.revoxOf ? SEND_STEPS.filter((x) => x === 'mix' || x === 'card' || x === 'recipe') : SEND_STEPS);
   const at = $derived(s.sendStep ? steps.indexOf(s.sendStep) : s.send === 'sent' ? steps.length : -1);
-
-  async function shareIt() {
-    const r = await s.shareLink();
-    note = r === 'copied' ? 'Link copied.' : r === 'failed' ? "Couldn't share the link." : '';
-  }
 </script>
 
 <dialog
@@ -34,17 +28,7 @@
     if (s.send !== 'sending') onclose();
   }}
 >
-  {#if s.send === 'sent' && s.sentMix}
-    <h2 id="send-title">ON THE MAP!</h2>
-    <p>Your loop is BeatVox #{s.sentMix.mixAsset}.</p>
-    <div class="actions">
-      <a class="btn primary" href={mapUrl(s.sentMix.mixAsset)}>GLOBAL MAP</a>
-      <button class="btn" onclick={onanother}>MAKE ANOTHER</button>
-      <button class="btn" onclick={shareIt}>SHARE YOUR BEATVOX</button>
-    </div>
-    {#if note}<p class="note" aria-live="polite">{note}</p>{/if}
-    <button class="link close" onclick={onclose}>close</button>
-  {:else if s.send === 'sending'}
+  {#if s.send !== 'idle'}
     <h2 id="send-title">SENDING YOUR BEATVOX</h2>
     <ol>
       {#each steps as st, i (st)}
@@ -142,10 +126,6 @@
     display: grid;
     gap: 10px;
   }
-  .actions .btn {
-    text-decoration: none;
-    color: var(--ink);
-  }
   .note {
     font-size: 13px;
     color: var(--muted);
@@ -153,10 +133,5 @@
   }
   .error {
     color: var(--error);
-  }
-  .close {
-    display: block;
-    margin: 6px auto 0;
-    font-weight: 700;
   }
 </style>

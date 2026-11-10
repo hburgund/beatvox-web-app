@@ -18,6 +18,8 @@ import { Roundware, beatvoxShareUrl, RW_JSON, RW_TAGS, type RwPlace, type RwProj
 import { STYLES } from '../lib/styles';
 import { loadShared, ringRows } from '../lib/shared';
 import { makeCardGif } from '../lib/card';
+import { buildScript } from '../lib/video/script';
+import { pickSprout, SHAPES, type Shape, type Sprout } from '../lib/video/draw';
 
 export const MAX_RECORD_SEC = 15;
 /** loops in a shared piece (Simple mode; Advanced will offer 4 / 8 / 16) */
@@ -52,7 +54,12 @@ export interface ShareResult {
   raw: AudioBuffer;
   recordedAt: Date;
   createdAt: Date;
+  /** how the video's ring sprouts (picked once, the same for both shapes) */
+  sprout: Sprout;
 }
+
+/** the sheet's steps after making it: put it on the map, then share it */
+export type ShareStage = 'map' | 'share';
 
 /** idle → sending → sent (or back to idle with an error, to retry) */
 export type SendPhase = 'idle' | 'sending' | 'sent';
@@ -108,6 +115,20 @@ export class Session {
   cardBusy = $state(false);
   private cardRun: Promise<Blob> | null = null;
   private cardRunTitle = '';
+  /** map it, then share it (or skip the map and go straight to sharing) */
+  shareStage = $state<ShareStage>('map');
+  /** the video shape picked to share */
+  videoShape = $state<Shape>('square');
+  /** the videos made so far, for `videoTitle` */
+  videos = $state.raw<Partial<Record<Shape, { blob: Blob; url: string }>>>({});
+  /** 0..1 through making each video */
+  videoProgress = $state<Record<Shape, number>>({ square: 0, tall: 0 });
+  /** null until checked; false when this browser can't make that shape */
+  videoOk = $state<Record<Shape, boolean | null>>({ square: null, tall: null });
+  /** the caption went to the clipboard with the last video shared */
+  captionCopied = $state(false);
+  private videoTitle: string | null = null;
+  private videoRun = 0;
   /** the loop preview is playing */
   loopPlaying = $state(false);
   private loopSrc: AudioBufferSourceNode | null = null;
@@ -468,6 +489,7 @@ export class Session {
         raw,
         recordedAt,
         createdAt: new Date(),
+        sprout: pickSprout(),
       };
       this.share = 'ready';
     } catch (e) {
@@ -495,6 +517,9 @@ export class Session {
     if (this.card) URL.revokeObjectURL(this.card.url);
     this.card = null;
     this.cardRun = null;
+    this.dropVideos();
+    this.shareStage = 'map';
+    this.captionCopied = false;
     this.shareResult = null;
     this.sentMix = null;
     this.send = 'idle';
@@ -532,7 +557,7 @@ export class Session {
     this.loopPlaying = false;
   }
 
-  shareFileName(kind: 'full' | 'loop' | 'gif' = 'full') {
+  shareFileName(kind: 'full' | 'loop' | 'gif' | Shape = 'full') {
     const r = this.shareResult;
     const slug = this.shareTitle
       .toLowerCase()
@@ -543,21 +568,8 @@ export class Session {
     const d = r?.createdAt ?? new Date();
     const p = (n: number) => String(n).padStart(2, '0');
     const stamp = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
-    return `beatvox-${slug || 'beat'}-${stamp}${kind === 'loop' ? '-loop.mp3' : kind === 'gif' ? '.gif' : '.mp3'}`;
-  }
-
-  private shareFile() {
-    return new File([this.shareResult!.full.mp3], this.shareFileName(), { type: 'audio/mpeg' });
-  }
-
-  /** Can this device hand the file to its share sheet (phones, some laptops)? */
-  canShareFile() {
-    if (!this.shareResult || typeof navigator.canShare !== 'function') return false;
-    try {
-      return navigator.canShare({ files: [this.shareFile()] });
-    } catch {
-      return false;
-    }
+    const ext = { full: '.mp3', loop: '-loop.mp3', gif: '.gif', square: '.mp4', tall: '-tall.mp4' }[kind];
+    return `beatvox-${slug || 'beat'}-${stamp}${ext}`;
   }
 
   /** Save to the device as a download. */
@@ -569,17 +581,6 @@ export class Session {
     document.body.append(a);
     a.click();
     a.remove();
-  }
-
-  /** Open the system share sheet with the MP3 attached. */
-  async shareMp3() {
-    if (!this.shareResult) return;
-    try {
-      await navigator.share({ files: [this.shareFile()], title: this.shareTitle || 'My BeatVox' });
-    } catch (e) {
-      // closing the share sheet isn't an error
-      if ((e as Error).name !== 'AbortError') this.shareStatus = `Couldn't share (${(e as Error).message}). Try Save instead.`;
-    }
   }
 
   /**
@@ -625,16 +626,122 @@ export class Session {
         await navigator.share({ files: [file], title: this.shareTitle || 'My BeatVox' });
         return;
       }
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(file);
-      a.download = file.name;
-      document.body.append(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+      download(file);
     } catch (e) {
       if ((e as Error).name !== 'AbortError') this.shareStatus = "Couldn't save the GIF. Try again.";
     }
+  }
+
+  // ── The videos ────────────────────────────────────────────────────────
+
+  /** the name on the video (and the card) */
+  private titleNow() {
+    return this.shareTitle.trim() || this.shareResult?.recipe.name || 'My BeatVox';
+  }
+
+  /**
+   * Make both videos for the name as it is now, in the background: the shape
+   * picked first, then the other, one at a time (so the first isn't slowed).
+   * Each is a few MB, held in memory only, and let go with the BeatVox.
+   */
+  makeVideos() {
+    const r = this.shareResult;
+    if (!r) return;
+    const title = this.titleNow();
+    if (this.videoTitle === title) return;
+    this.dropVideos();
+    this.videoTitle = title;
+    const run = this.videoRun;
+    void (async () => {
+      // the encoder loads only now, not with the studio
+      const { canMakeVideo, makeVideo } = await import('../lib/video/encode');
+      for (const shape of SHAPES) if (this.videoOk[shape] === null) this.videoOk[shape] = await canMakeVideo(shape).catch(() => false);
+      const sc = buildScript({ fullAudio: r.fullAudio, remixAt: r.remixAt, tape: r.tape, voiceSpan: r.voiceSpan, slices: r.instrument.slices }, title);
+      await document.fonts.load(`700 30px 'Courier Prime'`).catch(() => {});
+      const failed = new Set<Shape>();
+      for (;;) {
+        if (run !== this.videoRun) return;
+        const todo = (x: Shape) => this.videoOk[x] && !this.videos[x] && !failed.has(x);
+        const shape = todo(this.videoShape) ? this.videoShape : SHAPES.find(todo);
+        if (!shape) return;
+        const t0 = performance.now();
+        try {
+          const blob = await makeVideo(sc, r.sprout, shape, r.fullAudio, {
+            progress: (p) => run === this.videoRun && (this.videoProgress[shape] = p),
+            cancelled: () => run !== this.videoRun,
+          });
+          if (run !== this.videoRun) return;
+          if (import.meta.env.DEV) console.info(`video ${shape}: ${Math.round(performance.now() - t0)} ms, ${(blob.size / 1e6).toFixed(1)} MB`);
+          this.videos = { ...this.videos, [shape]: { blob, url: URL.createObjectURL(blob) } };
+        } catch (e) {
+          if ((e as Error).name === 'AbortError' || run !== this.videoRun) return;
+          console.warn(`video ${shape}:`, e);
+          failed.add(shape);
+          this.videoOk[shape] = false;
+        }
+      }
+    })();
+  }
+
+  private dropVideos() {
+    this.videoRun++;
+    this.videoTitle = null;
+    for (const v of Object.values(this.videos)) if (v) URL.revokeObjectURL(v.url);
+    this.videos = {};
+    this.videoProgress = { square: 0, tall: 0 };
+  }
+
+  /** The caption to paste with the video: its own link once it's on the map, else the project's. */
+  caption() {
+    const t = this.shareTitle.trim();
+    const name = t ? `My BeatVox, “${t}”` : 'My BeatVox';
+    return this.sentMix
+      ? `${name}: a beat made from one voice. Hear it on the map and make your own: ${beatvoxShareUrl(this.sentMix.mixAsset)} #beatvox`
+      : `${name}: a beat made from one voice. Make your own: ${globalThis.location?.origin ?? ''} #beatvox`;
+  }
+
+  private videoFile(shape: Shape) {
+    const v = this.videos[shape];
+    return v && new File([v.blob], this.shareFileName(shape), { type: 'video/mp4' });
+  }
+
+  /** Can this device hand a video to its share sheet? */
+  canShareVideo() {
+    if (typeof navigator.canShare !== 'function') return false;
+    try {
+      return navigator.canShare({ files: [new File([], 'beatvox.mp4', { type: 'video/mp4' })] });
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Share the picked video (the share sheet, straight from the tap: it has to
+   * be made already) and copy the caption, since most apps drop text sent
+   * with a file. Without a share sheet, save it.
+   */
+  async shareVideo() {
+    const file = this.videoFile(this.videoShape);
+    if (!file) return;
+    const caption = this.caption();
+    const copied = navigator.clipboard?.writeText(caption).then(
+      () => true,
+      () => false,
+    );
+    try {
+      if (this.canShareVideo()) await navigator.share({ files: [file], title: this.shareTitle || 'My BeatVox', text: caption });
+      else download(file);
+      this.captionCopied = (await copied) ?? false;
+    } catch (e) {
+      this.captionCopied = (await copied) ?? false;
+      if ((e as Error).name !== 'AbortError') this.shareStatus = `Couldn't share the video (${(e as Error).message}). Try saving it.`;
+    }
+  }
+
+  /** Save the picked video to this device. */
+  saveVideo() {
+    const file = this.videoFile(this.videoShape);
+    if (file) download(file);
   }
 
   /** After sending: a new beat with the same voice (its voice isn't sent again). */
@@ -646,7 +753,7 @@ export class Session {
 
   /** Share the link to the sent BeatVox (share sheet, or copy it). */
   async shareLink(): Promise<'shared' | 'copied' | 'failed'> {
-    const url = this.sentMix && beatvoxShareUrl(this.sentMix.mixAsset);
+    const url = this.sentMix ? beatvoxShareUrl(this.sentMix.mixAsset) : globalThis.location?.origin;
     if (!url) return 'failed';
     const title = this.shareTitle || 'My BeatVox';
     try {
@@ -839,3 +946,14 @@ export class Session {
 }
 
 export { VOICES, STEPS };
+
+/** Save a file the browser's way (Downloads, or the Files app on a phone). */
+function download(file: File) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(file);
+  a.download = file.name;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
