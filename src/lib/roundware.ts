@@ -42,6 +42,8 @@ export const RW_TAGS = {
   /** on a vox, and on mixes of it, whose maker lets others reVox it.
    *  Only sent once the live server lists the tag (see Session.sendToMap). */
   revoxAllowed: 1129,
+  /** a BeatVox's share card: the animated ring GIF link previews show */
+  card: 1130,
 } as const;
 
 /** JSON files (instrument, recipe) go as the project's "data" media type. */
@@ -224,8 +226,11 @@ export interface SentVoice {
 
 export interface SentMix {
   mixAsset: number;
+  /** the share card (an animated GIF of the ring), and its address */
+  cardAsset?: number;
+  cardUrl?: string;
   recipeAsset?: number;
 }
 
-export type SendStep = 'voice' | 'mix' | 'instrument' | 'recipe';
-export const SEND_STEPS: SendStep[] = ['voice', 'mix', 'instrument', 'recipe'];
+export type SendStep = 'voice' | 'mix' | 'instrument' | 'card' | 'recipe';
+export const SEND_STEPS: SendStep[] = ['voice', 'mix', 'instrument', 'card', 'recipe'];

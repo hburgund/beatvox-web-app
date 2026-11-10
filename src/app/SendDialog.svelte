@@ -5,7 +5,7 @@
 
   let { s, open, onclose, onanother }: { s: Session; open: boolean; onclose: () => void; onanother: () => void } = $props();
 
-  const STEP_TEXT = { voice: 'Your voice', mix: 'The loop', instrument: 'The slices', recipe: 'The beat' };
+  const STEP_TEXT = { voice: 'Your voice', mix: 'The loop', instrument: 'The slices', card: 'The picture', recipe: 'The beat' };
   let dlg: HTMLDialogElement;
   let note = $state('');
 
@@ -17,7 +17,7 @@
   });
 
   // a reVox sends only its loop and beat: the vox and slices are already there
-  const steps = $derived(s.revoxOf ? SEND_STEPS.filter((x) => x === 'mix' || x === 'recipe') : SEND_STEPS);
+  const steps = $derived(s.revoxOf ? SEND_STEPS.filter((x) => x === 'mix' || x === 'card' || x === 'recipe') : SEND_STEPS);
   const at = $derived(s.sendStep ? steps.indexOf(s.sendStep) : s.send === 'sent' ? steps.length : -1);
 
   async function shareIt() {

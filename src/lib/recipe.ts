@@ -85,6 +85,8 @@ export interface Recipe {
   mixAssetId?: number;
   /** a reVox: the mix asset whose vox it plays (the share page it came from) */
   revoxOf?: number;
+  /** the share card's address (an animated GIF of the ring), for link previews */
+  cardUrl?: string;
   /** optional: Roundware participant who made it */
   participant?: number | string;
   createdAt?: string;

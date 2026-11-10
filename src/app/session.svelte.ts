@@ -16,7 +16,8 @@ import { encodeWav } from '../lib/audio/wav';
 import { newId } from '../lib/instrument';
 import { Roundware, beatvoxShareUrl, RW_JSON, RW_TAGS, type RwPlace, type RwProject, type SendStep, type SentMix, type SentVoice } from '../lib/roundware';
 import { STYLES } from '../lib/styles';
-import { loadShared } from '../lib/shared';
+import { loadShared, ringRows } from '../lib/shared';
+import { makeCardGif } from '../lib/card';
 
 export const MAX_RECORD_SEC = 15;
 /** loops in a shared piece (Simple mode; Advanced will offer 4 / 8 / 16) */
@@ -667,6 +668,25 @@ export class Session {
         });
         v.instrumentAsset = a.id;
       }
+      // the share card, for link previews; worth trying, never worth failing a send
+      if (!m.cardUrl && known.has(RW_TAGS.card)) {
+        this.sendStep = 'card';
+        try {
+          const gif = await makeCardGif(ringRows(r.recipe), { title: title || r.recipe.name, revox: !!this.revoxOf }, r.recipe.bpm ?? this.bpm);
+          const a = await this.rw.upload({
+            mediaType: 'photo',
+            file: gif,
+            fileName: `${base}-card.gif`,
+            place,
+            tags: [RW_TAGS.card],
+            parent: m.mixAsset,
+            description: title,
+          });
+          this.sentMix = m = { ...m, cardAsset: a.id, cardUrl: a.file ?? undefined };
+        } catch {
+          /* the preview falls back to BeatVox's own picture */
+        }
+      }
       if (!m.recipeAsset) {
         this.sendStep = 'recipe';
         const recipe: Recipe = {
@@ -674,6 +694,7 @@ export class Session {
           name: title || r.recipe.name,
           instrument: { id: r.instrument.id, assetId: v.voiceAsset },
           mixAssetId: m.mixAsset,
+          ...(m.cardUrl ? { cardUrl: m.cardUrl } : {}),
           ...(this.revoxOf ? { revoxOf: this.revoxOf.mixId } : {}),
         };
         const a = await this.rw.upload({

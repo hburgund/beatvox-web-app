@@ -41,7 +41,7 @@ export interface MapData {
 }
 
 const MIX_TAGS: number[] = [RW_TAGS.mix, RW_TAGS.revoxMix];
-const INTERNAL: number[] = [RW_TAGS.source, RW_TAGS.instrument, RW_TAGS.recipe];
+const INTERNAL: number[] = [RW_TAGS.source, RW_TAGS.instrument, RW_TAGS.recipe, RW_TAGS.card];
 /** friendlier names than the tags' descriptions */
 const LABELS: Record<number, string> = {
   [RW_TAGS.mix]: 'Original BeatVoxes',

@@ -1,0 +1,9 @@
+# BeatVox on Netlify (beatvox-lab.netlify.app for now). Page routes are in
+# public/_redirects; the share page's link preview is an edge function.
+[build]
+  command = "npm run build"
+  publish = "dist"
+  edge_functions = "netlify/edge-functions"
+
+[build.environment]
+  NODE_VERSION = "22"
