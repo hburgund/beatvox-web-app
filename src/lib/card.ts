@@ -28,8 +28,6 @@ const FONT = "'Courier Prime', 'Courier New', monospace";
 
 export interface CardText {
   title: string;
-  /** a reVox (made from someone else's vox) */
-  revox?: boolean;
 }
 
 /** Draw one frame: the wedge and bursting hits on `step` (or none for -1). */
@@ -107,12 +105,9 @@ export function drawCard(g: CanvasRenderingContext2D, rows: RingRow[], text: Car
   g.fillText('BEATVOX', x + 4, 140 + 4);
   g.fillStyle = C.ink;
   g.fillText('BEATVOX', x, 140);
-  g.font = `700 22px ${FONT}`;
-  g.fillStyle = C.muted;
-  g.fillText(text.revox ? 'A REVOX' : 'A BEATVOX', x, 210);
   g.font = `700 54px ${FONT}`;
   g.fillStyle = C.ink;
-  wrap(g, text.title || 'Untitled', 500, 3).forEach((line, i) => g.fillText(line, x, 280 + i * 62));
+  wrap(g, text.title || 'Untitled', 500, 3).forEach((line, i) => g.fillText(line, x, 250 + i * 62));
   g.font = `400 24px ${FONT}`;
   g.fillStyle = C.muted;
   g.fillText('a beat made from one voice', x, 540);

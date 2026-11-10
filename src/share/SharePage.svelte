@@ -124,7 +124,7 @@
     {:else if live}
       <div class="title">
         <div>
-          <p class="label kicker">{source ? 'A REVOX' : 'A BEATVOX'} · {day(live.mix.createdAt).toUpperCase()}</p>
+          <p class="label kicker">{day(live.mix.createdAt).toUpperCase()}</p>
           <h1>{live.mix.title}</h1>
           {#if source}<p class="sub from">made with the vox from <a href="/b/{source.id}">{source.title}</a></p>{/if}
         </div>

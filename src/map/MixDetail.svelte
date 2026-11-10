@@ -59,7 +59,7 @@
 <div class="detail">
   <div class="top">
     <div class="names">
-      <p class="label kicker">{mix.revox ? 'A REVOX' : 'A BEATVOX'} · {day(mix.createdAt).toUpperCase()}</p>
+      <p class="label kicker">{day(mix.createdAt).toUpperCase()}</p>
       <h2>{mix.title}</h2>
       {#if source}<p class="sub">made with the vox from <button class="link" onclick={() => onpick(source.id)}>{source.title}</button></p>{/if}
     </div>

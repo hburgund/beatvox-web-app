@@ -593,7 +593,7 @@ export class Session {
     const title = this.shareTitle.trim();
     if (this.card?.title === title) return Promise.resolve(this.card.gif);
     if (this.cardRun && this.cardRunTitle === title) return this.cardRun;
-    const run = makeCardGif(ringRows(r.recipe), { title: title || r.recipe.name, revox: !!this.revoxOf }, r.recipe.bpm ?? this.bpm);
+    const run = makeCardGif(ringRows(r.recipe), { title: title || r.recipe.name }, r.recipe.bpm ?? this.bpm);
     this.cardRun = run;
     this.cardRunTitle = title;
     this.cardBusy = true;
