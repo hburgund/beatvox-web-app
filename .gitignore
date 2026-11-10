@@ -6,4 +6,7 @@ dist
 # so the whole reference archive and the v1.93 patch stay local.
 docs/beatvox-reference/
 docs/*.maxpat
+# Kept private too (Nov 2026): the v1.93 reference beat and the 2009 Rhizome document
+docs/and_justice.mp3
+docs/beatvox_rhizome_2009.doc
 .netlify
