@@ -47,3 +47,12 @@ Ideas and requests not yet scheduled. See [PROPOSAL.md](PROPOSAL.md) for the pla
 ## Slicer UI
 
 - [ ] **One waveform with a method dropdown.** Replace the lab's three stacked lanes with a single waveform and a "slice by" dropdown (Mixed default, Syllables, Attacks), to save screen space. Do this when the slicer moves into the app's Voice card.
+
+## About and legal
+
+- [ ] **An About page.** Who made BeatVox (Halsey, and its 2008 history), the project's goals, and mainly a FAQ on using what you make:
+  - **You own what you make.** Your voice, your BeatVoxes and the MP3s and GIFs are yours to use however you like.
+  - **The project may use them too:** share them, highlight them, and host them (on the map, the share pages and in Roundware).
+  - **Credit is appreciated, not required.**
+  - **Only use material you have the right to use.** Record your own voice, or someone's with their permission; no recordings of other people's songs, speeches or the like that you don't have rights to.
+  - **Legal disclaimers** (no warranty, the service may change or go away, removal requests, how the location and the recordings are kept), lined up with the project's Roundware terms.

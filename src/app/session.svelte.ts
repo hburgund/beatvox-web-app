@@ -1,7 +1,7 @@
 // App state: the voice recording, its slices, the engine and what the UI shows.
 // The audio engine is plain TypeScript; this class connects it to Svelte.
 
-import { BeatEngine, VOICES, STEPS, type RowFill, type Voice } from '../lib/audio/engine';
+import { BeatEngine, VOICES, STEPS, type RowFill, type Voice, type Tape } from '../lib/audio/engine';
 import { FxChain, spaceToParams } from '../lib/audio/fx';
 import { encodeMp3 } from '../lib/audio/mp3';
 import { renderShare, voiceSpan } from '../lib/audio/render';
@@ -40,6 +40,11 @@ export interface ShareResult {
   loop: ShareFile & { audio: AudioBuffer; loops: number };
   /** where the beat starts in `full`, seconds */
   remixAt: number;
+  /** `full` as audio, the capture it was rendered from, and the part of the
+   *  voice it starts with: what the video is drawn from */
+  fullAudio: AudioBuffer;
+  tape: Tape;
+  voiceSpan: { start: number; end: number };
   /** the beat as it was when capture started, and the voice it played */
   recipe: Recipe;
   instrument: Instrument;
@@ -445,7 +450,8 @@ export class Session {
     this.share = 'rendering';
     try {
       const t0 = performance.now();
-      const { full, loop, remixAt } = await renderShare(tape, voice, { voiceSpan: voiceSpan(instrument.slices, voice.duration) });
+      const span = voiceSpan(instrument.slices, voice.duration);
+      const { full, loop, remixAt } = await renderShare(tape, voice, { voiceSpan: span });
       const t1 = performance.now();
       const [fullMp3, loopMp3] = await Promise.all([encodeMp3(full), encodeMp3(loop)]);
       if (import.meta.env.DEV) console.info(`share: render ${Math.round(t1 - t0)} ms, mp3 ${Math.round(performance.now() - t1)} ms`);
@@ -454,6 +460,9 @@ export class Session {
         full: { mp3: fullMp3, url: URL.createObjectURL(fullMp3), duration: full.duration },
         loop: { mp3: loopMp3, url: URL.createObjectURL(loopMp3), duration: loop.duration, audio: loop, loops: tape.loops },
         remixAt,
+        fullAudio: full,
+        tape,
+        voiceSpan: span,
         recipe: tape.recipe,
         instrument,
         raw,

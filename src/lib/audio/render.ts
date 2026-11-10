@@ -31,7 +31,8 @@ export interface Rendered {
   remixAt: number;
 }
 
-const LEAD = 0.15;
+/** silence before the voice in the full render, seconds */
+export const LEAD = 0.15;
 
 /** The voice from just before its first slice to just after its last. */
 export function voiceSpan(slices: { start: number; end: number }[], duration: number) {

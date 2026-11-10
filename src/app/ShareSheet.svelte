@@ -4,6 +4,7 @@
   // the GIF, share them, or put it on the BeatVox map.
   import PlacePicker from './PlacePicker.svelte';
   import SendDialog from './SendDialog.svelte';
+  import VideoPreview from './VideoPreview.svelte';
   import Check from '../lib/ui/Check.svelte';
   import type { Session } from './session.svelte';
 
@@ -14,6 +15,7 @@
   let fullPlaying = $state(false);
   let closing = $state(false);
   let popup = $state(false);
+  let video = $state(false);
 
   const r = $derived(s.shareResult);
   const canSend = $derived(!!s.place && s.agreed && !!s.project && s.send === 'idle');
@@ -150,6 +152,15 @@
           </div>
         </div>
         <button class="btn" disabled={!s.card && !s.cardBusy} onclick={() => s.saveGif()}>SAVE GIF</button>
+        {#if import.meta.env.DEV}
+          <button
+            class="link"
+            onclick={() => {
+              stopAll();
+              video = true;
+            }}>video preview (dev)</button
+          >
+        {/if}
         {#if s.shareStatus}<p class="error">{s.shareStatus}</p>{/if}
       </section>
 
@@ -175,6 +186,7 @@
       </section>
     {/if}
   </div>
+  {#if import.meta.env.DEV}<VideoPreview {s} open={video} onclose={() => (video = false)} />{/if}
   <SendDialog {s} open={popup} onclose={() => (popup = false)} onanother={another} />
 </dialog>
 
