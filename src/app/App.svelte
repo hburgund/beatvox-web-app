@@ -4,6 +4,7 @@
   import Leds from '../lib/ui/Leds.svelte';
   import VoiceCard from './VoiceCard.svelte';
   import BeatCard from './BeatCard.svelte';
+  import GrooveAudition from './GrooveAudition.svelte';
   import SaveBar from './SaveBar.svelte';
   import ShareSheet from './ShareSheet.svelte';
   import About from '../about/About.svelte';
@@ -57,6 +58,7 @@
   <main>
     <VoiceCard {s} />
     <BeatCard {s} />
+    {#if import.meta.env.DEV}<GrooveAudition {s} />{/if}
   </main>
 </div>
 

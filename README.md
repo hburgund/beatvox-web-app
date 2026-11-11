@@ -49,3 +49,11 @@ npm run deploy
 - Slicer lab: https://beatvox-lab.netlify.app/slicer.html
 
 The deployed build has no reference recordings. Those are served only by the local dev server.
+
+## Groove audition (dev only)
+
+The studio's dev server shows a GROOVE AUDITION panel under the beat: candidate style beats pulled from the [Groove MIDI Dataset](https://magenta.tensorflow.org/datasets/groove) (Google Magenta, CC BY 4.0). It needs the dataset in `../sources/google-groove-midi/` (beside this repo, not in it). Load a voice, pick a genre, then `[` and `]` step through the grooves and `K` keeps one. Picks are saved to `../sources/groove-picks.json`. See `dev/grooves.ts`.
+
+## Credits
+
+- Style beats taken from the [Groove MIDI Dataset](https://magenta.tensorflow.org/datasets/groove) by Google Magenta, licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).

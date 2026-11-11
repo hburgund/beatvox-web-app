@@ -388,8 +388,13 @@ export class Session {
   applyStyle(name: string) {
     const r = STYLES.find((x) => x.name === name);
     if (!r) return this.newBeat();
+    this.applyRecipe(r);
+  }
+
+  /** Play a style recipe (one from the Style menu, or one being auditioned). */
+  applyRecipe(r: Recipe) {
     this.audio();
-    this.style = name;
+    this.style = r.name;
     if (r.bpm !== undefined) this.bpm = r.bpm;
     if (r.space !== undefined) this.space = r.space;
     if (r.humanize !== undefined) this.humanize = Math.round(r.humanize * 100);
