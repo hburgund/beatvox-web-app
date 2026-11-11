@@ -15,7 +15,8 @@ import { keepAwake } from '../lib/wakeLock';
 import { encodeWav } from '../lib/audio/wav';
 import { newId } from '../lib/instrument';
 import { Roundware, beatvoxShareUrl, RW_JSON, RW_TAGS, type RwPlace, type RwProject, type SendStep, type SentMix, type SentVoice } from '../lib/roundware';
-import { STYLES } from '../lib/styles';
+import { styleNamed, type Style } from '../lib/styles';
+import { ShuffleBag } from '../lib/shuffleBag';
 import { loadShared, ringRows } from '../lib/shared';
 import { makeCardGif } from '../lib/card';
 import { buildScript } from '../lib/video/script';
@@ -104,6 +105,10 @@ export class Session {
   dropRow = $state<number | null>(null);
   /** name of the style the beat started from, or '' for a random beat */
   style = $state('');
+  /** which of the style's beats is playing (its name, and where it is in the style) */
+  styleBeat = $state<{ name: string; index: number; of: number } | null>(null);
+  /** per style, so NEW BEAT plays every beat in it once before any comes round again */
+  private bags = new Map<string, ShuffleBag>();
 
   // share
   share = $state<SharePhase>('idle');
@@ -255,6 +260,7 @@ export class Session {
     this.instrument = instrument;
     this.slices = instrument.slices;
     this.style = '';
+    this.styleBeat = null;
     if (instrument.slices.length < 2) {
       this.status = 'Not much to slice there. Try speaking or beatboxing a bit louder.';
     } else {
@@ -263,9 +269,9 @@ export class Session {
     this.discardShare();
     if (!instrument.slices.length) return;
     // a new voice starts on a full style beat (the most reliably fun one), not v1.93's sparse kickoff
-    const start = STYLES.find((x) => x.name === START_STYLE);
+    const house = styleNamed(START_STYLE);
+    const start = !revox?.recipe && house ? this.pickBeat(house) : undefined;
     const recipe = revox?.recipe ?? start;
-    if (recipe && recipe === start) this.style = start.name;
     if (recipe) {
       if (recipe.bpm !== undefined) this.bpm = recipe.bpm;
       if (recipe.pitch !== undefined) this.pitch = recipe.pitch;
@@ -358,6 +364,7 @@ export class Session {
     this.slices = [];
     this.status = '';
     this.style = '';
+    this.styleBeat = null;
     this.discardShare();
   }
 
@@ -378,23 +385,49 @@ export class Session {
     keepAwake(false);
   }
 
+  /** Another beat: the next one in the style if it has more than one, else a random v1.93 beat. */
   newBeat() {
+    const st = styleNamed(this.style);
+    if (st && st.beats.length > 1) return this.applyRecipe(this.pickBeat(st));
+    this.randomBeat();
+  }
+
+  /** A random v1.93 beat (no style). */
+  randomBeat() {
     this.audio();
     this.style = '';
+    this.styleBeat = null;
     this.engine?.newBeat();
   }
 
-  /** Start from a genre style ('' = a random v1.93 beat). */
+  /** Start from a genre style: one of its beats ('' = a random v1.93 beat). */
   applyStyle(name: string) {
-    const r = STYLES.find((x) => x.name === name);
-    if (!r) return this.newBeat();
-    this.applyRecipe(r);
+    const st = styleNamed(name);
+    if (!st) return this.randomBeat();
+    this.applyRecipe(this.pickBeat(st));
   }
 
-  /** Play a style recipe (one from the Style menu, or one being auditioned). */
+  /**
+   * One of the style's beats, at random, never the one playing, and each
+   * once before any repeats. Sets `style` and `styleBeat` to it.
+   */
+  private pickBeat(st: Style): Recipe {
+    let bag = this.bags.get(st.name);
+    if (!bag) this.bags.set(st.name, (bag = new ShuffleBag()));
+    const now = this.style === st.name ? this.styleBeat?.index : null;
+    const i = bag.next([...st.beats.keys()], now) ?? 0;
+    this.style = st.name;
+    this.styleBeat = { name: st.beats[i].name, index: i, of: st.beats.length };
+    return st.beats[i];
+  }
+
+  /** Play a style recipe (a style's beat, or one being auditioned). */
   applyRecipe(r: Recipe) {
     this.audio();
-    this.style = r.name;
+    if (!styleNamed(this.style)?.beats.includes(r)) {
+      this.style = r.name;
+      this.styleBeat = null;
+    }
     if (r.bpm !== undefined) this.bpm = r.bpm;
     if (r.space !== undefined) this.space = r.space;
     if (r.humanize !== undefined) this.humanize = Math.round(r.humanize * 100);

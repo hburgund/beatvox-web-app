@@ -23,10 +23,13 @@
       <span class="meta">STYLE</span>
       <select value={s.style} disabled={!ready} onchange={(e) => s.applyStyle(e.currentTarget.value)}>
         <option value="">random (v1.93)</option>
-        {#each STYLES as st (st.name)}<option value={st.name}>{st.name}</option>{/each}
+        {#each STYLES as st (st.name)}<option value={st.name}>{st.name}{st.beats.length > 1 ? ` (${st.beats.length})` : ''}</option>{/each}
       </select>
     </label>
   </div>
+  {#if s.styleBeat && s.styleBeat.of > 1}
+    <p class="which" aria-live="polite">{s.style}: <b>{s.styleBeat.name}</b> · {s.styleBeat.index + 1} of {s.styleBeat.of}. NEW BEAT plays another.</p>
+  {/if}
 
   <Grid
     voices={s.voices}
@@ -97,6 +100,14 @@
   }
   .mix + .mix {
     margin-right: auto;
+  }
+  .which {
+    margin: -4px 0 0;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .which b {
+    color: var(--ink);
   }
   .style {
     display: flex;

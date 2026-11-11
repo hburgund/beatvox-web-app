@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { formatPattern, parsePattern, parseRecipe, validateRecipe } from './recipe';
-import { STYLES, STYLE_ERRORS } from './styles';
+import { STYLES, STYLE_ERRORS, styleBeats } from './styles';
 
 describe('recipe patterns', () => {
   it('reads drum-machine notation', () => {
@@ -35,11 +35,35 @@ describe('recipes', () => {
     ]);
   });
 
-  it('every built-in style is valid and survives JSON', () => {
-    for (const s of STYLES) {
-      expect(() => validateRecipe(s)).not.toThrow();
-      expect(parseRecipe(JSON.stringify(s))).toEqual(s);
-    }
+  it('every built-in beat is valid and survives JSON', () => {
+    for (const st of STYLES)
+      for (const b of st.beats) {
+        expect(() => validateRecipe(b)).not.toThrow();
+        expect(parseRecipe(JSON.stringify(b))).toEqual(b);
+      }
+  });
+
+  it('House has ten beats with different names', () => {
+    const house = STYLES.find((s) => s.name === 'House')!;
+    expect(house.beats).toHaveLength(10);
+    expect(new Set(house.beats.map((b) => b.name)).size).toBe(10);
+  });
+
+  it("a style's beats take the file's settings unless they change them", () => {
+    const f = {
+      format: 'beatvox-recipe', version: 1, name: 'S', kind: 'style', bpm: 120, swing: 0.1,
+      beats: [
+        { name: 'A', voices: [{ pattern: 'x'.repeat(16) }] },
+        { name: 'B', bpm: 90, voices: [{ pattern: 'x'.repeat(16) }] },
+      ],
+    };
+    const [a, b] = styleBeats(f);
+    expect([a.name, a.bpm, a.swing, a.kind]).toEqual(['A', 120, 0.1, 'style']);
+    expect([b.name, b.bpm, b.swing]).toEqual(['B', 90, 0.1]);
+    expect('beats' in a).toBe(false);
+    expect(() => styleBeats({ ...f, beats: [{ name: 'C', voices: [{ pattern: 'x...' }] }] })).toThrow(/beat "C".*16/);
+    expect(() => styleBeats({ ...f, beats: [] })).toThrow(/at least one/);
+    expect(() => styleBeats({ ...f, kind: 'beat' })).toThrow(/expected "style"/);
   });
 
   it('rejects things that are not recipes', () => {

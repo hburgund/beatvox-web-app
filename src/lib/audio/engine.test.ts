@@ -265,7 +265,7 @@ describe('BeatEngine', () => {
 
   it('loads a style recipe: patterns, accents, swing, no kickoff', () => {
     const { engine, ctx, started } = setup();
-    const house = STYLES.find((x) => x.name === 'House')!;
+    const house = STYLES.find((x) => x.name === 'House')!.beats[0];
     engine.applyRecipe(house);
     expect(engine.voices.filter((v) => v.on)).toHaveLength(house.voices.length);
     expect(engine.voices[0].pattern).toEqual(parsePattern(house.voices[0].pattern).hits);
@@ -368,7 +368,7 @@ describe('BeatEngine', () => {
       prepare: DEFAULT_PREPARE,
     });
     const { engine, ctx } = setup(42, inst);
-    engine.applyRecipe(STYLES[1]); // a style, so voices have drum roles
+    engine.applyRecipe(STYLES[1].beats[0]); // a style, so voices have drum roles
     play(engine, ctx, 1);
     const taped = engine.capture(2);
     const c = ctx as unknown as { currentTime: number };

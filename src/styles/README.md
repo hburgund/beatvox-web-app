@@ -21,6 +21,19 @@ The format is the BeatVox recipe format (see `src/lib/recipe.ts`), the same one 
 }
 ```
 
+**Many beats in one style:** give the file a `beats` list instead of `voices`. Settings at the top (`bpm`, `swing`, `space`…) are the style's; each beat has a `name`, its `voices`, and any settings it changes. Picking the style plays one of its beats at random, and NEW BEAT plays another (each once before any repeats). See `02-house.json`.
+
+```json
+{
+  "format": "beatvox-recipe", "version": 1, "name": "House", "kind": "style",
+  "bpm": 124, "swing": 0.05, "space": 30,
+  "beats": [
+    {"name": "Classic", "voices": [{"pattern": "X...X...X...X...", "role": "kick"}]},
+    {"name": "Deep", "bpm": 120, "swing": 0.1, "voices": [{"pattern": "X...X...X...X...", "role": "kick"}]}
+  ]
+}
+```
+
 **Patterns:** 16 characters, one per sixteenth note: `x` hit, `X` accent, `o` ghost note, `.` rest. v1.93-style `1`/`0` also works. Spaces and `|` are ignored, so `"x... x... x... x..."` is fine.
 
 **Voice fields:**
