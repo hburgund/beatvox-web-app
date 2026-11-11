@@ -9,6 +9,11 @@ Ideas and requests not yet scheduled. See [PROPOSAL.md](PROPOSAL.md) for the pla
 - [ ] **Save settings as a recipe.** A "save" button that stores the current beat as a recipe so a pattern you like isn't lost. The recipe holds: slices, patterns, voice/slice assignments, tempo, pitch, pan, effects and seed.
 - [ ] **Re-load recipes.** A list of saved recipes to load back in, kept locally on the device. Also loadable from Roundware for shared ones.
 
+- [x] **RE-SLICE** (Nov 2026). A button beside NEW BEAT and EVOLVE: every playing row gets a slice no row is playing, no two alike, picked at random whatever the row's role (on purpose: it's for getting lucky). Rows given a slice by hand keep theirs. Choosing a style puts role-matched slices back.
+- [ ] **GO CRAZY button.** One big button that makes a new random beat, re-slices, and nudges the knobs at the bottom (tempo, pan, pitch, space, human) to random values within sensible ranges. For fun and happy accidents, like Random's NEW BEAT taken further.
+- [ ] **A fuller effects section.** Today the effects are a fixed chain (per-row delay and reverb sends, EQ, compression, limiter) set by presets and the Space knob. Open more of it up: delay time and feedback, reverb size, filter sweeps, maybe distortion or bit-crush, and per-row sends. Saved in the recipe.
+- [ ] **Review and expand panning.** Today the Pan knob sets how wide each row's auto-pan wanders. Review how it sounds, and look at per-row pan positions, pan patterns tied to the beat, and how panning reads in the shared MP3 and video.
+
 ## Sharing, reVox and storage
 
 - [x] **Instruments and recipes are separate.** An instrument (`src/lib/instrument.ts`) is a voice and its exact slices with drum-role scores; a recipe is how it's played. A beat names its instrument; on another instrument it picks slices by role. A reVox is someone else's instrument played with your own beats.

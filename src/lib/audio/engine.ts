@@ -154,6 +154,7 @@ export type Action =
   | { kind: 'kickoff' }
   | { kind: 'kickoffStage'; stage: number }
   | { kind: 'evolve'; auto: boolean }
+  | { kind: 'reslice' }
   | { kind: 'toggleStep'; voice: number; step: number }
   | { kind: 'toggleVoice'; voice: number }
   | { kind: 'setSlice'; voice: number; slice: number }
@@ -310,6 +311,10 @@ export class BeatEngine {
   kickoff() {
     this.request({ kind: 'kickoff' });
   }
+  /** New slices on every playing row: none in use now, no two alike, any role. */
+  reslice() {
+    this.request({ kind: 'reslice' });
+  }
   toggleStep(voice: number, step: number) {
     this.request({ kind: 'toggleStep', voice, step });
   }
@@ -439,6 +444,9 @@ export class BeatEngine {
       case 'evolve':
         this.doEvolve();
         break;
+      case 'reslice':
+        this.doReslice();
+        break;
       case 'toggleStep': {
         const v = this.voices[a.voice];
         v.pattern[a.step] = !v.pattern[a.step];
@@ -539,6 +547,31 @@ export class BeatEngine {
       .sort((a, b) => b.score - a.score)
       .slice(0, 3);
     return ranked.length ? this.rng.pick(ranked).i : this.freeSlice(used);
+  }
+
+  /**
+   * RE-SLICE: each playing row (except ones given a slice by hand) gets a
+   * slice no row has now, picked at random whatever its role. When the voice
+   * runs short, it takes slices from resting rows next; a row with nothing
+   * left to take keeps its own.
+   */
+  private doReslice() {
+    const rows = this.voices.map((v, i) => (v.on && !this.pinned.has(i) ? i : -1)).filter((i) => i >= 0);
+    if (!rows.length) return;
+    const inUse = new Set(this.voices.map((v) => v.slice));
+    const playing = new Set(this.voices.filter((v) => v.on).map((v) => v.slice));
+    const fresh = this.rng.shuffle(this.slices.map((_, i) => i).filter((i) => !inUse.has(i)));
+    const spare = this.rng.shuffle([...new Set(this.voices.filter((v) => !v.on).map((v) => v.slice))].filter((i) => !playing.has(i)));
+    const pool = [...fresh, ...spare];
+    for (const i of this.rng.shuffle(rows)) {
+      const next = pool.shift();
+      if (next === undefined) break;
+      const old = this.voices[i].slice;
+      // a resting row whose slice was taken gets the old one back
+      const rester = this.voices.find((o) => !o.on && o.slice === next);
+      if (rester) rester.slice = old;
+      this.voices[i].slice = next;
+    }
   }
 
   private dealSlices() {

@@ -440,6 +440,12 @@ export class Session {
     this.engine?.evolve();
   }
 
+  /** New, unused slices on every playing row, any sound on any row. */
+  reslice() {
+    this.audio();
+    this.engine?.reslice();
+  }
+
   /** Add or remove one hit (on the next step while playing). */
   toggleStep(voice: number, step: number) {
     this.engine?.toggleStep(voice, step);

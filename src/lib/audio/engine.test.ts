@@ -233,6 +233,32 @@ describe('BeatEngine', () => {
     expect(engine.voices[0].fill).toBe('8');
   });
 
+  it('re-slice gives every playing row a slice none was playing, no two alike', () => {
+    const { engine } = setup(7);
+    engine.applyRecipe(STYLES.find((st) => st.name === 'House')!.beats[0]);
+    for (let n = 0; n < 50; n++) {
+      const before = engine.voices.map((v) => ({ on: v.on, slice: v.slice }));
+      const wasPlaying = new Set(before.filter((v) => v.on).map((v) => v.slice));
+      engine.reslice();
+      const now = engine.voices.filter((v) => v.on).map((v) => v.slice);
+      expect(now.length).toBe(wasPlaying.size);
+      for (const sl of now) expect(wasPlaying.has(sl)).toBe(false);
+      expect(new Set(engine.voices.map((v) => v.slice)).size).toBe(8);
+      // patterns and which rows play stay as they were
+      engine.voices.forEach((v, i) => expect(v.on).toBe(before[i].on));
+    }
+  });
+
+  it('re-slice leaves a row given a slice by hand alone', () => {
+    const { engine } = setup(7);
+    const want = engine.voices[6].slice;
+    engine.setSlice(2, want);
+    for (let n = 0; n < 50; n++) {
+      engine.reslice();
+      expect(engine.voices[2].slice).toBe(want);
+    }
+  });
+
   it('keeps slices unique through many evolves', () => {
     const { engine } = setup(7);
     for (let i = 0; i < 300; i++) engine.evolve();

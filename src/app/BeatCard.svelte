@@ -67,6 +67,7 @@
     </button>
     <button class="btn" disabled={!ready} onclick={() => s.newBeat()}>NEW BEAT</button>
     <button class="btn" disabled={!ready} onclick={() => s.evolve()}>EVOLVE</button>
+    <button class="btn" disabled={!ready} onclick={() => s.reslice()}>RE-SLICE</button>
   </div>
 
   <Check bind:checked={() => s.autoEvolve, (v) => s.setAutoEvolve(v)} disabled={!ready}>keep evolving</Check>
