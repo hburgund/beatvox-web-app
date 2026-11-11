@@ -36,6 +36,13 @@ Ideas and requests not yet scheduled. See [PROPOSAL.md](PROPOSAL.md) for the pla
   - per-voice patterns and a drum role per voice;
   - tempo range, swing and effects preset;
   - how Evolve is allowed to change it, so a template keeps its feel.
+- [~] **Many beats per style, from real drummers** (Nov 2026). Most people want an established groove right away, so each style should hold a bunch of beats and NEW BEAT should pick another from the chosen style (v1.93 stays random). Source: the Groove MIDI Dataset (Google Magenta, CC BY 4.0: real drummers, ~490 takes in 4/4), kept beside the repo in `../sources/google-groove-midi/`. Done: `dev/grooves.ts` pulls one or two main grooves out of each take (lined up to the downbeat, passing taps dropped, swing measured), and the studio's dev-only GROOVE AUDITION panel plays them with the loaded voice; KEEP saves to `../sources/groove-picks.json`. Still to do:
+  - pick by ear, then a script that turns the picks into style files;
+  - styles that hold many beats, and NEW BEAT choosing among them;
+  - 2-bar (32-step) patterns: many grooves (DnB's two-step above all) need two bars;
+  - optional fills in the last bar of 4 or 8;
+  - write our own for what the dataset lacks: house, trap, DnB, dembow, breakbeat;
+  - **credit** "Groove MIDI Dataset by Google Magenta, CC BY 4.0" on the About page once any of its grooves ship (the license requires it).
 - [x] **Guess which drum each slice suits.** Done in `src/lib/audio/drumRoles.ts`: styles deal slices by role, Evolve keeps role voices on good fits, drum roles get tighter gates, and the slicer lab shows each slice's role. Possible next: per-role tone shaping (low shelf on kicks). Original idea: Classify slices by sound and put them on matching voices in templates:
   - **kick:** low spectral centroid, energy below ~200 Hz, short (deep vowels, "b", "d", "oo");
   - **snare:** broadband and noisy mid-range with a sharp attack ("t", "k", "ch", "p");
