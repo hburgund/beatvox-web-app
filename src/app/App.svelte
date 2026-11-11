@@ -33,6 +33,14 @@
 
   function key(e: KeyboardEvent) {
     const t = e.target as HTMLElement;
+    // ⌘Z / Ctrl+Z undo, with Shift (or Ctrl+Y) redo; works after clicking a button too
+    if ((e.metaKey || e.ctrlKey) && !e.altKey && (e.key === 'z' || e.key === 'Z' || e.key === 'y')) {
+      if (sheet || about.open || t.closest('input, select, textarea')) return;
+      e.preventDefault();
+      if (e.key === 'y' || e.shiftKey) s.redo();
+      else s.undo();
+      return;
+    }
     if (sheet || about.open || t.closest('input, select, textarea, button, [role="slider"]')) return;
     if (!s.slices.length) return;
     if (e.key === ' ') {

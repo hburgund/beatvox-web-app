@@ -1,7 +1,7 @@
 // App state: the voice recording, its slices, the engine and what the UI shows.
 // The audio engine is plain TypeScript; this class connects it to Svelte.
 
-import { BeatEngine, VOICES, STEPS, type RowFill, type Voice, type Tape } from '../lib/audio/engine';
+import { BeatEngine, VOICES, STEPS, type BeatState, type RowFill, type Voice, type Tape } from '../lib/audio/engine';
 import { FxChain, spaceToParams } from '../lib/audio/fx';
 import { encodeMp3 } from '../lib/audio/mp3';
 import { renderShare, voiceSpan } from '../lib/audio/render';
@@ -24,6 +24,27 @@ import { pickSprout, SHAPES, type Shape, type Sprout } from '../lib/video/draw';
 
 /** The style a new voice's first beat comes from. */
 const START_STYLE = 'House';
+/** how many steps undo keeps */
+const UNDO_STEPS = 50;
+/** taps, or turns of one knob, this close together (ms) are one undo step */
+const GROUP_MS = 2000;
+
+/** the knobs that are part of a beat (not volume) */
+interface Knobs {
+  bpm: number;
+  pitch: number;
+  panning: number;
+  space: number;
+  humanize: number;
+}
+
+/** one undo step: the beat, its knobs and the style it came from */
+interface Moment {
+  beat: BeatState;
+  knobs: Knobs;
+  style: string;
+  styleBeat: { name: string; index: number; of: number } | null;
+}
 
 export const MAX_RECORD_SEC = 15;
 /** loops in a shared piece (Simple mode; Advanced will offer 4 / 8 / 16) */
@@ -110,6 +131,18 @@ export class Session {
   /** per style, so NEW BEAT plays every beat in it once before any comes round again */
   private bags = new Map<string, ShuffleBag>();
 
+  // undo: the beats before each change, and the ones undone (cleared by any new change)
+  private past: Moment[] = [];
+  private future: Moment[] = [];
+  canUndo = $state(false);
+  canRedo = $state(false);
+  /** the knobs as last sent to the engine, so a knob turn records the value before it */
+  private knobsNow: Knobs = { bpm: 89, pitch: 1, panning: 60, space: 35, humanize: 60 };
+  /** taps and knob turns close together count as one step */
+  private lastGroup: { key: string; at: number } | null = null;
+  /** one change can call record() more than once (NEW BEAT → applyRecipe); keep the first */
+  private recordedThisTick = false;
+
   // share
   share = $state<SharePhase>('idle');
   /** 0..1 through the capture */
@@ -176,6 +209,7 @@ export class Session {
       this.fx = new FxChain(this.ctx);
       this.engine = new BeatEngine(this.ctx, this.fx);
       this.engine.onChange = () => this.sync();
+      this.engine.onAutoChange = () => this.record();
       this.applyMix();
     }
     if (this.ctx.state !== 'running') void this.ctx.resume();
@@ -280,6 +314,8 @@ export class Session {
       if (recipe.humanize !== undefined) this.humanize = Math.round(recipe.humanize * 100);
     }
     this.engine!.load(voice, instrument, recipe);
+    this.knobsNow = this.knobs();
+    this.clearHistory();
     // one screen: the beat starts as soon as the voice is cut
     if (!revox) this.go();
   }
@@ -365,6 +401,7 @@ export class Session {
     this.status = '';
     this.style = '';
     this.styleBeat = null;
+    this.clearHistory();
     this.discardShare();
   }
 
@@ -387,6 +424,7 @@ export class Session {
 
   /** Another beat: the next one in the style if it has more than one, else a random v1.93 beat. */
   newBeat() {
+    this.record();
     const st = styleNamed(this.style);
     if (st && st.beats.length > 1) return this.applyRecipe(this.pickBeat(st));
     this.randomBeat();
@@ -394,6 +432,7 @@ export class Session {
 
   /** A random v1.93 beat (no style). */
   randomBeat() {
+    this.record();
     this.audio();
     this.style = '';
     this.styleBeat = null;
@@ -402,6 +441,7 @@ export class Session {
 
   /** Start from a genre style: one of its beats ('' = a random v1.93 beat). */
   applyStyle(name: string) {
+    this.record();
     const st = styleNamed(name);
     if (!st) return this.randomBeat();
     this.applyRecipe(this.pickBeat(st));
@@ -423,6 +463,7 @@ export class Session {
 
   /** Play a style recipe (a style's beat, or one being auditioned). */
   applyRecipe(r: Recipe) {
+    this.record();
     this.audio();
     if (!styleNamed(this.style)?.beats.includes(r)) {
       this.style = r.name;
@@ -432,22 +473,27 @@ export class Session {
     if (r.space !== undefined) this.space = r.space;
     if (r.humanize !== undefined) this.humanize = Math.round(r.humanize * 100);
     if (r.panning !== undefined) this.panning = r.panning;
+    // the recipe's knobs are part of this one step, not a knob turn of their own
+    this.knobsNow = this.knobs();
     this.engine?.applyRecipe(r);
   }
 
   evolve() {
+    this.record();
     this.audio();
     this.engine?.evolve();
   }
 
   /** New, unused slices on every playing row, any sound on any row. */
   reslice() {
+    this.record();
     this.audio();
     this.engine?.reslice();
   }
 
   /** Add or remove one hit (on the next step while playing). */
   toggleStep(voice: number, step: number) {
+    this.record('taps');
     this.engine?.toggleStep(voice, step);
   }
 
@@ -460,21 +506,25 @@ export class Session {
 
   /** Make a beat row play this slice (dragged from the waveform). */
   setSlice(voice: number, slice: number) {
+    this.record();
     this.engine?.setSlice(voice, slice);
   }
 
   /** Set one row's level, 0..1 (the Mix view). */
   setLevel(voice: number, level: number) {
+    this.record(`level ${voice}`);
     this.engine?.setLevel(voice, level);
   }
 
   /** Set one row to a quick pattern (the Pattern view). */
   fillRow(voice: number, fill: RowFill) {
+    this.record();
     this.engine?.fillRow(voice, fill);
   }
 
   /** Rest or wake one slice's row. */
   toggleVoice(voice: number) {
+    this.record('taps');
     this.engine?.toggleVoice(voice);
   }
 
@@ -485,9 +535,83 @@ export class Session {
 
   applyMix() {
     if (!this.engine || !this.fx) return;
+    // a knob turn (not volume) is a step; one drag, or turns close together, count once
+    const k = this.knobs();
+    const was = this.knobsNow;
+    const turned = (Object.keys(k) as (keyof Knobs)[]).filter((n) => k[n] !== was[n]);
+    if (turned.length) {
+      this.record(`knob ${turned.join(' ')}`);
+      this.knobsNow = k;
+    }
     this.engine.set({ bpm: this.bpm, pitch: this.pitch, panning: this.panning / 100, humanize: this.humanize / 100 });
     this.fx.setVolume(Math.pow(this.volume / 100, 2) * 1.25);
     this.engine.setFx(spaceToParams(this.space / 100));
+  }
+
+  // ── Undo ──────────────────────────────────────────────────────────────
+
+  /** Go back one step. Turns keep evolving off, so the beat stays where you put it. */
+  undo() {
+    const m = this.past.pop();
+    if (!m) return;
+    this.future.push(this.moment());
+    this.goTo(m);
+  }
+
+  /** Go forward again, until a new change clears what was undone. */
+  redo() {
+    const m = this.future.pop();
+    if (!m) return;
+    this.past.push(this.moment());
+    this.goTo(m);
+  }
+
+  /** Save the beat as it is, just before a change. `group`: taps or one knob's drag close together are one step. */
+  private record(group?: string) {
+    if (!this.engine || !this.slices.length || this.recordedThisTick) return;
+    this.recordedThisTick = true;
+    queueMicrotask(() => (this.recordedThisTick = false));
+    const now = performance.now();
+    const same = group && this.lastGroup?.key === group && now - this.lastGroup.at < GROUP_MS;
+    this.lastGroup = group ? { key: group, at: now } : null;
+    if (same) return;
+    // the knobs as they were before this change (a knob turn has already moved its own)
+    this.past.push({ ...this.moment(), knobs: { ...this.knobsNow } });
+    if (this.past.length > UNDO_STEPS) this.past.shift();
+    this.future = [];
+    this.updateHistory();
+  }
+
+  private moment(): Moment {
+    return { beat: this.engine!.snapshot(), knobs: this.knobs(), style: this.style, styleBeat: this.styleBeat };
+  }
+
+  private goTo(m: Moment) {
+    this.audio();
+    this.lastGroup = null;
+    this.style = m.style;
+    this.styleBeat = m.styleBeat;
+    Object.assign(this, m.knobs);
+    this.knobsNow = { ...m.knobs };
+    this.engine!.restore(m.beat);
+    this.applyMix();
+    this.updateHistory();
+  }
+
+  private clearHistory() {
+    this.past = [];
+    this.future = [];
+    this.lastGroup = null;
+    this.updateHistory();
+  }
+
+  private updateHistory() {
+    this.canUndo = this.past.length > 0;
+    this.canRedo = this.future.length > 0;
+  }
+
+  private knobs(): Knobs {
+    return { bpm: this.bpm, pitch: this.pitch, panning: this.panning, space: this.space, humanize: this.humanize };
   }
 
   // ── Save and share ────────────────────────────────────────────────────

@@ -161,7 +161,18 @@ export type Action =
   | { kind: 'setLevel'; voice: number; level: number }
   | { kind: 'fillRow'; voice: number; fill: RowFill }
   | { kind: 'settings'; settings: Partial<EngineSettings> }
-  | { kind: 'recipe'; recipe: Recipe };
+  | { kind: 'recipe'; recipe: Recipe }
+  | { kind: 'restore'; state: BeatState };
+
+/** The beat itself, for undo: every row, and the bits of the beat that aren't on a knob. */
+export interface BeatState {
+  voices: Voice[];
+  swing: number;
+  /** rows given a slice by hand */
+  pinned: number[];
+  /** rows given a quick pattern by hand */
+  held: number[];
+}
 
 const ones = () => Array<number>(STEPS).fill(1);
 
@@ -216,6 +227,8 @@ export class BeatEngine {
   /** user actions with the step they took effect on (for exact re-rendering) */
   readonly log: { step: number; action: Action }[] = [];
   onChange: () => void = () => {};
+  /** called just before an automatic evolve changes the beat (for undo) */
+  onAutoChange: () => void = () => {};
 
   private rng: Rng;
   /** humanize's own random stream, so beats, evolves and slice choices come
@@ -334,6 +347,26 @@ export class BeatEngine {
     this.request({ kind: 'setSlice', voice, slice });
   }
 
+  /** A copy of the beat as it is now (see restore). */
+  snapshot(): BeatState {
+    return {
+      voices: structuredClone(this.voices),
+      swing: this.settings.swing,
+      pinned: [...this.pinned],
+      held: [...this.held],
+    };
+  }
+
+  /**
+   * Put back a beat from snapshot(), at once. Drops anything waiting for the
+   * downbeat, ends the kickoff and turns keep evolving off, so the beat you
+   * went back to stays put.
+   */
+  restore(state: BeatState) {
+    this.queue = [];
+    this.run({ kind: 'restore', state });
+  }
+
   /** Load a style or saved beat (on the next downbeat while playing). */
   applyRecipe(recipe: Recipe) {
     this.request({ kind: 'recipe', recipe });
@@ -442,6 +475,7 @@ export class BeatEngine {
         this.doKickoffStage(a.stage);
         break;
       case 'evolve':
+        if (a.auto) this.onAutoChange();
         this.doEvolve();
         break;
       case 'reslice':
@@ -494,6 +528,17 @@ export class BeatEngine {
       case 'recipe':
         this.doRecipe(a.recipe);
         break;
+      case 'restore': {
+        const st = structuredClone(a.state);
+        this.voices = st.voices.map((v, i) => ({ ...v, lastAbs: this.voices[i]?.lastAbs ?? -2, hand: this.voices[i]?.hand ?? 0 }));
+        this.pinned = new Set(st.pinned);
+        this.held = new Set(st.held);
+        this.kickoffStart = null;
+        this.kickoffStage = 3;
+        this.applySends();
+        this.applySettings({ swing: st.swing, autoEvolve: false });
+        break;
+      }
     }
     this.changed();
   }

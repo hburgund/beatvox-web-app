@@ -259,6 +259,42 @@ describe('BeatEngine', () => {
     }
   });
 
+  it('restore puts back a snapshot exactly, ends keep evolving and drops waiting changes', () => {
+    const { engine, ctx } = setup(7);
+    engine.applyRecipe(STYLES.find((st) => st.name === 'House')!.beats[2]);
+    engine.setSlice(3, engine.voices[7].slice);
+    const saved = engine.snapshot();
+    const pick = (e: BeatEngine) => e.voices.map((v) => ({ on: v.on, slice: v.slice, pattern: v.pattern.join(), accent: v.accent.join(), level: v.level, role: v.role }));
+    const before = pick(engine);
+    for (let i = 0; i < 20; i++) engine.evolve();
+    engine.reslice();
+    expect(pick(engine)).not.toEqual(before);
+    engine.set({ autoEvolve: true, swing: 0 });
+    play(engine, ctx, 1);
+    engine.newBeat(); // waits for the downbeat
+    engine.restore(saved);
+    expect(pick(engine)).toEqual(before);
+    expect(engine.settings.autoEvolve).toBe(false);
+    expect(engine.settings.swing).toBe(saved.swing);
+    play(engine, ctx, 4); // the queued NEW BEAT never lands
+    expect(pick(engine)).toEqual(before);
+    // the hand-placed row is still hand-placed: evolve leaves its slice alone
+    engine.stop();
+    for (let i = 0; i < 200; i++) engine.evolve();
+    expect(engine.voices[3].slice).toBe(saved.voices[3].slice);
+  });
+
+  it('tells undo just before each automatic evolve', () => {
+    const { engine, ctx } = setup(7);
+    let n = 0;
+    engine.onAutoChange = () => n++;
+    engine.evolve();
+    expect(n).toBe(0);
+    engine.set({ autoEvolve: true, evolveEvery: 1 });
+    play(engine, ctx, 6);
+    expect(n).toBeGreaterThanOrEqual(3);
+  });
+
   it('keeps slices unique through many evolves', () => {
     const { engine } = setup(7);
     for (let i = 0; i < 300; i++) engine.evolve();

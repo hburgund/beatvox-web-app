@@ -70,7 +70,21 @@
     <button class="btn" disabled={!ready} onclick={() => s.reslice()}>RE-SLICE</button>
   </div>
 
-  <Check bind:checked={() => s.autoEvolve, (v) => s.setAutoEvolve(v)} disabled={!ready}>keep evolving</Check>
+  <div class="below">
+    <Check bind:checked={() => s.autoEvolve, (v) => s.setAutoEvolve(v)} disabled={!ready}>keep evolving</Check>
+    <div class="history">
+      <button class="btn icon" disabled={!ready || !s.canUndo} aria-label="Undo" title="Undo (⌘Z)" onclick={() => s.undo()}>
+        <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"
+          ><path d="M7 4L3 8l4 4M3 8h9a5 5 0 010 10H8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="square" /></svg
+        >
+      </button>
+      <button class="btn icon" disabled={!ready || !s.canRedo} aria-label="Redo" title="Redo (⇧⌘Z)" onclick={() => s.redo()}>
+        <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"
+          ><path d="M13 4l4 4-4 4M17 8H8a5 5 0 000 10h4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="square" /></svg
+        >
+      </button>
+    </div>
+  </div>
 
   <div class="dials">
     <Knob label="Vol" bind:value={s.volume} />
@@ -154,6 +168,23 @@
   }
   .transport .btn:not(.round) {
     flex: 1;
+  }
+  .below {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .history {
+    display: flex;
+    gap: 6px;
+  }
+  .btn.icon {
+    min-height: 40px;
+    width: 48px;
+    padding: 0;
+    display: grid;
+    place-items: center;
   }
   .dials {
     display: grid;

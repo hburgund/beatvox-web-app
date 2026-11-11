@@ -5,7 +5,7 @@ Ideas and requests not yet scheduled. See [PROPOSAL.md](PROPOSAL.md) for the pla
 ## Patterns and recipes
 
 - [x] **Track level and humanize are separate.** Each voice has a steady `level` (0–1, 1 = natural) for the mix, and the v1.93 velocity walk is now a `humanize` multiplier on top (recipe-wide amount 0–1). Replaces the MIDI-style `velocity` 50–110/127, which drifted so far that a style's relative levels were lost within a few bars. A per-track level fader in Advanced mode can use it directly.
-- [ ] **Undo for patterns.** An undo button that steps back through the last handful of beat states (e.g., 10), covering New Beat, Evolve and manual edits. Possibly redo too.
+- [x] **Undo and redo** (Nov 2026). ↶ and ↷ beside keep evolving, plus ⌘Z and ⇧⌘Z: the last 50 steps of the beat (its rows, the knobs except volume, and the style it came from). NEW BEAT, EVOLVE, RE-SLICE, a style pick, a dragged slice or a quick pattern is one step each; box taps, or turns of one knob, within 2 seconds of each other are one step; each automatic evolve is a step. Undo turns keep evolving off so the beat stays put; a new change clears redo; a new voice clears the history. Possible next: a history strip of tiny grids to jump back to any step.
 - [ ] **Save settings as a recipe.** A "save" button that stores the current beat as a recipe so a pattern you like isn't lost. The recipe holds: slices, patterns, voice/slice assignments, tempo, pitch, pan, effects and seed.
 - [ ] **Re-load recipes.** A list of saved recipes to load back in, kept locally on the device. Also loadable from Roundware for shared ones.
 
