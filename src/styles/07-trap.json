@@ -6,11 +6,109 @@
   "bpm": 140,
   "space": 30,
   "evolve": {"auto": false},
-  "voices": [
-    {"pattern": "X.........x..x..", "role": "kick", "level": 1},
-    {"pattern": "........X.......", "role": "snare", "level": 0.95},
-    {"pattern": "x.x.x.x.x.xxx.x.", "role": "hat", "level": 0.6},
-    {"pattern": ".............ooo", "role": "hat", "level": 0.55},
-    {"pattern": "X.....x.........", "role": "tonal", "level": 0.75}
+  "beats": [
+    {
+      "name": "Classic",
+      "voices": [
+        {"pattern": "X.........x..x..", "role": "kick", "level": 1},
+        {"pattern": "........X.......", "role": "snare", "level": 0.95},
+        {"pattern": "x.x.x.x.x.xxx.x.", "role": "hat", "level": 0.6},
+        {"pattern": ".............ooo", "role": "hat", "level": 0.55},
+        {"pattern": "X.....x.........", "role": "tonal", "level": 0.75}
+      ]
+    },
+    {
+      "name": "Rolls",
+      "voices": [
+        {"pattern": "X......X..X.....", "role": "kick", "level": 1},
+        {"pattern": "........X.......", "role": "snare", "level": 0.95},
+        {"pattern": "x.x.x.x.xxxxx.x.", "role": "hat", "level": 0.6},
+        {"pattern": ".......ooo.....o", "role": "hat", "level": 0.5},
+        {"pattern": "X.........x.....", "role": "tonal", "level": 0.7}
+      ]
+    },
+    {
+      "name": "Triplet feel",
+      "bpm": 145,
+      "voices": [
+        {"pattern": "X.....x...x.....", "role": "kick", "level": 1},
+        {"pattern": "........X.......", "role": "snare", "level": 0.95},
+        {"pattern": "x..x..x.x..x..x.", "role": "hat", "level": 0.6},
+        {"pattern": "X...............", "role": "tonal", "level": 0.75}
+      ]
+    },
+    {
+      "name": "Drill",
+      "bpm": 142,
+      "voices": [
+        {"pattern": "X......x..X..x..", "role": "kick", "level": 1},
+        {"pattern": "........X.....X.", "role": "snare", "level": 0.9},
+        {"pattern": "x..x..x.x..x.x..", "role": "hat", "level": 0.6},
+        {"pattern": "X.........x.....", "role": "tonal", "level": 0.7}
+      ]
+    },
+    {
+      "name": "Sparse",
+      "bpm": 130,
+      "space": 40,
+      "voices": [
+        {"pattern": "X.........X.....", "role": "kick", "level": 1},
+        {"pattern": "........X.......", "role": "snare", "level": 0.95},
+        {"pattern": "x...x...x...x...", "role": "hat", "level": 0.6},
+        {"pattern": "...............x", "role": "perc", "level": 0.55},
+        {"pattern": "X...............", "role": "tonal", "level": 0.75}
+      ]
+    },
+    {
+      "name": "Busy hats",
+      "voices": [
+        {"pattern": "X..X......X.....", "role": "kick", "level": 1},
+        {"pattern": "........X.......", "role": "snare", "level": 0.95},
+        {"pattern": "XoxoXoxoXoxoXoxo", "role": "hat", "level": 0.5},
+        {"pattern": "X.....x.........", "role": "tonal", "level": 0.7}
+      ]
+    },
+    {
+      "name": "Clap stack",
+      "voices": [
+        {"pattern": "X.......X..X....", "role": "kick", "level": 1},
+        {"pattern": "........X.......", "role": "snare", "level": 0.95},
+        {"pattern": "........X.......", "role": "perc", "level": 0.7},
+        {"pattern": "x.x.x.x.x.x.x.x.", "role": "hat", "level": 0.6},
+        {"pattern": "...........ooo..", "role": "hat", "level": 0.5}
+      ]
+    },
+    {
+      "name": "Bounce",
+      "bpm": 150,
+      "voices": [
+        {"pattern": "X..X...X..X.....", "role": "kick", "level": 1},
+        {"pattern": "........X.......", "role": "snare", "level": 0.95},
+        {"pattern": "x.x.x.x.x.x.xxxx", "role": "hat", "level": 0.55},
+        {"pattern": "X..X............", "role": "tonal", "level": 0.7}
+      ]
+    },
+    {
+      "name": "Dark",
+      "bpm": 136,
+      "space": 45,
+      "voices": [
+        {"pattern": "X.........X..X..", "role": "kick", "level": 1},
+        {"pattern": "........X.......", "role": "snare", "level": 0.9},
+        {"pattern": "x.x.x.x.x.x.x.x.", "role": "hat", "level": 0.5},
+        {"pattern": ".x...........x..", "role": "perc", "level": 0.5},
+        {"pattern": "X...............", "role": "tonal", "level": 0.75}
+      ]
+    },
+    {
+      "name": "Rattle",
+      "bpm": 144,
+      "voices": [
+        {"pattern": "X.....X...X..X..", "role": "kick", "level": 1},
+        {"pattern": "........X.....o.", "role": "snare", "level": 0.95},
+        {"pattern": "x.xxx.x.x.xxxxx.", "role": "hat", "level": 0.55},
+        {"pattern": "X.........x.....", "role": "tonal", "level": 0.7}
+      ]
+    }
   ]
 }

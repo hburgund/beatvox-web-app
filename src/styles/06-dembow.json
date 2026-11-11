@@ -6,10 +6,103 @@
   "bpm": 96,
   "space": 25,
   "evolve": {"auto": false},
-  "voices": [
-    {"pattern": "X...x...X...x...", "role": "kick", "level": 0.95},
-    {"pattern": "...X..x....X..x.", "role": "snare", "level": 0.9},
-    {"pattern": "x.x.x.x.x.x.x.x.", "role": "hat", "level": 0.6},
-    {"pattern": "x.......x.......", "role": "tonal", "level": 0.7}
+  "beats": [
+    {
+      "name": "Classic",
+      "voices": [
+        {"pattern": "X...x...X...x...", "role": "kick", "level": 0.95},
+        {"pattern": "...X..x....X..x.", "role": "snare", "level": 0.9},
+        {"pattern": "x.x.x.x.x.x.x.x.", "role": "hat", "level": 0.6},
+        {"pattern": "x.......x.......", "role": "tonal", "level": 0.7}
+      ]
+    },
+    {
+      "name": "Perreo",
+      "bpm": 98,
+      "voices": [
+        {"pattern": "X...X...X...X...", "role": "kick", "level": 0.95},
+        {"pattern": "...X..X....X..X.", "role": "snare", "level": 0.9},
+        {"pattern": "x.x.x.x.x.x.x.x.", "role": "hat", "level": 0.55},
+        {"pattern": "......x.......x.", "role": "perc", "level": 0.6}
+      ]
+    },
+    {
+      "name": "Dominican",
+      "bpm": 116,
+      "voices": [
+        {"pattern": "X...X...X...X...", "role": "kick", "level": 0.95},
+        {"pattern": "...X..X....X..X.", "role": "snare", "level": 0.9},
+        {"pattern": "XoxoXoxoXoxoXoxo", "role": "hat", "level": 0.45},
+        {"pattern": "x.x...x.x.x...x.", "role": "perc", "level": 0.55}
+      ]
+    },
+    {
+      "name": "Moombahton",
+      "bpm": 108,
+      "voices": [
+        {"pattern": "X...X...X...X...", "role": "kick", "level": 0.95},
+        {"pattern": "...X..X....X..X.", "role": "snare", "level": 0.85},
+        {"pattern": "..x...x...x...x.", "role": "hat", "level": 0.6},
+        {"pattern": "x.....x.....x...", "role": "tonal", "level": 0.65}
+      ]
+    },
+    {
+      "name": "Sparse",
+      "bpm": 90,
+      "voices": [
+        {"pattern": "X.......X.......", "role": "kick", "level": 0.95},
+        {"pattern": "...X..X....X..X.", "role": "snare", "level": 0.9},
+        {"pattern": "x...x...x...x...", "role": "hat", "level": 0.6},
+        {"pattern": "x.......x.......", "role": "tonal", "level": 0.7}
+      ]
+    },
+    {
+      "name": "Rolled snare",
+      "voices": [
+        {"pattern": "X...X...X...X...", "role": "kick", "level": 0.95},
+        {"pattern": "...X..X....X.xX.", "role": "snare", "level": 0.9},
+        {"pattern": "x.x.x.x.x.x.x.x.", "role": "hat", "level": 0.55},
+        {"pattern": ".............ooo", "role": "perc", "level": 0.55}
+      ]
+    },
+    {
+      "name": "Old school",
+      "bpm": 92,
+      "voices": [
+        {"pattern": "X...X...X...X...", "role": "kick", "level": 0.95},
+        {"pattern": "...X..X....X..X.", "role": "snare", "level": 0.9},
+        {"pattern": "x..x..x.x..x..x.", "role": "perc", "level": 0.55},
+        {"pattern": "..x...x...x...x.", "role": "hat", "level": 0.55}
+      ]
+    },
+    {
+      "name": "Dancehall",
+      "bpm": 100,
+      "voices": [
+        {"pattern": "X.....X...X.....", "role": "kick", "level": 0.95},
+        {"pattern": "...X..X....X..X.", "role": "snare", "level": 0.9},
+        {"pattern": "x.x.x.x.x.x.x.x.", "role": "hat", "level": 0.55},
+        {"pattern": "X.....x.....x...", "role": "tonal", "level": 0.65}
+      ]
+    },
+    {
+      "name": "Clap",
+      "voices": [
+        {"pattern": "X...X...X...X...", "role": "kick", "level": 0.95},
+        {"pattern": "...X..X....X..X.", "role": "snare", "level": 0.85},
+        {"pattern": "...X..X....X..X.", "role": "perc", "level": 0.6},
+        {"pattern": "x.xxx.xxx.xxx.xx", "role": "hat", "level": 0.5}
+      ]
+    },
+    {
+      "name": "Trap-bow",
+      "bpm": 90,
+      "voices": [
+        {"pattern": "X..x....X..x....", "role": "kick", "level": 0.95},
+        {"pattern": "...X..X....X..X.", "role": "snare", "level": 0.9},
+        {"pattern": "x.x.x.xxx.x.x.xx", "role": "hat", "level": 0.55},
+        {"pattern": "X.......x.......", "role": "tonal", "level": 0.7}
+      ]
+    }
   ]
 }

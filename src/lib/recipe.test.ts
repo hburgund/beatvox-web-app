@@ -31,7 +31,7 @@ describe('recipes', () => {
   it('loads every file in src/styles', () => {
     expect(STYLE_ERRORS).toEqual([]);
     expect(STYLES.map((s) => s.name)).toEqual([
-      'v1.93 Groove', 'House', 'Boom Bap', 'Rock', 'Breakbeat', 'Dembow', 'Trap', 'Drum & Bass',
+      'BeatVox', 'House', 'Boom Bap', 'Rock', 'Breakbeat', 'Dembow', 'Trap', 'Drum & Bass',
     ]);
   });
 
@@ -43,10 +43,11 @@ describe('recipes', () => {
       }
   });
 
-  it('House has ten beats with different names', () => {
-    const house = STYLES.find((s) => s.name === 'House')!;
-    expect(house.beats).toHaveLength(10);
-    expect(new Set(house.beats.map((b) => b.name)).size).toBe(10);
+  it('every style has about ten beats, each with its own name', () => {
+    for (const st of STYLES) {
+      expect(st.beats.length, st.name).toBeGreaterThanOrEqual(8);
+      expect(new Set(st.beats.map((b) => b.name)).size, st.name).toBe(st.beats.length);
+    }
   });
 
   it("a style's beats take the file's settings unless they change them", () => {

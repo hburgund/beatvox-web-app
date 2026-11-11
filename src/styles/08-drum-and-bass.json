@@ -6,10 +6,108 @@
   "bpm": 172,
   "space": 28,
   "evolve": {"auto": false},
-  "voices": [
-    {"pattern": "X.........x.....", "role": "kick", "level": 1},
-    {"pattern": "....X.......X...", "role": "snare", "level": 0.95},
-    {"pattern": "x.x.x.x.x.x.x.x.", "role": "hat", "level": 0.55},
-    {"pattern": "..x.......o...x.", "role": "perc", "level": 0.65}
+  "beats": [
+    {
+      "name": "Classic",
+      "voices": [
+        {"pattern": "X.........x.....", "role": "kick", "level": 1},
+        {"pattern": "....X.......X...", "role": "snare", "level": 0.95},
+        {"pattern": "x.x.x.x.x.x.x.x.", "role": "hat", "level": 0.55},
+        {"pattern": "..x.......o...x.", "role": "perc", "level": 0.65}
+      ]
+    },
+    {
+      "name": "Amen roller",
+      "voices": [
+        {"pattern": "X.X.......XX....", "role": "kick", "level": 1},
+        {"pattern": "....X..o.o..X..o", "role": "snare", "level": 0.95},
+        {"pattern": "x.x.x.x.x.x.x.x.", "role": "hat", "level": 0.55}
+      ]
+    },
+    {
+      "name": "Liquid",
+      "bpm": 174,
+      "space": 45,
+      "voices": [
+        {"pattern": "X.........x.....", "role": "kick", "level": 1},
+        {"pattern": "....X.......X...", "role": "snare", "level": 0.85},
+        {"pattern": "x.x.x.x.x.x.x.x.", "role": "hat", "level": 0.4},
+        {"pattern": "..x...x...x...x.", "role": "hat", "level": 0.5},
+        {"pattern": "x.......x.......", "role": "tonal", "level": 0.6}
+      ]
+    },
+    {
+      "name": "Jump up",
+      "bpm": 175,
+      "voices": [
+        {"pattern": "X.X.......X.....", "role": "kick", "level": 1},
+        {"pattern": "....X.......X...", "role": "snare", "level": 0.95},
+        {"pattern": "x.x.x.x.x.x.x.x.", "role": "hat", "level": 0.55},
+        {"pattern": "X.....X...X.....", "role": "tonal", "level": 0.7}
+      ]
+    },
+    {
+      "name": "Halftime",
+      "bpm": 170,
+      "voices": [
+        {"pattern": "X.....X...X.....", "role": "kick", "level": 1},
+        {"pattern": "........X.......", "role": "snare", "level": 0.95},
+        {"pattern": "x.x.x.x.x.x.x.x.", "role": "hat", "level": 0.55},
+        {"pattern": "...x.......x....", "role": "perc", "level": 0.6}
+      ]
+    },
+    {
+      "name": "Jungle",
+      "bpm": 165,
+      "swing": 0.04,
+      "voices": [
+        {"pattern": "X.x.......x..x..", "role": "kick", "level": 1},
+        {"pattern": "....X..X.X..X..X", "role": "snare", "level": 0.9},
+        {"pattern": "x.xxx.xxx.xxx.xx", "role": "hat", "level": 0.5},
+        {"pattern": ".......x.......x", "role": "perc", "level": 0.55}
+      ]
+    },
+    {
+      "name": "Minimal",
+      "bpm": 174,
+      "space": 22,
+      "voices": [
+        {"pattern": "X.........X.....", "role": "kick", "level": 1},
+        {"pattern": "....X.......X...", "role": "snare", "level": 0.95},
+        {"pattern": "..x...x...x...x.", "role": "hat", "level": 0.55},
+        {"pattern": "x...............", "role": "perc", "level": 0.6}
+      ]
+    },
+    {
+      "name": "Ghosted",
+      "voices": [
+        {"pattern": "X.........x..x..", "role": "kick", "level": 1},
+        {"pattern": "....X..o.o..X..o", "role": "snare", "level": 0.95},
+        {"pattern": "x.x.x.x.x.x.x.x.", "role": "hat", "level": 0.55},
+        {"pattern": "..x.............", "role": "perc", "level": 0.6}
+      ]
+    },
+    {
+      "name": "Steppa",
+      "bpm": 170,
+      "voices": [
+        {"pattern": "X......X..X.....", "role": "kick", "level": 1},
+        {"pattern": "....X.......X...", "role": "snare", "level": 0.95},
+        {"pattern": "xoxoxoxoxoxoxoxo", "role": "hat", "level": 0.5},
+        {"pattern": "X.........x.....", "role": "tonal", "level": 0.7}
+      ]
+    },
+    {
+      "name": "Neuro",
+      "bpm": 174,
+      "space": 20,
+      "voices": [
+        {"pattern": "X.........X.X...", "role": "kick", "level": 1},
+        {"pattern": "....X.......X...", "role": "snare", "level": 0.95},
+        {"pattern": "x.x.x.x.x.x.x.x.", "role": "hat", "level": 0.5},
+        {"pattern": "....x.......x...", "role": "perc", "level": 0.5},
+        {"pattern": "X..X..X..X......", "role": "tonal", "level": 0.65}
+      ]
+    }
   ]
 }

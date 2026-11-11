@@ -6,10 +6,105 @@
   "bpm": 112,
   "space": 30,
   "evolve": {"auto": false},
-  "voices": [
-    {"pattern": "X.......X.x.....", "role": "kick", "level": 1},
-    {"pattern": "....X.......X...", "role": "snare", "level": 0.95},
-    {"pattern": "x.x.x.x.x.x.x.x.", "role": "hat", "level": 0.7},
-    {"pattern": "X...............", "role": "tonal", "level": 0.8}
+  "beats": [
+    {
+      "name": "Classic",
+      "voices": [
+        {"pattern": "X.......X.x.....", "role": "kick", "level": 1},
+        {"pattern": "....X.......X...", "role": "snare", "level": 0.95},
+        {"pattern": "x.x.x.x.x.x.x.x.", "role": "hat", "level": 0.7},
+        {"pattern": "X...............", "role": "tonal", "level": 0.8}
+      ]
+    },
+    {
+      "name": "Four on the floor",
+      "bpm": 120,
+      "voices": [
+        {"pattern": "X...X...X...X...", "role": "kick", "level": 1},
+        {"pattern": "....X.......X...", "role": "snare", "level": 0.95},
+        {"pattern": "x.x.x.x.x.x.x.x.", "role": "hat", "level": 0.65},
+        {"pattern": "X...............", "role": "tonal", "level": 0.75}
+      ]
+    },
+    {
+      "name": "Driving 16ths",
+      "bpm": 116,
+      "voices": [
+        {"pattern": "X.......X.X.....", "role": "kick", "level": 1},
+        {"pattern": "....X.......X...", "role": "snare", "level": 0.95},
+        {"pattern": "XxxxXxxxXxxxXxxx", "role": "hat", "level": 0.55}
+      ]
+    },
+    {
+      "name": "Half-time",
+      "bpm": 140,
+      "space": 38,
+      "voices": [
+        {"pattern": "X.........X.....", "role": "kick", "level": 1},
+        {"pattern": "........X.......", "role": "snare", "level": 0.95},
+        {"pattern": "x.x.x.x.x.x.x.x.", "role": "hat", "level": 0.65},
+        {"pattern": "X.......x.......", "role": "tonal", "level": 0.7}
+      ]
+    },
+    {
+      "name": "Punk",
+      "bpm": 168,
+      "space": 20,
+      "voices": [
+        {"pattern": "X...X.x.X...X.x.", "role": "kick", "level": 1},
+        {"pattern": "....X.......X...", "role": "snare", "level": 0.95},
+        {"pattern": "X.x.X.x.X.x.X.x.", "role": "hat", "level": 0.6}
+      ]
+    },
+    {
+      "name": "Ride",
+      "bpm": 108,
+      "voices": [
+        {"pattern": "X.....x.X.......", "role": "kick", "level": 1},
+        {"pattern": "....X.......X...", "role": "snare", "level": 0.95},
+        {"pattern": "X.x.X.x.X.x.X.x.", "role": "hat", "level": 0.6},
+        {"pattern": "X...............", "role": "perc", "level": 0.7}
+      ]
+    },
+    {
+      "name": "Stomp",
+      "bpm": 96,
+      "voices": [
+        {"pattern": "X.X.....X.X.....", "role": "kick", "level": 1},
+        {"pattern": "....X.......X...", "role": "snare", "level": 0.95},
+        {"pattern": "....X.......X...", "role": "perc", "level": 0.6},
+        {"pattern": "X.......X.......", "role": "tonal", "level": 0.7}
+      ]
+    },
+    {
+      "name": "Tom groove",
+      "bpm": 104,
+      "voices": [
+        {"pattern": "X.......X.......", "role": "kick", "level": 1},
+        {"pattern": "....X.......X...", "role": "snare", "level": 0.9},
+        {"pattern": "x..x..x...x.x.x.", "role": "tonal", "level": 0.65},
+        {"pattern": "x...x...x...x...", "role": "hat", "level": 0.6}
+      ]
+    },
+    {
+      "name": "Funk rock",
+      "bpm": 100,
+      "voices": [
+        {"pattern": "X..x...xX.x.....", "role": "kick", "level": 1},
+        {"pattern": "....X..o....X..o", "role": "snare", "level": 0.95},
+        {"pattern": "x.x.x.x.x.x.x.x.", "role": "hat", "level": 0.6},
+        {"pattern": "..........X.....", "role": "hat", "level": 0.7}
+      ]
+    },
+    {
+      "name": "Shuffle",
+      "bpm": 110,
+      "swing": 0.2,
+      "voices": [
+        {"pattern": "X.....x.X.....x.", "role": "kick", "level": 1},
+        {"pattern": "....X.......X...", "role": "snare", "level": 0.95},
+        {"pattern": "x.xxx.xxx.xxx.xx", "role": "hat", "level": 0.6}
+      ]
+    }
   ]
 }

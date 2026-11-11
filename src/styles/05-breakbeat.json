@@ -7,10 +7,105 @@
   "swing": 0.04,
   "space": 25,
   "evolve": {"auto": false},
-  "voices": [
-    {"pattern": "X.x.......xx....", "role": "kick", "level": 0.95},
-    {"pattern": "....X..o.o..X..o", "role": "snare", "level": 0.95},
-    {"pattern": "x.x.x.x.x.x.x.x.", "role": "hat", "level": 0.65},
-    {"pattern": ".......x......x.", "role": "perc", "level": 0.65}
+  "beats": [
+    {
+      "name": "Classic",
+      "voices": [
+        {"pattern": "X.x.......xx....", "role": "kick", "level": 0.95},
+        {"pattern": "....X..o.o..X..o", "role": "snare", "level": 0.95},
+        {"pattern": "x.x.x.x.x.x.x.x.", "role": "hat", "level": 0.65},
+        {"pattern": ".......x......x.", "role": "perc", "level": 0.65}
+      ]
+    },
+    {
+      "name": "Amen",
+      "bpm": 140,
+      "voices": [
+        {"pattern": "X.X.......XX....", "role": "kick", "level": 0.95},
+        {"pattern": "....X..X.X..X..X", "role": "snare", "level": 0.9},
+        {"pattern": "x.x.x.x.x.x.x.x.", "role": "hat", "level": 0.6}
+      ]
+    },
+    {
+      "name": "Funky drummer",
+      "bpm": 102,
+      "swing": 0.06,
+      "voices": [
+        {"pattern": "X.X...X...X..X..", "role": "kick", "level": 0.95},
+        {"pattern": "....X..o.o.oX..o", "role": "snare", "level": 0.9},
+        {"pattern": "x.x.x.x.x.xox.x.", "role": "hat", "level": 0.6}
+      ]
+    },
+    {
+      "name": "Think",
+      "bpm": 112,
+      "voices": [
+        {"pattern": "X.....X...X.....", "role": "kick", "level": 0.95},
+        {"pattern": "....X.......X..x", "role": "snare", "level": 0.9},
+        {"pattern": "XxoxXxoxXxoxXxox", "role": "hat", "level": 0.5}
+      ]
+    },
+    {
+      "name": "Big beat",
+      "bpm": 128,
+      "voices": [
+        {"pattern": "X.....X.X.......", "role": "kick", "level": 1},
+        {"pattern": "....X.......X...", "role": "snare", "level": 0.95},
+        {"pattern": "..x...x...x...x.", "role": "hat", "level": 0.65},
+        {"pattern": "x.x.x.x.x.x.x.x.", "role": "perc", "level": 0.4},
+        {"pattern": "X.........X.....", "role": "tonal", "level": 0.65}
+      ]
+    },
+    {
+      "name": "Nu skool",
+      "bpm": 132,
+      "voices": [
+        {"pattern": "X......X..X.....", "role": "kick", "level": 0.95},
+        {"pattern": "....X.......X...", "role": "snare", "level": 0.95},
+        {"pattern": "x.xxx.xxx.xxx.xx", "role": "hat", "level": 0.55},
+        {"pattern": "...x......x.....", "role": "perc", "level": 0.6}
+      ]
+    },
+    {
+      "name": "Skippy",
+      "bpm": 138,
+      "voices": [
+        {"pattern": "X.x...x...x..x..", "role": "kick", "level": 0.95},
+        {"pattern": "....X...o...X...", "role": "snare", "level": 0.95},
+        {"pattern": "x.x.x.x.x.x.x.x.", "role": "hat", "level": 0.6},
+        {"pattern": ".......x......xx", "role": "perc", "level": 0.55}
+      ]
+    },
+    {
+      "name": "Apache",
+      "bpm": 118,
+      "voices": [
+        {"pattern": "X.....X.X.......", "role": "kick", "level": 0.95},
+        {"pattern": "....X.......X...", "role": "snare", "level": 0.9},
+        {"pattern": "x..x..x.x..x..x.", "role": "perc", "level": 0.6},
+        {"pattern": "x.x.x.x.x.x.x.x.", "role": "hat", "level": 0.55}
+      ]
+    },
+    {
+      "name": "Chopped",
+      "bpm": 140,
+      "voices": [
+        {"pattern": "X..X......X.X...", "role": "kick", "level": 0.95},
+        {"pattern": "....X.X.....X..X", "role": "snare", "level": 0.9},
+        {"pattern": "x.x.x.x.x.x.x.x.", "role": "hat", "level": 0.6},
+        {"pattern": "..x.....x.......", "role": "perc", "level": 0.6}
+      ]
+    },
+    {
+      "name": "Rolling",
+      "bpm": 130,
+      "swing": 0.08,
+      "voices": [
+        {"pattern": "X.x.......x.....", "role": "kick", "level": 0.95},
+        {"pattern": "....X..o.o..X.oo", "role": "snare", "level": 0.9},
+        {"pattern": "xoxoxoxoxoxoxoxo", "role": "hat", "level": 0.55},
+        {"pattern": "x.........x.....", "role": "tonal", "level": 0.65}
+      ]
+    }
   ]
 }
