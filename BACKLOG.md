@@ -29,6 +29,7 @@ Ideas and requests not yet scheduled. See [PROPOSAL.md](PROPOSAL.md) for the pla
 - [x] **reVox from the share page.** REVOX THIS VOX opens `/?revox=<mix id>`: the studio loads that vox with its saved slices and starts from its beat (waiting for Play). Sending it adds only the new loop (tagged reVox mix, under the original vox) and its recipe, which names the BeatVox it came from (`revoxOf`). Its share page says "made with the vox from …".
 - [x] **Link previews with an animated card** (Nov 2026): the studio makes a 16-frame GIF of the ring at send time and uploads it (tag `beatvox-card`, 1130); a Netlify Edge Function fills in the share page's preview tags. BeatVoxes sent before this preview as text only.
 - [ ] **Cards for older BeatVoxes:** render and upload one for each (a one-off script, or the share page offering to make it), or a server-side renderer.
+- [ ] **Deploy to beatvox.app.** The domain is registered, with DNS at WordPress. Point it at the Netlify site (add the domain in Netlify, then the DNS records at WordPress), turn on HTTPS, and check share links, link previews and the edge function on the new address.
 - [ ] **Netlify from Git:** push the repo to GitHub and link it in Netlify, so a push deploys (the edge function deploys with the site).
 - [ ] **Idea: the clock sprouts its rays.** The small loop button (16 squares round the play button, the beat marked on them) grows the full ring grid's "rays" when it goes into full playback, for example on the map when a card opens.
 - [ ] **Loudness-normalize each voice (LUFS).** Today a recording is peak-normalized, so one loud plosive makes the whole voice quiet. Normalize to a loudness target with a peak ceiling, so every participant's instrument, reVoxes and MP3s in the Roundware stream sit at the same loudness. Fits Phase 2.
@@ -62,6 +63,7 @@ Ideas and requests not yet scheduled. See [PROPOSAL.md](PROPOSAL.md) for the pla
 
 ## About and legal
 
+- [ ] **Review all the copy.** Read every piece of text in the app (studio, map, share pages, About, welcome card, buttons, hints, errors, statuses) for voice, clarity and consistency before launch.
 - [~] **An About page.** Built (Nov 2026, design round 9) as an overlay over any page, so a beat or Wander keeps going: a sheet on a phone, a side panel on a laptop, opened by the round ? beside the wordmark, at `/about` or `#about-<section>`, and from "Read the terms" on the send step. The copy is in `src/about/AboutContent.svelte`; still to do: rewrite it in Halsey's voice and fill the highlighted placeholders (bio, photo, where it was shown, contact email, Roundware terms link, hosting and analytics). A first visit to the map also gets a welcome card (`src/map/Welcome.svelte`), shown once. Original idea: Who made BeatVox (Halsey, and its 2008 history), the project's goals, and mainly a FAQ on using what you make:
   - **You own what you make.** Your voice, your BeatVoxes and the MP3s and GIFs are yours to use however you like.
   - **The project may use them too:** share them, highlight them, and host them (on the map, the share pages and in Roundware).
