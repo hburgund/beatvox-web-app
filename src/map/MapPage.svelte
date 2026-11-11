@@ -476,7 +476,7 @@
   .left {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 16px;
   }
   .brand {
     font: 700 26px/1 var(--mono);
@@ -708,7 +708,9 @@
     .brand {
       font-size: 22px;
     }
-    .left,
+    .left {
+      gap: 12px;
+    }
     .tools {
       gap: 6px;
     }

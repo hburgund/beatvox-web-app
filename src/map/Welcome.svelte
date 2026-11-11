@@ -11,10 +11,11 @@
   // the same waveform cut into three slices: pulled apart, one color each
   const SLICE_COLORS = ['var(--blue)', 'var(--pink)', 'var(--yellow)'];
   const sliced = wave.map((h, i) => ({ x: i * 4 + Math.floor(i / 4) * 5, h, fill: SLICE_COLORS[Math.floor(i / 4)] }));
-  const clock = Array.from({ length: 16 }, (_, k) => ({
-    x: 15 + 12 * Math.sin((k * Math.PI) / 8) - 2,
-    y: 15 - 12 * Math.cos((k * Math.PI) / 8) - 2,
-    on: k % 3 === 0,
+  // the loop clock, cut down to 8 steps so it reads at this size
+  const clock = Array.from({ length: 8 }, (_, k) => ({
+    x: 15 + 11 * Math.sin((k * Math.PI) / 4) - 3,
+    y: 15 - 11 * Math.cos((k * Math.PI) / 4) - 3,
+    on: k === 0 || k === 3 || k === 4 || k === 6,
   }));
 </script>
 
@@ -44,8 +45,8 @@
     <svg class="arrow" width="18" height="10" viewBox="0 0 18 10"><path d="M1 5h14M11 1l4 4-4 4" stroke="var(--muted)" stroke-width="1.8" fill="none" /></svg>
     <span class="step">
       <svg width="30" height="30" viewBox="0 0 30 30">
-        {#each clock as c, k (k)}<rect x={c.x} y={c.y} width="4" height="4" fill={c.on ? 'var(--ink)' : 'var(--card)'} stroke="var(--ink)" stroke-width="0.8" />{/each}
-        <circle cx="15" cy="15" r="6" fill="var(--yellow)" stroke="var(--ink)" stroke-width="1.4" />
+        {#each clock as c, k (k)}<rect x={c.x} y={c.y} width="6" height="6" fill={c.on ? 'var(--ink)' : 'var(--card)'} stroke="var(--ink)" stroke-width="1" />{/each}
+        <circle cx="15" cy="15" r="5" fill="var(--yellow)" stroke="var(--ink)" stroke-width="1.4" />
       </svg>
       A BEAT
     </span>

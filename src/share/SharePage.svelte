@@ -269,7 +269,7 @@
   .left {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 16px;
   }
   .brand {
     font: 700 28px/1 var(--mono);
