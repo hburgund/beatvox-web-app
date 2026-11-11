@@ -30,6 +30,8 @@
   /** each mix's rows for its clock marker, as recipes arrive */
   let marks = $state.raw(new Map<number, RingRow[]>());
   let zoom = $state(2);
+  /** zoomed in far enough for clocks instead of dots; markers are only redrawn when this flips */
+  const clocks = $derived(zoom >= 4);
   let wide = $state(false);
   let wandering = $state(false);
   let scope = $state<'anywhere' | 'vox'>('anywhere');
@@ -38,6 +40,20 @@
   let map: MlMap | null = null;
   let ml: Maplibre | null = null;
   let markers: Marker[] = [];
+  /** how faint a mix on the far side of the globe shows through (MapLibre's default is 0.2) */
+  const FAR_SIDE = '0.08';
+
+  /** Mixes on the far side of the globe show faintly through it but can't be clicked or tabbed to. */
+  function markFarSide() {
+    for (const m of markers) {
+      const el = m.getElement();
+      const far = el.style.opacity === FAR_SIDE;
+      if (el.classList.contains('far') === far) continue;
+      el.classList.toggle('far', far);
+      el.tabIndex = far ? -1 : 0;
+      el.toggleAttribute('aria-hidden', far);
+    }
+  }
   /** the map is up (markers wait for it) */
   let ready = $state(false);
   const player = new Player();
@@ -92,6 +108,8 @@
       map = r.map;
       ml = r.ml;
       map.on('zoomend', () => (zoom = map!.getZoom()));
+      // markers update their own opacity as the globe turns; follow it
+      map.on('render', markFarSide);
       map.on('load', () => {
         // the lines joining mixes of the same vox: dashed ink, or solid pink for the chosen vox
         map!.addSource('family', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
@@ -182,7 +200,7 @@
     if (!ready || !map || !ml || !data) return;
     const show = visible;
     const sel = selected;
-    const z = zoom;
+    const big = clocks;
     const mk = marks;
     const ids = new Set(show.map((m) => m.id));
     // lines: from a vox's first shown mix to each of its others
@@ -202,22 +220,24 @@
     // zoomed out a dot, zoomed in a clock; the chosen one drawn last, on top
     markers.forEach((m) => m.remove());
     markers = [];
-    const clocks = z >= 4;
     for (const m of [...show].sort((a, b) => Number(a.id === sel?.id) - Number(b.id === sel?.id))) {
       const on = m.id === sel?.id;
       const el = document.createElement('button');
       el.className = `bv-pin${on ? ' on' : ''}`;
       el.setAttribute('aria-label', `${m.title}${on ? ' (open)' : ''}`);
       el.title = m.title;
-      el.innerHTML = clocks
+      el.innerHTML = big
         ? clockMarker(mk.get(m.id) ?? null, { size: on ? 52 : 40, selected: on })
         : `<span class="bv-dot${on ? ' on' : ''}${m.revox ? ' revox' : ''}"></span>`;
       el.addEventListener('click', (e) => {
         e.stopPropagation();
         pick(m, true);
       });
-      markers.push(new ml.Marker({ element: el }).setLngLat([m.longitude, m.latitude]).addTo(map));
+      // start faint if it's round the back, so it doesn't flash at full strength for a frame
+      if (map.transform.isLocationOccluded(new ml.LngLat(m.longitude, m.latitude))) el.style.opacity = FAR_SIDE;
+      markers.push(new ml.Marker({ element: el, opacityWhenCovered: FAR_SIDE }).setLngLat([m.longitude, m.latitude]).addTo(map));
     }
+    markFarSide();
   });
 
   /** Show a mix's details; from a tap, play it too. */
@@ -527,6 +547,9 @@
     border: none;
     cursor: pointer;
     line-height: 0;
+  }
+  .map :global(.bv-pin.far) {
+    pointer-events: none;
   }
   .map :global(.bv-pin svg) {
     display: block;
