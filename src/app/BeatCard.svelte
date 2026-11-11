@@ -22,7 +22,7 @@
     <label class="style">
       <span class="meta">STYLE</span>
       <select value={s.style} disabled={!ready} onchange={(e) => s.applyStyle(e.currentTarget.value)}>
-        <option value="">random (v1.93)</option>
+        <option value="">Random</option>
         {#each STYLES as st (st.name)}<option value={st.name}>{st.name}{st.beats.length > 1 ? ` (${st.beats.length})` : ''}</option>{/each}
       </select>
     </label>
