@@ -21,6 +21,9 @@ import { makeCardGif } from '../lib/card';
 import { buildScript } from '../lib/video/script';
 import { pickSprout, SHAPES, type Shape, type Sprout } from '../lib/video/draw';
 
+/** The style a new voice's first beat comes from. */
+const START_STYLE = 'House';
+
 export const MAX_RECORD_SEC = 15;
 /** loops in a shared piece (Simple mode; Advanced will offer 4 / 8 / 16) */
 export const SHARE_LOOPS = 8;
@@ -259,7 +262,10 @@ export class Session {
     }
     this.discardShare();
     if (!instrument.slices.length) return;
-    const recipe = revox?.recipe ?? undefined;
+    // a new voice starts on a full style beat (the most reliably fun one), not v1.93's sparse kickoff
+    const start = STYLES.find((x) => x.name === START_STYLE);
+    const recipe = revox?.recipe ?? start;
+    if (recipe && recipe === start) this.style = start.name;
     if (recipe) {
       if (recipe.bpm !== undefined) this.bpm = recipe.bpm;
       if (recipe.pitch !== undefined) this.pitch = recipe.pitch;
