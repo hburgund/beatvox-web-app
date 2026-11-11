@@ -30,7 +30,7 @@ Ideas and requests not yet scheduled. See [PROPOSAL.md](PROPOSAL.md) for the pla
 - [x] **Link previews with an animated card** (Nov 2026): the studio makes a 16-frame GIF of the ring at send time and uploads it (tag `beatvox-card`, 1130); a Netlify Edge Function fills in the share page's preview tags. BeatVoxes sent before this preview as text only.
 - [ ] **Cards for older BeatVoxes:** render and upload one for each (a one-off script, or the share page offering to make it), or a server-side renderer.
 - [ ] **Deploy to beatvox.app.** The domain is registered, with DNS at WordPress. Point it at the Netlify site (add the domain in Netlify, then the DNS records at WordPress), turn on HTTPS, and check share links, link previews and the edge function on the new address.
-- [ ] **Netlify from Git:** push the repo to GitHub and link it in Netlify, so a push deploys (the edge function deploys with the site).
+- [ ] **Netlify from Git:** the repo is on GitHub (hburgund/beatvox-web-app); link it in Netlify so a push deploys (the edge function deploys with the site).
 - [ ] **Idea: the clock sprouts its rays.** The small loop button (16 squares round the play button, the beat marked on them) grows the full ring grid's "rays" when it goes into full playback, for example on the map when a card opens.
 - [ ] **Loudness-normalize each voice (LUFS).** Today a recording is peak-normalized, so one loud plosive makes the whole voice quiet. Normalize to a loudness target with a peak ceiling, so every participant's instrument, reVoxes and MP3s in the Roundware stream sit at the same loudness. Fits Phase 2.
 - [x] **Store the original and the BeatVoxes separately.** Built: raw voice → mix (and its recipe) and instrument as separate Roundware assets (PROPOSAL §6).
@@ -44,7 +44,6 @@ Ideas and requests not yet scheduled. See [PROPOSAL.md](PROPOSAL.md) for the pla
   - how Evolve is allowed to change it, so a template keeps its feel.
 - [~] **Many beats per style, from real drummers** (Nov 2026). Most people want an established groove right away, so each style should hold a bunch of beats and NEW BEAT should pick another from the chosen style (v1.93 stays random). Source: the Groove MIDI Dataset (Google Magenta, CC BY 4.0: real drummers, ~490 takes in 4/4), kept beside the repo in `../sources/google-groove-midi/`. Done: `dev/grooves.ts` pulls one or two main grooves out of each take (lined up to the downbeat, passing taps dropped, swing measured), and the studio's dev-only GROOVE AUDITION panel plays them with the loaded voice; KEEP saves to `../sources/groove-picks.json`. Still to do:
   - pick by ear, then a script that turns the picks into style files;
-  - styles that hold many beats, and NEW BEAT choosing among them;
   - 2-bar (32-step) patterns: many grooves (DnB's two-step above all) need two bars;
   - optional fills in the last bar of 4 or 8;
   - write our own for what the dataset lacks: house, trap, DnB, dembow, breakbeat;
