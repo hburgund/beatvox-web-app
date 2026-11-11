@@ -92,10 +92,13 @@
     {#if !s.recording}
       <div class="row extras">
         <Check bind:checked={s.noisyRoom}>noisy room</Check>
-        <label class="link file">
-          open a sound file
-          <input type="file" accept="audio/*" onchange={pickFile} />
-        </label>
+        <!-- dev only: BeatVox is about your own voice, recorded here, so the site has no upload -->
+        {#if import.meta.env.DEV}
+          <label class="link file">
+            open a sound file
+            <input type="file" accept="audio/*" onchange={pickFile} />
+          </label>
+        {/if}
       </div>
     {/if}
   {/if}

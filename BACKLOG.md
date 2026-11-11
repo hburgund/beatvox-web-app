@@ -70,3 +70,8 @@ Ideas and requests not yet scheduled. See [PROPOSAL.md](PROPOSAL.md) for the pla
   - **Credit is appreciated, not required.**
   - **Only use material you have the right to use.** Record your own voice, or someone's with their permission; no recordings of other people's songs, speeches or the like that you don't have rights to.
   - **Legal disclaimers** (no warranty, the service may change or go away, removal requests, how the location and the recordings are kept), lined up with the project's Roundware terms.
+
+## Launch
+
+- [x] **No uploading on the site** (Nov 2026). "Open a sound file" only shows on the dev server, like the reference recordings and GROOVE AUDITION: BeatVox is about your own voice, recorded on the spot, and uploads would make it easy to use other people's voices or recordings without consent. reVox stays the way to use someone else's voice, with their permission. If access ever calls for it (no mic, can't record easily), a middle path: allow uploads to play with, but don't let them be sent to the map.
+- [ ] **Tell Jay Sweet (Newport Folk Festival) at launch.**
