@@ -19,6 +19,8 @@
     disabled?: boolean;
     /** the row a dragged slice is over */
     dropRow?: number | null;
+    /** the row a slice just landed on; it flashes */
+    landed?: { row: number; n: number } | null;
     /** each slice's sound ('kick', 'snare', 'hat', 'perc', 'tonal'), by slice number */
     sounds?: (string | undefined)[];
     /** what each row shows: its boxes, a level bar, quick patterns or its pan */
@@ -31,7 +33,7 @@
     onfill: (voice: number, fill: RowFill) => void;
     onpan?: (voice: number, pan: Partial<PanSetting>) => void;
   }
-  let { voices, step, firing, disabled = false, dropRow = null, sounds = [], view = 'boxes', pans = [], ontoggle, ontogglevoice, onlevel, onfill, onpan }: Props = $props();
+  let { voices, step, firing, disabled = false, dropRow = null, landed = null, sounds = [], view = 'boxes', pans = [], ontoggle, ontogglevoice, onlevel, onfill, onpan }: Props = $props();
 
   // the menu's choices; '···' shows when the row's hits match none of them
   const FILLS: { fill: RowFill; text: string }[] = [
@@ -70,6 +72,7 @@
   {#each rows as v, i (i)}
     {@const shown = v.fill ?? fillOf(v.pattern) ?? ''}
     <div class="row" class:resting={!v.on} class:drop={dropRow === i} data-row={i}>
+      {#if landed?.row === i}{#key landed.n}<span class="landed" aria-hidden="true"></span>{/key}{/if}
       <button
         class="slice"
         {disabled}
@@ -143,6 +146,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    position: relative;
   }
   .slice {
     width: 26px;
@@ -162,6 +166,30 @@
     outline: 2px dashed var(--pink);
     outline-offset: 2px;
     border-radius: 3px;
+  }
+  /* a slice just landed on this row: a quick pink flash over it */
+  .landed {
+    position: absolute;
+    inset: -3px;
+    border-radius: 4px;
+    background: var(--pink);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 2;
+    animation: landed 700ms ease-out;
+  }
+  @keyframes landed {
+    0% {
+      opacity: 0.55;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .landed {
+      animation-duration: 1ms;
+    }
   }
   .lvl {
     position: absolute;

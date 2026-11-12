@@ -38,6 +38,7 @@
     firing={s.firing}
     disabled={!ready}
     dropRow={s.dropRow}
+    landed={s.landed}
     sounds={s.instrument?.slices.map((x) => x.role) ?? []}
     {view}
     pans={s.playing ? s.pans : []}

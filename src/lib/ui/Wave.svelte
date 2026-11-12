@@ -100,32 +100,72 @@
     return el ? Number(el.dataset.row) : null;
   }
 
+  /** the row highlighted under the dragged slice: where it lands */
+  let over: number | null = null;
+  let pointer = -1;
+
+  // stop following the pointer if the waveform goes away mid-drag
+  $effect(() => () => {
+    window.removeEventListener('pointermove', move);
+    window.removeEventListener('pointerup', up);
+    window.removeEventListener('pointercancel', up);
+  });
+
   function down(e: PointerEvent) {
     const i = sliceAt(e.clientX);
     if (i < 0) return;
-    canvas.setPointerCapture(e.pointerId);
+    // a mouse press would otherwise start selecting text (or a native drag)
+    if (e.pointerType === 'mouse') e.preventDefault();
+    try {
+      canvas.setPointerCapture(e.pointerId);
+    } catch {
+      /* the window listeners below still follow it */
+    }
+    // a gesture that never ended properly must not leak into this one
+    drag = null;
+    over = null;
+    pointer = e.pointerId;
     start = { x: e.clientX, y: e.clientY, slice: i };
     pressed = i;
+    // follow the pointer on the window too, so the drop still lands if the canvas loses it
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
     onslice?.(i);
   }
 
   function move(e: PointerEvent) {
-    if (!start) return;
+    if (!start || e.pointerId !== pointer) return;
     if (!drag && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 8) drag = { slice: start.slice, x: 0, y: 0 };
     if (drag) {
       drag = { slice: drag.slice, x: e.clientX, y: e.clientY };
-      onover?.(rowAt(e.clientX, e.clientY));
+      // between rows keeps the last one, so the highlight doesn't flicker off
+      const row = rowAt(e.clientX, e.clientY);
+      if (row !== null || !overGrid(e.clientX, e.clientY)) over = row;
+      onover?.(over);
     }
   }
 
+  /** inside the beat grid (rows and the gaps between them) */
+  function overGrid(x: number, y: number) {
+    return !!document.elementFromPoint(x, y)?.closest('.grid');
+  }
+
   function up(e: PointerEvent) {
+    if (e.pointerId !== pointer) return;
+    window.removeEventListener('pointermove', move);
+    window.removeEventListener('pointerup', up);
+    window.removeEventListener('pointercancel', up);
     if (drag) {
-      const row = rowAt(e.clientX, e.clientY);
+      // the highlighted row is the promise: drop there (a cancel has no reliable position)
+      const row = e.type === 'pointerup' ? (rowAt(e.clientX, e.clientY) ?? over) : over;
       if (row !== null) ondrop?.(drag.slice, row);
       onover?.(null);
     }
     drag = null;
+    over = null;
     start = null;
+    pointer = -1;
     setTimeout(() => (pressed = -1), 120);
   }
 </script>
@@ -136,9 +176,6 @@
     style="height:{height}px"
     aria-label="Your voice, cut into {slices.length} slices. Tap a slice to hear it; drag it onto a beat row."
     onpointerdown={down}
-    onpointermove={move}
-    onpointerup={up}
-    onpointercancel={up}
   ></canvas>
 </div>
 {#if drag && drag.x}
@@ -155,6 +192,9 @@
     border-radius: 4px;
     cursor: pointer;
     touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
     font-family: var(--mono);
   }
   .chip {

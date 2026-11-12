@@ -124,6 +124,8 @@ export class Session {
   humanize = $state(60);
   /** the beat row a slice is being dragged over */
   dropRow = $state<number | null>(null);
+  /** the row a slice just landed on (it flashes), with a count so the same row can flash twice */
+  landed = $state<{ row: number; n: number } | null>(null);
   /** name of the style the beat started from, or '' for a random beat */
   style = $state('');
   /** which of the style's beats is playing (its name, and where it is in the style) */
@@ -506,6 +508,7 @@ export class Session {
   setSlice(voice: number, slice: number) {
     this.record();
     this.engine?.setSlice(voice, slice);
+    this.landed = { row: voice, n: (this.landed?.n ?? 0) + 1 };
   }
 
   /** Set one row's level, 0..1 (the Mix view). */
