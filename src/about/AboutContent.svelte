@@ -80,7 +80,7 @@
         <dt>What’s a reVox?</dt>
         <dd>A new beat made from someone else’s voice. It links back to the original, so you can follow a voice around the world.</dd>
         <dt>How do I take mine off the map?</dt>
-        <dd>Email <mark class="todo">[CONTACT EMAIL]</mark> with the link to its page and it will be removed.</dd>
+        <dd>Email <a class="mail" href="mailto:hello@beatvox.app">hello@beatvox.app</a> with the link to its page and it will be removed.</dd>
         <dt>How exact is my place on the map?</dt>
         <dd>Exactly where you put the pin. WHERE I AM uses your phone’s location, so at home you may prefer to search for your town and pick a spot.</dd>
         <dt>Is anything uploaded before I send it?</dt>
@@ -136,7 +136,7 @@
   </div>
 
   <footer>
-    <p>Questions, or want a BeatVox taken down? <mark class="todo">[CONTACT EMAIL]</mark></p>
+    <p>Questions, or want a BeatVox taken down? <a class="mail" href="mailto:hello@beatvox.app">hello@beatvox.app</a></p>
     <p class="small">© 2026 Halsey Burgund · BeatVox v2</p>
   </footer>
 </div>
@@ -215,6 +215,10 @@
     margin: -4px 0 6px;
   }
   .maker a,
+  .mail {
+    font-weight: 700;
+    color: var(--ink);
+  }
   .credits a {
     font: 700 14px var(--mono);
     color: var(--ink);
