@@ -5,9 +5,12 @@ import path from 'node:path';
 import type { Plugin } from 'vite';
 
 const ROOT = path.resolve(import.meta.dirname, '../docs');
-const SOURCES = [
-  { dir: 'beatvox-reference/samples', group: '2008 visitors' },
+// samples/_hidden/ holds 2008 takes that are near-silent or under 2 s (see WHY.txt there); not listed.
+const SOURCES: { dir: string; group: string; flat?: boolean; match?: RegExp; skip?: RegExp }[] = [
+  { dir: 'beatvox-reference/samples', group: 'dec / ica', match: /^(dec|ica)_bvox/i },
+  { dir: 'beatvox-reference/samples', group: '2008 visitors', skip: /^(dec|ica)_bvox/i },
   { dir: 'beatvox-reference/payc', group: 'payc' },
+  { dir: 'beatvox-reference/speeches', group: 'speeches' },
   { dir: 'beatvox-reference', group: 'misc', flat: true },
   { dir: '.', group: 'reference output', flat: true },
 ];
@@ -22,6 +25,7 @@ function list() {
     for (const name of fs.readdirSync(dir).sort()) {
       const full = path.join(dir, name);
       if (!AUDIO.test(name) || !fs.statSync(full).isFile()) continue;
+      if ((s.match && !s.match.test(name)) || s.skip?.test(name)) continue;
       out.push({ group: s.group, name, path: path.posix.join(s.dir, name) });
     }
   }
