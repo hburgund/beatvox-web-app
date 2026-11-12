@@ -45,8 +45,8 @@ Phones only allow the mic over HTTPS, so test builds go to Netlify. `netlify.tom
 npm run deploy
 ```
 
-- App: https://beatvox-lab.netlify.app/
-- Slicer lab: https://beatvox-lab.netlify.app/slicer.html
+- App: https://beatvox.app/ (Netlify site beatvox-lab; deploys on every push to main)
+- Slicer lab: https://beatvox.app/slicer.html
 
 The deployed build has no reference recordings. Those are served only by the local dev server.
 

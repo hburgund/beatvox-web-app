@@ -1,4 +1,4 @@
-# BeatVox on Netlify (beatvox-lab.netlify.app for now). Page routes are in
+# BeatVox on Netlify: beatvox.app (the site is beatvox-lab; beatvox-lab.netlify.app redirects). Page routes are in
 # public/_redirects; the share page's link preview is an edge function.
 [build]
   command = "npm run build"

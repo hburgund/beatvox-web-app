@@ -9,7 +9,7 @@ import type { Role } from '../recipe';
 /** how long the end card holds after the last bar */
 export const END_CARD = 3;
 /** the project's link, on the video (people won't type a link with an id) */
-export const VIDEO_LINK = 'beatvox-lab.netlify.app';
+export const VIDEO_LINK = 'beatvox.app';
 
 export interface VideoRow {
   /** the drum role of the slice this row plays (sets its color) */
