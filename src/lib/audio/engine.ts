@@ -26,7 +26,7 @@
 
 import { Rng } from './rng';
 import type { FxChain, FxParams } from './fx';
-import { VoiceBank, type Cmd } from './voiceBank';
+import { SOLO_CHANNEL, VoiceBank, type Cmd } from './voiceBank';
 import type { Slice } from './slicer';
 import { matchSlices, type RoleScores } from './drumRoles';
 import { instrumentRef, refersTo, type Instrument } from '../instrument';
@@ -189,6 +189,8 @@ const HUMAN_START = 0.006;
 const HUMAN_CENTS = 15;
 /** each row tuned by up to ± this (cents) */
 const ROW_CENTS = 20;
+/** a tapped slice's loudness (v1.93's hear-a-slice level) */
+const TAP_LEVEL = 0.9;
 /** quick loudness wobble per hit, ± */
 const HUMAN_WOBBLE = 0.08;
 /** the weak hand of running 16ths, this much quieter */
@@ -400,6 +402,22 @@ export class BeatEngine {
   setLevel(voice: number, level: number) {
     this.request({ kind: 'setLevel', voice, level });
   }
+  /**
+   * Play one slice now, on its own (a tap on the waveform): through the
+   * effects and the volume like the beat, on the solo channel. A capture
+   * running now records it, so a solo played over the beat is in the MP3.
+   * A new tap cuts off the one before, like a drum row.
+   */
+  tapSlice(slice: number) {
+    const s = this.slices[slice];
+    if (!s || !this.buffer) return;
+    const t = this.ctx.currentTime;
+    const rate = this.settings.pitch;
+    const len = (s.end - s.start) / rate;
+    const a = Math.min(0.003, len / 4);
+    this.emit({ k: 'hit', t, voice: SOLO_CHANNEL, offset: s.start, len, rate, level: TAP_LEVEL, a, h: Math.max(0, len - a - 0.02) });
+  }
+
   /** Set where a row sits: FIXED at `at`, or ROAMing `lo`..`hi` (-1 left to 1 right). */
   setPan(voice: number, pan: Partial<PanSetting>) {
     this.request({ kind: 'setPan', voice, pan });

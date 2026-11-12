@@ -1,5 +1,6 @@
 // The audio side of the beat engine: 8 voice channels (player → pan →
-// dry / delay / reverb sends) feeding the effects chain.
+// dry / delay / reverb sends) feeding the effects chain, plus a solo channel
+// for slices tapped on the waveform, so a capture records those too.
 //
 // The engine decides *what* happens (which slice, how loud, where it pans)
 // and sends each decision here as a small command. Running everything
@@ -10,6 +11,8 @@
 import type { FxChain, FxParams } from './fx';
 
 export const VOICE_CHANNELS = 8;
+/** the channel slices tapped on the waveform play on: centred, dry, after the beat rows */
+export const SOLO_CHANNEL = VOICE_CHANNELS;
 
 export type Cmd =
   /** play a slice: gate up over `a`, hold until `h`, down to 0 at `len` */
@@ -53,7 +56,7 @@ export class VoiceBank {
     private ctx: BaseAudioContext,
     private fx: FxChain,
   ) {
-    for (let v = 0; v < VOICE_CHANNELS; v++) {
+    for (let v = 0; v <= SOLO_CHANNEL; v++) {
       const input = ctx.createGain();
       const panner = ctx.createStereoPanner();
       panner.pan.value = 0;

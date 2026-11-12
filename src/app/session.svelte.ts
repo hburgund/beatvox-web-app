@@ -497,11 +497,14 @@ export class Session {
     this.engine?.toggleStep(voice, step);
   }
 
-  /** Hear one slice on its own (the beat keeps going). */
+  /** Hear one slice on its own (the beat keeps going); a capture under way records it. */
   hearSlice(i: number) {
     const s = this.slices[i];
     if (!s || !this.voice) return;
-    playSlice(this.audio(), this.voice, s);
+    const ctx = this.audio();
+    // through the engine, so it's in the mix (effects, volume) and SAVE 8 BARS records it
+    if (this.engine) this.engine.tapSlice(i);
+    else playSlice(ctx, this.voice, s);
   }
 
   /** Make a beat row play this slice (dragged from the waveform). */

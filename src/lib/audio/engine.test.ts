@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BeatEngine, STEPS, PATTERNS, fillOf, type Tape } from './engine';
 import { FxChain } from './fx';
+import { SOLO_CHANNEL } from './voiceBank';
 import type { Slice } from './slicer';
 import { STYLES } from '../styles';
 import { parsePattern, type RecipeVoice, type Role } from '../recipe';
@@ -513,6 +514,30 @@ describe('BeatEngine', () => {
       expect(h.len).toBeGreaterThan(0.97);
       expect(h.len).toBeLessThan(1.03);
     }
+  });
+
+  it('a slice tapped on the waveform during a capture is on the tape, on the solo channel', async () => {
+    const { engine, ctx } = setup();
+    const c = ctx as unknown as { currentTime: number };
+    play(engine, ctx, 1);
+    engine.tapSlice(3); // before the capture: heard, not taped
+    const taped = engine.capture(2);
+    let tape: Tape | null = null;
+    void taped.then((t) => (tape = t));
+    for (let i = 0; i < 400 && !tape; i++) {
+      c.currentTime += 0.025;
+      engine.schedule(c.currentTime + 0.12);
+      // a little solo once the capture has started
+      if (i === 130 || i === 140) engine.tapSlice(i === 130 ? 5 : 7);
+      await Promise.resolve();
+    }
+    engine.stop();
+    const solo = tape!.cmds.filter((x) => x.k === 'hit' && x.voice === SOLO_CHANNEL);
+    expect(solo.map((h) => (h as { offset: number }).offset)).toEqual([slices[5].start, slices[7].start]);
+    for (const h of solo) expect(h.t).toBeGreaterThanOrEqual(tape!.start);
+    // the beat's own rows are still only 0–7
+    expect(tape!.cmds.every((x) => x.k !== 'hit' || x.voice <= SOLO_CHANNEL)).toBe(true);
+    engine.tapSlice(99); // no such slice: nothing happens
   });
 
   it('captures whole loops from the next downbeat', async () => {
