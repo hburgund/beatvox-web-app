@@ -1,0 +1,198 @@
+<!doctype html>
+<!--
+  The link-preview card for BeatVox's own pages (the map, the studio, About):
+  1200 × 630, rendered to public/og/beatvox.png with headless Chrome:
+
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new \
+    --hide-scrollbars --force-device-scale-factor=1 --window-size=1200,630 \
+    --screenshot=public/og/beatvox.png "file://$PWD/dev/og-card.html"
+
+  The beat is House "Classic", drawn the way the studio draws it.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      @font-face {
+        font-family: 'Courier Prime';
+        font-weight: 400;
+        src: url('../node_modules/@fontsource/courier-prime/files/courier-prime-latin-400-normal.woff2') format('woff2');
+      }
+      @font-face {
+        font-family: 'Courier Prime';
+        font-weight: 700;
+        src: url('../node_modules/@fontsource/courier-prime/files/courier-prime-latin-700-normal.woff2') format('woff2');
+      }
+      :root {
+        --paper: #f4efe2;
+        --card: #fffcf4;
+        --ink: #1d1b16;
+        --muted: #6b665a;
+        --soft: #d9d2c0;
+        --blue: #2a35c9;
+        --pink: #ff5c80;
+        --yellow: #ffd23f;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 1200px;
+        height: 630px;
+        overflow: hidden;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: 'Courier Prime', monospace;
+      }
+      .wrap {
+        display: flex;
+        height: 100%;
+        padding: 64px 64px 56px 72px;
+        gap: 56px;
+        align-items: center;
+      }
+      .words {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+      }
+      h1 {
+        margin: 0;
+        font: 700 104px/1 'Courier Prime', monospace;
+        letter-spacing: 0.03em;
+        text-shadow: 6px 6px 0 var(--pink);
+      }
+      .leds {
+        display: flex;
+        gap: 8px;
+        margin-top: 14px;
+      }
+      .leds i {
+        width: 22px;
+        height: 22px;
+        border: 3px solid var(--ink);
+        background: var(--card);
+      }
+      .leds i:first-child {
+        background: var(--yellow);
+      }
+      .tag {
+        margin: 40px 0 0;
+        font: 700 46px/1.15 'Courier Prime', monospace;
+      }
+      .sub {
+        margin: 18px 0 0;
+        font: 400 27px/1.35 'Courier Prime', monospace;
+        color: var(--muted);
+      }
+      .url {
+        margin-top: auto;
+        font: 700 30px/1 'Courier Prime', monospace;
+      }
+      .beat {
+        position: relative;
+        flex: none;
+        width: 420px;
+        padding: 22px;
+        background: var(--card);
+        border: 3px solid var(--ink);
+        border-radius: 10px;
+        box-shadow: 8px 8px 0 var(--ink);
+      }
+      .row {
+        display: grid;
+        grid-template-columns: repeat(16, 1fr);
+        gap: 4px;
+        margin-bottom: 7px;
+      }
+      .row i {
+        height: 30px;
+        border: 2px solid var(--soft);
+        border-radius: 4px;
+        background: var(--card);
+      }
+      .row i:nth-child(4n + 1) {
+        background: var(--paper);
+      }
+      .row i.k {
+        background: var(--blue);
+        border-color: var(--ink);
+      }
+      .row i.s {
+        background: var(--pink);
+        border-color: var(--ink);
+      }
+      .row i.h {
+        background: var(--yellow);
+        border-color: var(--ink);
+      }
+      .row i.o {
+        background: var(--ink);
+        border-color: var(--ink);
+      }
+      .play {
+        position: absolute;
+        left: -46px;
+        bottom: -46px;
+        width: 112px;
+        height: 112px;
+        border-radius: 50%;
+        background: var(--yellow);
+        border: 4px solid var(--ink);
+        box-shadow: 6px 6px 0 var(--ink);
+        display: grid;
+        place-items: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="words">
+        <div class="brand">
+          <h1>BEATVOX</h1>
+          <div class="leds"><i></i><i></i><i></i><i></i></div>
+        </div>
+        <p class="tag">Turn your voice<br />into a beat.</p>
+        <p class="sub">Say anything for 15 seconds.<br />BeatVox cuts it into a beat,<br />and shares it on the map.</p>
+        <div class="url">beatvox.app</div>
+      </div>
+      <div class="beat" id="beat">
+        <div class="play">
+          <svg width="44" height="44" viewBox="0 0 18 18"><path d="M5 2l11 7-11 7z" fill="#1d1b16" /></svg>
+        </div>
+      </div>
+    </div>
+    <script>
+      // House "Classic": kick, snare, two hats, perc, tonal (the studio's colors)
+      const rows = [
+        ['X...X...X...X...', 'k'],
+        ['....X.......X...', 's'],
+        ['..x...x...x...x.', 'h'],
+        ['oxoxoxoxoxoxoxox', 'h'],
+        ['...x.....x.x....', 'o'],
+        ['x.....x.....x...', 'o'],
+        ['................', ''],
+        ['................', ''],
+      ];
+      const beat = document.getElementById('beat');
+      for (const [p, c] of rows) {
+        const row = document.createElement('div');
+        row.className = 'row';
+        for (const ch of p) {
+          const i = document.createElement('i');
+          if (ch !== '.') i.className = c;
+          row.append(i);
+        }
+        beat.insertBefore(row, beat.querySelector('.play'));
+      }
+    </script>
+  </body>
+</html>

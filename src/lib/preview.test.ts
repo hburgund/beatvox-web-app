@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { injectMeta, previewFor } from './preview';
+import { injectMeta, previewFor, sitePreview } from './preview';
 
 const API = 'https://api.test/api/3';
 const page = '<!doctype html><html><head><meta charset="UTF-8"><title>BeatVox</title></head><body></body></html>';
@@ -65,5 +65,23 @@ describe('injectMeta', () => {
     const html = injectMeta(page, { title: 't', description: 'd', url: 'u' });
     expect(html).not.toContain('og:image');
     expect(html).toContain('content="summary"');
+  });
+});
+
+describe('sitePreview', () => {
+  it('gives the map, the studio and About the site card, at a clean address', () => {
+    const home = sitePreview('https://beatvox.app/');
+    expect(home?.title).toBe('BeatVox: turn your voice into a beat');
+    expect(home?.image).toBe('https://beatvox.app/og/beatvox.png');
+    expect(sitePreview('https://beatvox.app/studio?revox=12')?.url).toBe('https://beatvox.app/studio');
+    expect(sitePreview('https://beatvox.app/about/')?.title).toBe('About BeatVox');
+    const html = injectMeta(page, sitePreview('https://beatvox.app/studio')!);
+    expect(html).toContain('<meta property="og:image:type" content="image/png">');
+    expect(html).not.toContain('drawn as a ring');
+  });
+
+  it('leaves other pages alone', () => {
+    expect(sitePreview('https://beatvox.app/b/12')).toBeNull();
+    expect(sitePreview('https://beatvox.app/slicer.html')).toBeNull();
   });
 });

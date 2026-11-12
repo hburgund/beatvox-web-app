@@ -1,4 +1,6 @@
-// Link previews for a BeatVox's share page (/b/<id>). iMessage, WhatsApp,
+// Link previews for BeatVox's pages: the map, the studio and About get the
+// site's card (sitePreview); a BeatVox's share page (/b/<id>) gets its own.
+// iMessage, WhatsApp,
 // Slack and the like don't run the app; they read the page's <head>. The
 // Netlify Edge Function (netlify/edge-functions/share-preview.ts) uses these
 // to fill it in: the title, a line about it, and its share card (the
@@ -11,7 +13,44 @@ export interface PreviewMeta {
   description: string;
   /** the share card, or nothing (older BeatVoxes have none) */
   image?: string;
+  /** default: a BeatVox's ring GIF */
+  imageType?: string;
+  imageAlt?: string;
   url: string;
+}
+
+/** The site's own card, drawn by dev/og-card.html. */
+export const SITE_CARD = '/og/beatvox.png';
+
+const SITE_PAGES: Record<string, { title: string; description: string }> = {
+  '/': {
+    title: 'BeatVox: turn your voice into a beat',
+    description: 'Beats made from people’s voices, on a map of the world. Listen, wander, and make your own.',
+  },
+  '/studio': {
+    title: 'Make a BeatVox',
+    description: 'Say anything for 15 seconds and BeatVox cuts your voice into a beat. Play with it, share it, put it on the map.',
+  },
+  '/about': {
+    title: 'About BeatVox',
+    description: 'What BeatVox is, how it works, and who made it.',
+  },
+};
+
+/** The preview for one of the site's own pages (not a share page), or null. */
+export function sitePreview(pageUrl: string): PreviewMeta | null {
+  const u = new URL(pageUrl);
+  const path = u.pathname.replace(/\/+$/, '') || '/';
+  const page = SITE_PAGES[path];
+  if (!page) return null;
+  return {
+    ...page,
+    image: `${u.origin}${SITE_CARD}`,
+    imageType: 'image/png',
+    imageAlt: 'BeatVox: a beat grid and a yellow play button',
+    // the address without ?revox= and the like, so every share of a page is one link
+    url: `${u.origin}${path}`,
+  };
 }
 
 const MIX = 1128;
@@ -87,10 +126,10 @@ export function injectMeta(html: string, m: PreviewMeta): string {
     ...(m.image
       ? [
           `<meta property="og:image" content="${esc(m.image)}">`,
-          `<meta property="og:image:type" content="image/gif">`,
+          `<meta property="og:image:type" content="${esc(m.imageType ?? 'image/gif')}">`,
           `<meta property="og:image:width" content="1200">`,
           `<meta property="og:image:height" content="630">`,
-          `<meta property="og:image:alt" content="${esc(m.title)}: the beat drawn as a ring">`,
+          `<meta property="og:image:alt" content="${esc(m.imageAlt ?? `${m.title}: the beat drawn as a ring`)}">`,
           `<meta name="twitter:image" content="${esc(m.image)}">`,
         ]
       : []),
