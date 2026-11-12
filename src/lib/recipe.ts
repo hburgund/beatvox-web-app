@@ -55,6 +55,10 @@ export interface RecipeVoice {
   /** mix level 0..1, 1 = the recording's natural level (default 1). Each
    *  hit then wanders below it by the recipe's humanize amount. */
   level?: number;
+  /** where the row sits, -1 (left) to 1 (right): one number stays put
+   *  (FIXED), a [low, high] pair wanders between them (ROAM). Absent: by
+   *  role, spread like a drum kit (see defaultPan in engine.ts). */
+  pan?: number | [number, number];
   delaySend?: number;
   reverbSend?: number;
 }
@@ -70,7 +74,8 @@ export interface Recipe {
   /** 0..0.5: how late the off-beat sixteenths land */
   swing?: number;
   pitch?: number;
-  /** auto-pan width 0..100 */
+  /** older beats only (before per-row pan): every row roamed this wide,
+   *  0..100. Rows without their own `pan` still do. */
   panning?: number;
   /** 0..1: how much each hit's loudness wanders, like a person playing
    *  (default 1 = v1.93; 0 = machine-steady) */
@@ -145,6 +150,11 @@ export function validateRecipe(value: unknown): Recipe {
     if (v.sliceRole && !ROLES.includes(v.sliceRole)) throw new Error(`unknown role "${v.sliceRole}"`);
     if ('velocity' in v) throw new Error('"velocity" is now "level", 0–1 (1 = natural level)');
     if (v.level !== undefined && !(v.level >= 0 && v.level <= 1)) throw new Error('level must be 0–1');
+    if (v.pan !== undefined) {
+      const ends = Array.isArray(v.pan) ? v.pan : [v.pan];
+      if ((Array.isArray(v.pan) && v.pan.length !== 2) || !ends.every((x) => x >= -1 && x <= 1))
+        throw new Error('pan must be -1–1, or a [low, high] pair');
+    }
   }
   if (r.bpm !== undefined && !(r.bpm >= 20 && r.bpm <= 300)) throw new Error('bpm out of range');
   if (r.swing !== undefined && !(r.swing >= 0 && r.swing <= 0.5)) throw new Error('swing must be 0–0.5');

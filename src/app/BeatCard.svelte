@@ -9,9 +9,9 @@
   let { s }: { s: Session } = $props();
   const ready = $derived(s.slices.length > 0);
   const pct = (v: number) => `${Math.round(v)}%`;
-  /** boxes, level bars (MIX) or quick patterns (PATTERN) */
-  let view = $state<'boxes' | 'mix' | 'pattern'>('boxes');
-  const flip = (v: 'mix' | 'pattern') => (view = view === v ? 'boxes' : v);
+  /** boxes, level bars (MIX), quick patterns (PATTERN) or pan bars (PAN) */
+  let view = $state<'boxes' | 'mix' | 'pattern' | 'pan'>('boxes');
+  const flip = (v: 'mix' | 'pattern' | 'pan') => (view = view === v ? 'boxes' : v);
 </script>
 
 <section class="card beat" aria-label="Beat">
@@ -19,6 +19,7 @@
     <span class="label">BEAT</span>
     <button class="btn mix" class:on={view === 'mix'} aria-pressed={view === 'mix'} disabled={!ready} onclick={() => flip('mix')}>MIX</button>
     <button class="btn mix" class:on={view === 'pattern'} aria-pressed={view === 'pattern'} disabled={!ready} onclick={() => flip('pattern')}>PATTERN</button>
+    <button class="btn mix last" class:on={view === 'pan'} aria-pressed={view === 'pan'} disabled={!ready} onclick={() => flip('pan')}>PAN</button>
     <label class="style">
       <span class="meta">STYLE</span>
       <select value={s.style} disabled={!ready} onchange={(e) => s.applyStyle(e.currentTarget.value)}>
@@ -39,6 +40,8 @@
     dropRow={s.dropRow}
     sounds={s.instrument?.slices.map((x) => x.role) ?? []}
     {view}
+    pans={s.playing ? s.pans : []}
+    onpan={(v, p) => s.setPan(v, p)}
     onlevel={(v, x) => s.setLevel(v, x)}
     onfill={(v, f) => s.fillRow(v, f)}
     ontoggle={(v, i) => s.toggleStep(v, i)}
@@ -48,6 +51,8 @@
     <p class="empty">Your beat shows up here. Tap a box to add or remove a hit.</p>
   {:else if view === 'mix'}
     <p class="empty">Drag along a row to set its level. Tap MIX to go back to the boxes.</p>
+  {:else if view === 'pan'}
+    <p class="empty">FIXED: drag to place a row anywhere from left to right. ROAM: drag the two ends, and the row wanders between them. Tap PAN to go back.</p>
   {:else if view === 'pattern'}
     <p class="empty">Pick a pattern for any row from its menu. Evolve leaves those rows alone. Tap PATTERN to put the menus away.</p>
   {/if}
@@ -89,7 +94,6 @@
   <div class="dials">
     <Knob label="Vol" bind:value={s.volume} />
     <Knob label="Tempo" bind:value={s.bpm} min={40} max={180} />
-    <Knob label="Pan" bind:value={s.panning} />
     <Knob label="Pitch" bind:value={s.pitch} min={0.5} max={2} step={0.01} format={(v) => v.toFixed(2)} />
     <Knob label="Space" bind:value={s.space} format={pct} />
     <Knob label="Human" bind:value={s.humanize} format={pct} />
@@ -113,7 +117,7 @@
     padding: 0 10px;
     font-size: 13px;
   }
-  .mix + .mix {
+  .mix.last {
     margin-right: auto;
   }
   .which {
@@ -130,14 +134,18 @@
     gap: 6px;
     min-width: 0;
   }
-  /* on a phone the menu itself says what it is */
+  /* on a phone the style menu gets a line of its own, so its names fit */
   @media (max-width: 440px) {
-    .meta {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      overflow: hidden;
-      clip-path: inset(50%);
+    .head {
+      flex-wrap: wrap;
+      row-gap: 8px;
+    }
+    .style {
+      flex: 1 0 100%;
+    }
+    .style select {
+      max-width: none;
+      flex: 1;
     }
   }
   .meta {
@@ -188,7 +196,7 @@
   }
   .dials {
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 4px;
   }
 </style>

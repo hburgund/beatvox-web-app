@@ -1,7 +1,7 @@
 // App state: the voice recording, its slices, the engine and what the UI shows.
 // The audio engine is plain TypeScript; this class connects it to Svelte.
 
-import { BeatEngine, VOICES, STEPS, type BeatState, type RowFill, type Voice, type Tape } from '../lib/audio/engine';
+import { BeatEngine, VOICES, STEPS, type BeatState, type PanSetting, type RowFill, type Voice, type Tape } from '../lib/audio/engine';
 import { FxChain, spaceToParams } from '../lib/audio/fx';
 import { encodeMp3 } from '../lib/audio/mp3';
 import { renderShare, voiceSpan } from '../lib/audio/render';
@@ -33,7 +33,6 @@ const GROUP_MS = 2000;
 interface Knobs {
   bpm: number;
   pitch: number;
-  panning: number;
   space: number;
   humanize: number;
 }
@@ -114,10 +113,11 @@ export class Session {
   step = $state(-1);
   /** voices that fired on the current step */
   firing = $state.raw<number[]>([]);
+  /** where each row is in the stereo field right now, -1..1 (the PAN view) */
+  pans = $state.raw<number[]>([]);
   autoEvolve = $state(false);
   volume = $state(65);
   bpm = $state(89);
-  panning = $state(60);
   pitch = $state(1);
   space = $state(35);
   /** 0..100: how much each hit varies (start, pitch, loudness, timing) */
@@ -137,7 +137,7 @@ export class Session {
   canUndo = $state(false);
   canRedo = $state(false);
   /** the knobs as last sent to the engine, so a knob turn records the value before it */
-  private knobsNow: Knobs = { bpm: 89, pitch: 1, panning: 60, space: 35, humanize: 60 };
+  private knobsNow: Knobs = { bpm: 89, pitch: 1, space: 35, humanize: 60 };
   /** taps and knob turns close together count as one step */
   private lastGroup: { key: string; at: number } | null = null;
   /** one change can call record() more than once (NEW BEAT → applyRecipe); keep the first */
@@ -309,7 +309,6 @@ export class Session {
     if (recipe) {
       if (recipe.bpm !== undefined) this.bpm = recipe.bpm;
       if (recipe.pitch !== undefined) this.pitch = recipe.pitch;
-      if (recipe.panning !== undefined) this.panning = recipe.panning;
       if (recipe.space !== undefined) this.space = recipe.space;
       if (recipe.humanize !== undefined) this.humanize = Math.round(recipe.humanize * 100);
     }
@@ -472,7 +471,6 @@ export class Session {
     if (r.bpm !== undefined) this.bpm = r.bpm;
     if (r.space !== undefined) this.space = r.space;
     if (r.humanize !== undefined) this.humanize = Math.round(r.humanize * 100);
-    if (r.panning !== undefined) this.panning = r.panning;
     // the recipe's knobs are part of this one step, not a knob turn of their own
     this.knobsNow = this.knobs();
     this.engine?.applyRecipe(r);
@@ -516,6 +514,12 @@ export class Session {
     this.engine?.setLevel(voice, level);
   }
 
+  /** Set where one row sits (the Pan view): FIXED at `at`, or ROAMing `lo`..`hi`, -1 left to 1 right. */
+  setPan(voice: number, pan: Partial<PanSetting>) {
+    this.record(`pan ${voice}`);
+    this.engine?.setPan(voice, pan);
+  }
+
   /** Set one row to a quick pattern (the Pattern view). */
   fillRow(voice: number, fill: RowFill) {
     this.record();
@@ -543,7 +547,7 @@ export class Session {
       this.record(`knob ${turned.join(' ')}`);
       this.knobsNow = k;
     }
-    this.engine.set({ bpm: this.bpm, pitch: this.pitch, panning: this.panning / 100, humanize: this.humanize / 100 });
+    this.engine.set({ bpm: this.bpm, pitch: this.pitch, humanize: this.humanize / 100 });
     this.fx.setVolume(Math.pow(this.volume / 100, 2) * 1.25);
     this.engine.setFx(spaceToParams(this.space / 100));
   }
@@ -611,7 +615,7 @@ export class Session {
   }
 
   private knobs(): Knobs {
-    return { bpm: this.bpm, pitch: this.pitch, panning: this.panning, space: this.space, humanize: this.humanize };
+    return { bpm: this.bpm, pitch: this.pitch, space: this.space, humanize: this.humanize };
   }
 
   // ── Save and share ────────────────────────────────────────────────────
@@ -1097,6 +1101,9 @@ export class Session {
           this.step = last.step;
           this.firing = last.hits;
         }
+        const e = this.engine;
+        const pans = e.voices.map((_, i) => Math.round(e.panPosition(i, now) * 100) / 100);
+        if (pans.some((x, i) => x !== this.pans[i])) this.pans = pans;
         again = true;
       }
       if (this.engine?.capturing) {

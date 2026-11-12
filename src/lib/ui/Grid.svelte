@@ -3,11 +3,14 @@
   // to rest or wake that row. A hit is filled with the color of its slice's
   // sound (kick blue, snare pink, hat yellow, anything else ink), the same
   // colors the share image uses. The column under the playhead lights.
-  // In the Mix view each row's boxes become one level bar. The Pattern view
+  // In the Mix view each row's boxes become one level bar, in the Pan view a
+  // FIXED / ROAM toggle and a pan bar. The Pattern view
   // slides a menu in before each row's boxes to set a quick pattern. The yellow
   // strip under each slice number shows the row's level in every view.
-  import { fillOf, type RowFill, type Voice } from '../audio/engine';
+  import { defaultPan, fillOf, type RowFill, type Voice } from '../audio/engine';
   import LevelBar from './LevelBar.svelte';
+  import PanBar from './PanBar.svelte';
+  import type { PanSetting } from '../audio/engine';
 
   interface Props {
     voices: Voice[];
@@ -18,14 +21,17 @@
     dropRow?: number | null;
     /** each slice's sound ('kick', 'snare', 'hat', 'perc', 'tonal'), by slice number */
     sounds?: (string | undefined)[];
-    /** what each row shows: its boxes, a level bar, or quick patterns */
-    view?: 'boxes' | 'mix' | 'pattern';
+    /** what each row shows: its boxes, a level bar, quick patterns or its pan */
+    view?: 'boxes' | 'mix' | 'pattern' | 'pan';
+    /** where each row is in the stereo field now (while playing) */
+    pans?: number[];
     ontoggle: (voice: number, step: number) => void;
     ontogglevoice: (voice: number) => void;
     onlevel: (voice: number, level: number) => void;
     onfill: (voice: number, fill: RowFill) => void;
+    onpan?: (voice: number, pan: Partial<PanSetting>) => void;
   }
-  let { voices, step, firing, disabled = false, dropRow = null, sounds = [], view = 'boxes', ontoggle, ontogglevoice, onlevel, onfill }: Props = $props();
+  let { voices, step, firing, disabled = false, dropRow = null, sounds = [], view = 'boxes', pans = [], ontoggle, ontogglevoice, onlevel, onfill, onpan }: Props = $props();
 
   // the menu's choices; '···' shows when the row's hits match none of them
   const FILLS: { fill: RowFill; text: string }[] = [
@@ -42,7 +48,7 @@
   const COLOR: Record<string, string> = { kick: 'kick', snare: 'snare', hat: 'hat' };
 
   // an empty grid to show before there's a voice
-  const blank: Pick<Voice, 'on' | 'slice' | 'level' | 'pattern' | 'fill'>[] = Array.from({ length: 8 }, (_, i) => ({ on: true, slice: i, level: 1, pattern: Array(16).fill(false) }));
+  const blank: Pick<Voice, 'on' | 'slice' | 'level' | 'pan' | 'pattern' | 'fill'>[] = Array.from({ length: 8 }, (_, i) => ({ on: true, slice: i, level: 1, pan: defaultPan('any'), pattern: Array(16).fill(false) }));
   const rows = $derived(voices.length ? voices : blank);
 
   // arrow keys move between boxes (only one box per row is a Tab stop)
@@ -99,6 +105,8 @@
           {disabled}
           onchange={(x) => onlevel(i, x)}
         />
+      {:else if view === 'pan'}
+        <PanBar label="Row {i + 1} pan" pan={v.pan} live={pans[i] ?? null} {disabled} onchange={(p) => onpan?.(i, p)} />
       {:else}
       <div class="steps">
         {#each v.pattern as on, s (s)}
@@ -256,7 +264,8 @@
     }
   }
   .resting .cell,
-  .resting :global(.level) {
+  .resting :global(.level),
+  .resting :global(.pan) {
     opacity: 0.4;
   }
   .cell:disabled,

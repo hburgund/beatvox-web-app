@@ -13,7 +13,9 @@
 //   loudness, alternates strong-weak on running 16ths, and lands up to 4 ms
 //   late (never on a beat); each row has its own slight tuning (v1.93 tuned
 //   each voice at random). All of it scales with `humanize`: 0 = machine.
-// - auto-pan: a random ramp every 2–10 s per voice (linear, sine or wobbly)
+// - pan: each row is FIXED at one place, or ROAMs inside its own range: a
+//   random ramp every 2–10 s (linear, sine or wobbly), like v1.93's auto-pan.
+//   By default rows spread like a drum kit in a mix (see defaultPan).
 // - New Beat, Evolve and styles land on the next downbeat; edits to one row
 //   (a box, resting a row, a new slice, its level) apply at once
 // - kickoff: 1 voice, +1 at 5 s, +1 at 10 s, auto-evolve from 12 s every 3 s
@@ -67,6 +69,59 @@ export function fillOf(pattern: boolean[]): RowFill | null {
 const PRESET_LIST = [PATTERNS.allOn, PATTERNS.eighths, PATTERNS.quarters, PATTERNS.groove, PATTERNS.allOff];
 
 export type PanShape = 'linear' | 'sine' | 'wobble';
+export type PanMode = 'fixed' | 'roam';
+
+/** A row's place in the stereo field, -1 (left) to 1 (right). */
+export interface PanSetting {
+  mode: PanMode;
+  /** FIXED: where it stays */
+  at: number;
+  /** ROAM: the range it wanders in */
+  lo: number;
+  hi: number;
+}
+
+/** The role a recipe row's default pan goes by. */
+const panRole = (rv: Recipe['voices'][number]): Role => (rv.role && rv.role !== 'any' ? rv.role : (rv.sliceRole ?? 'any'));
+
+/**
+ * A recipe row's pan: its own, else an older beat's one width for every row,
+ * else by role. `nth` counts the rows of the same role before it.
+ */
+function recipePan(rv: Recipe['voices'][number], nth: number, panning?: number): PanSetting {
+  const base = defaultPan(panRole(rv), nth);
+  if (typeof rv.pan === 'number') return { ...base, mode: 'fixed', at: rv.pan };
+  if (Array.isArray(rv.pan)) return { ...base, mode: 'roam', lo: Math.min(...rv.pan), hi: Math.max(...rv.pan) };
+  if (panning !== undefined) return { mode: 'roam', at: 0, lo: -panning / 100, hi: panning / 100 };
+  return base;
+}
+
+/**
+ * Where a row sits until someone moves it, spread like a drum kit in a mix:
+ * kick fixed in the middle, snare fixed just left of it, hats roaming a little
+ * right of centre, percussion roaming wide, tonal sounds the middle 40%. A
+ * second row of the same role (`nth` 1, 3…) goes to the other side, so two
+ * hat rows spread out instead of piling up. Every row has both settings, so
+ * the FIXED / ROAM toggle has somewhere sensible to go.
+ */
+export function defaultPan(role: Role, nth = 0): PanSetting {
+  const side = nth % 2 === 0 ? 1 : -1;
+  const flip = (lo: number, hi: number) => (side === 1 ? { lo, hi } : { lo: -hi, hi: -lo });
+  switch (role) {
+    case 'kick':
+      return { mode: 'fixed', at: 0, lo: -0.3, hi: 0.3 };
+    case 'snare':
+      return { mode: 'fixed', at: -0.1 * side, ...flip(-0.3, 0.1) };
+    case 'hat':
+      return { mode: 'roam', at: 0.25 * side, ...flip(0.1, 0.4) };
+    case 'perc':
+      return { mode: 'roam', at: 0.15 * side, ...flip(-0.4, 0.7) };
+    case 'tonal':
+      return { mode: 'roam', at: 0, lo: -0.4, hi: 0.4 };
+    default:
+      return { mode: 'roam', at: 0, lo: -0.6, hi: 0.6 };
+  }
+}
 
 export interface Voice {
   on: boolean;
@@ -77,6 +132,8 @@ export interface Voice {
   role: Role;
   /** mix level 0..1, 1 = the recording's natural level; steady */
   level: number;
+  /** where the row sits: FIXED at one place or ROAMing a range (both kept, so the toggle can flip back) */
+  pan: PanSetting;
   /** humanize multiplier, wanders between HUMAN_FLOOR and 1 on each hit */
   human: number;
   /** this row's own slight tuning, cents at full humanize */
@@ -100,8 +157,6 @@ export interface EngineSettings {
   bpm: number;
   /** playback rate for every hit (v1.93 PITCH) */
   pitch: number;
-  /** auto-pan width 0..1 (v1.93 PANNING) */
-  panning: number;
   autoEvolve: boolean;
   /** seconds between automatic Evolve changes */
   evolveEvery: number;
@@ -115,7 +170,6 @@ export interface EngineSettings {
 export const DEFAULT_SETTINGS: EngineSettings = {
   bpm: 89,
   pitch: 1,
-  panning: 0.6,
   autoEvolve: false,
   evolveEvery: 3,
   swing: 0,
@@ -159,6 +213,7 @@ export type Action =
   | { kind: 'toggleVoice'; voice: number }
   | { kind: 'setSlice'; voice: number; slice: number }
   | { kind: 'setLevel'; voice: number; level: number }
+  | { kind: 'setPan'; voice: number; pan: Partial<PanSetting> }
   | { kind: 'fillRow'; voice: number; fill: RowFill }
   | { kind: 'settings'; settings: Partial<EngineSettings> }
   | { kind: 'recipe'; recipe: Recipe }
@@ -186,8 +241,12 @@ export const ROLE_ENVELOPE: Partial<Record<Role, Envelope>> = {
 };
 
 interface PanState {
+  /** when the next roam ramp starts (Infinity: FIXED, nothing to do) */
   nextAt: number;
+  /** where the last ramp ends */
   value: number;
+  /** the ramp sent last, to tell where the row is mid-ramp */
+  ramp: { t: number; dur: number; curve: Float32Array } | null;
 }
 
 /**
@@ -202,7 +261,7 @@ export interface Tape {
   loops: number;
   /** tempo when it started (sets the gap before the remix) */
   bpm: number;
-  /** the state at `start`: effects, tempo, pan width, sends, running pan ramps */
+  /** the state at `start`: effects, tempo, sends, each row's pan */
   head: Cmd[];
   /** everything sent from `start` to `end`, in order */
   cmds: Cmd[];
@@ -234,6 +293,8 @@ export class BeatEngine {
   /** humanize's own random stream, so beats, evolves and slice choices come
    *  out the same for a seed whatever humanize does */
   private hr: Rng;
+  /** pan ramps have their own dice, so moving a pan never changes what the beat does next */
+  private pr: Rng;
   private buffer: AudioBuffer | null = null;
   private slices: Slice[] = [];
   /** drum-role scores per slice */
@@ -263,8 +324,9 @@ export class BeatEngine {
   ) {
     this.rng = new Rng(seed);
     this.hr = new Rng((this.rng.seed ^ 0x9e3779b9) >>> 0);
+    this.pr = new Rng((this.rng.seed ^ 0x85ebca6b) >>> 0);
     this.bank = new VoiceBank(ctx, fx);
-    for (let v = 0; v < VOICES; v++) this.pan.push({ nextAt: 0, value: 0 });
+    for (let v = 0; v < VOICES; v++) this.pan.push({ nextAt: 0, value: 0, ramp: null });
     this.applySettings({});
     this.voices = Array.from({ length: VOICES }, () => this.blankVoice());
   }
@@ -338,6 +400,14 @@ export class BeatEngine {
   setLevel(voice: number, level: number) {
     this.request({ kind: 'setLevel', voice, level });
   }
+  /** Set where a row sits: FIXED at `at`, or ROAMing `lo`..`hi` (-1 left to 1 right). */
+  setPan(voice: number, pan: Partial<PanSetting>) {
+    this.request({ kind: 'setPan', voice, pan });
+  }
+  /** Where a row is in the stereo field at time `t`, -1..1 (for the PAN view). */
+  panPosition(voice: number, t: number) {
+    return this.panNow(voice, t);
+  }
   /** Set a row to a quick pattern (see ROW_FILLS). */
   fillRow(voice: number, fill: RowFill) {
     this.request({ kind: 'fillRow', voice, fill });
@@ -384,7 +454,6 @@ export class BeatEngine {
       bpm: st.bpm,
       swing: st.swing,
       pitch: st.pitch,
-      panning: Math.round(st.panning * 100),
       humanize: +st.humanize.toFixed(2),
       evolve: { auto: st.autoEvolve, every: st.evolveEvery },
       seed: this.rng.seed,
@@ -396,6 +465,7 @@ export class BeatEngine {
         slice: v.slice,
         sliceRole: this.instrument?.slices[v.slice]?.role,
         level: +v.level.toFixed(2),
+        pan: v.pan.mode === 'fixed' ? +v.pan.at.toFixed(2) : ([+v.pan.lo.toFixed(2), +v.pan.hi.toFixed(2)] as [number, number]),
         delaySend: +v.delaySend.toFixed(2),
         reverbSend: +v.reverbSend.toFixed(2),
       })),
@@ -457,7 +527,7 @@ export class BeatEngine {
     // edits to one row (tap a box, rest a row, swap a slice) apply at once, so
     // the grid answers the tap; the sound follows from the next unscheduled
     // step (at most LOOKAHEAD away). Whole-beat changes wait for the downbeat.
-    const now = !this.playing || a.kind === 'toggleStep' || a.kind === 'toggleVoice' || a.kind === 'setSlice' || a.kind === 'setLevel' || a.kind === 'fillRow';
+    const now = !this.playing || a.kind === 'toggleStep' || a.kind === 'toggleVoice' || a.kind === 'setSlice' || a.kind === 'setLevel' || a.kind === 'setPan' || a.kind === 'fillRow';
     if (now) this.run(a);
     else this.queue.push(a);
   }
@@ -494,6 +564,17 @@ export class BeatEngine {
       case 'setLevel': {
         const v = this.voices[a.voice];
         if (v) v.level = Math.min(1, Math.max(0, a.level));
+        break;
+      }
+      case 'setPan': {
+        const v = this.voices[a.voice];
+        if (!v) break;
+        const p = { ...v.pan, ...a.pan };
+        const clamp = (x: number) => Math.min(1, Math.max(-1, x));
+        p.at = clamp(p.at);
+        [p.lo, p.hi] = [clamp(Math.min(p.lo, p.hi)), clamp(Math.max(p.lo, p.hi))];
+        v.pan = p;
+        this.repan(a.voice);
         break;
       }
       case 'fillRow': {
@@ -540,6 +621,8 @@ export class BeatEngine {
         break;
       }
     }
+    // a new beat brings new pans (undo brings the old ones back)
+    if (a.kind === 'kickoff' || a.kind === 'newBeat' || a.kind === 'recipe' || a.kind === 'restore') this.voices.forEach((_, i) => this.repan(i));
     this.changed();
   }
 
@@ -556,7 +639,7 @@ export class BeatEngine {
   }
 
   private blankVoice(): Voice {
-    return { on: false, slice: 0, pattern: [...PATTERNS.allOff], accent: ones(), role: 'any', level: 1, human: 1, cents: 0, lastAbs: -2, hand: 0, delaySend: 0, reverbSend: 0 };
+    return { on: false, slice: 0, pattern: [...PATTERNS.allOff], accent: ones(), role: 'any', level: 1, pan: defaultPan('any'), human: 1, cents: 0, lastAbs: -2, hand: 0, delaySend: 0, reverbSend: 0 };
   }
 
   /** replace a voice's pattern (accents back to normal) */
@@ -768,6 +851,7 @@ export class BeatEngine {
       v.on = rv.on ?? true;
       v.role = rv.role ?? 'any';
       v.level = Math.min(1, Math.max(0, rv.level ?? 1));
+      v.pan = recipePan(rv, r.voices.slice(0, i).filter((o) => panRole(o) === panRole(rv)).length, r.panning);
       v.human = this.randomHuman();
       if (rv.delaySend !== undefined) v.delaySend = rv.delaySend;
       if (rv.reverbSend !== undefined) v.reverbSend = rv.reverbSend;
@@ -784,7 +868,6 @@ export class BeatEngine {
     const s: Partial<EngineSettings> = { swing: r.swing ?? 0, humanize: r.humanize ?? this.settings.humanize, autoEvolve: r.evolve?.auto ?? false };
     if (r.bpm !== undefined) s.bpm = r.bpm;
     if (r.pitch !== undefined) s.pitch = r.pitch;
-    if (r.panning !== undefined) s.panning = r.panning / 100;
     if (r.evolve?.every !== undefined) s.evolveEvery = r.evolve.every;
     this.applySettings(s);
   }
@@ -792,7 +875,6 @@ export class BeatEngine {
   private applySettings(s: Partial<EngineSettings>) {
     this.settings = { ...this.settings, ...s, envelope: { ...this.settings.envelope, ...s.envelope } };
     const t = this.ctx.currentTime;
-    this.emit({ k: 'width', t, value: this.settings.panning });
     this.emit({ k: 'tempo', t, bpm: this.settings.bpm });
     if (s.autoEvolve && this.playing && this.nextEvolveAt === Infinity) {
       this.nextEvolveAt = this.nextTime + this.settings.evolveEvery;
@@ -913,27 +995,63 @@ export class BeatEngine {
     }
   }
 
+  /** Roaming rows: when a ramp ends, start the next one. */
   private autoPan(t: number) {
     this.pan.forEach((p, i) => {
-      if (t + LOOKAHEAD < p.nextAt) return;
+      const v = this.voices[i];
+      if (v.pan.mode !== 'roam' || t + LOOKAHEAD < p.nextAt) return;
       const start = Math.max(p.nextAt, this.ctx.currentTime);
-      const dur = this.rng.range(2, 10);
-      const target = this.rng.range(-1, 1);
-      const shape: PanShape = this.rng.pick(['linear', 'sine', 'wobble'] as const);
-      const n = 32;
-      const curve = new Float32Array(n);
-      const wob = this.rng.range(1, 3);
-      for (let k = 0; k < n; k++) {
-        const x = k / (n - 1);
-        let y = x;
-        if (shape === 'sine') y = 0.5 - 0.5 * Math.cos(Math.PI * x);
-        if (shape === 'wobble') y = x + 0.15 * Math.sin(2 * Math.PI * wob * x) * (1 - x);
-        curve[k] = Math.max(-1, Math.min(1, p.value + (target - p.value) * y));
-      }
-      this.emit({ k: 'pan', t: start, voice: i, dur, curve });
-      p.value = target;
-      p.nextAt = start + dur;
+      this.panRamp(i, start, p.value, this.pr.range(v.pan.lo, v.pan.hi), this.pr.range(2, 10), this.pr.pick(['linear', 'sine', 'wobble'] as const), false);
     });
+  }
+
+  /**
+   * A row's pan setting changed (or a whole new beat came): head for it from
+   * wherever the row is now. FIXED glides there in a moment; ROAM starts a new
+   * wander, quickly if the row is outside its new range.
+   */
+  private repan(i: number) {
+    const v = this.voices[i];
+    const now = this.ctx.currentTime;
+    const from = this.panNow(i, now);
+    if (v.pan.mode === 'fixed') {
+      this.panRamp(i, now, from, v.pan.at, 0.25, 'sine', true);
+      this.pan[i].nextAt = Infinity;
+      return;
+    }
+    const inside = from >= v.pan.lo - 0.01 && from <= v.pan.hi + 0.01;
+    const dur = inside ? this.pr.range(2, 10) : this.pr.range(0.6, 1.5);
+    this.panRamp(i, now, from, this.pr.range(v.pan.lo, v.pan.hi), dur, inside ? this.pr.pick(['linear', 'sine', 'wobble'] as const) : 'sine', true);
+  }
+
+  /** Send one pan ramp; `cut` replaces any ramp still running. */
+  private panRamp(i: number, start: number, from: number, to: number, dur: number, shape: PanShape, cut: boolean) {
+    const n = 32;
+    const curve = new Float32Array(n);
+    const wob = this.pr.range(1, 3);
+    for (let k = 0; k < n; k++) {
+      const x = k / (n - 1);
+      let y = x;
+      if (shape === 'sine') y = 0.5 - 0.5 * Math.cos(Math.PI * x);
+      if (shape === 'wobble') y = x + 0.15 * Math.sin(2 * Math.PI * wob * x) * (1 - x);
+      curve[k] = Math.max(-1, Math.min(1, from + (to - from) * y));
+    }
+    this.emit({ k: 'pan', t: start, voice: i, dur, curve, ...(cut ? { cut } : {}) });
+    const p = this.pan[i];
+    p.value = to;
+    p.nextAt = start + dur;
+    p.ramp = { t: start, dur, curve };
+  }
+
+  /** Where a row's pan is at time `t`. */
+  private panNow(i: number, t: number) {
+    const r = this.pan[i].ramp;
+    if (!r) return this.pan[i].value;
+    if (t <= r.t) return r.curve[0];
+    if (t >= r.t + r.dur) return r.curve[r.curve.length - 1];
+    const f = ((t - r.t) / r.dur) * (r.curve.length - 1);
+    const k = Math.min(r.curve.length - 2, Math.floor(f));
+    return r.curve[k] + (r.curve[k + 1] - r.curve[k]) * (f - k);
   }
 
   private hit(i: number, v: Voice, t: number, accent = 1) {

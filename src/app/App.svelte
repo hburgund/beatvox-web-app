@@ -22,7 +22,7 @@
 
   // push dial changes into the engine and effects
   $effect(() => {
-    void [s.volume, s.bpm, s.pitch, s.panning, s.space, s.humanize];
+    void [s.volume, s.bpm, s.pitch, s.space, s.humanize];
     s.applyMix();
   });
 

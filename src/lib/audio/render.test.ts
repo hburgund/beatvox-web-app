@@ -18,9 +18,9 @@ describe('cutCurve', () => {
 describe('render layout', () => {
   it('moves taped commands to where the remix starts', () => {
     const tape = { start: 20 } as Tape;
-    expect(shift({ k: 'width', t: 21.5, value: 1 }, tape, 5).t).toBeCloseTo(6.5);
+    expect(shift({ k: 'tempo', t: 21.5, bpm: 90 }, tape, 5).t).toBeCloseTo(6.5);
     // anything sent just before the downbeat lands on it
-    expect(shift({ k: 'width', t: 19.9, value: 1 }, tape, 5).t).toBe(5);
+    expect(shift({ k: 'tempo', t: 19.9, bpm: 90 }, tape, 5).t).toBe(5);
   });
 
   it('trims the voice to its slices', () => {

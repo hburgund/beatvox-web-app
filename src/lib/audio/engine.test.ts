@@ -3,7 +3,7 @@ import { BeatEngine, STEPS, PATTERNS, fillOf, type Tape } from './engine';
 import { FxChain } from './fx';
 import type { Slice } from './slicer';
 import { STYLES } from '../styles';
-import { parsePattern, type Role } from '../recipe';
+import { parsePattern, type RecipeVoice, type Role } from '../recipe';
 import { createInstrument, validateInstrument, type Instrument } from '../instrument';
 import { DEFAULT_PARAMS } from './slicer';
 import { DEFAULT_PREPARE } from './prepare';
@@ -21,6 +21,7 @@ function fakeContext() {
     },
     setTargetAtTime() {},
     setValueCurveAtTime() {},
+    cancelScheduledValues() {},
   });
   const started: { when: number; offset: number }[] = [];
   const node = (extra: object = {}) => ({
@@ -193,6 +194,68 @@ describe('BeatEngine', () => {
     expect(engine.voices[1].level).toBe(0.3);
     engine.stop();
     expect(engine.toRecipe('t').voices[1].level).toBe(0.3);
+  });
+
+  it('pans each row: by role at first, FIXED stays put, ROAM wanders only inside its range', () => {
+    const { engine, ctx } = setup();
+    const c = ctx as unknown as { currentTime: number };
+    const recipe = (extra: object, voices: RecipeVoice[]) => ({ format: 'beatvox-recipe' as const, version: 1, name: 't', kind: 'style' as const, ...extra, voices });
+    const x = 'x'.repeat(16);
+    engine.applyRecipe(recipe({}, [
+      { pattern: x, role: 'kick' },
+      { pattern: x, role: 'snare' },
+      { pattern: x, role: 'hat', pan: [0.2, 0.5] },
+      { pattern: x, role: 'perc', pan: -0.7 },
+    ]));
+    expect(engine.voices[0].pan).toMatchObject({ mode: 'fixed', at: 0 });
+    expect(engine.voices[1].pan).toMatchObject({ mode: 'fixed', at: -0.1 });
+    expect(engine.voices[2].pan).toMatchObject({ mode: 'roam', lo: 0.2, hi: 0.5 });
+    expect(engine.voices[3].pan).toMatchObject({ mode: 'fixed', at: -0.7 });
+
+    // within half a second of a change every row is where it should be, and stays there
+    play(engine, ctx, 1);
+    for (let k = 0; k < 120; k++) {
+      play(engine, ctx, 0.25);
+      expect(engine.panPosition(0, c.currentTime)).toBeCloseTo(0, 5);
+      expect(engine.panPosition(1, c.currentTime)).toBeCloseTo(-0.1, 5);
+      const hat = engine.panPosition(2, c.currentTime);
+      expect(hat).toBeGreaterThanOrEqual(0.2 - 0.05);
+      expect(hat).toBeLessThanOrEqual(0.5 + 1e-6);
+      expect(engine.panPosition(3, c.currentTime)).toBeCloseTo(-0.7, 5);
+    }
+
+    // set at once, clamped and in order; the toggle keeps both settings
+    engine.setPan(2, { lo: 0.9, hi: -3 });
+    expect(engine.voices[2].pan).toMatchObject({ lo: -1, hi: 0.9 });
+    engine.setPan(2, { mode: 'fixed', at: 0.4 });
+    play(engine, ctx, 1);
+    expect(engine.panPosition(2, c.currentTime)).toBeCloseTo(0.4, 5);
+    engine.setPan(2, { mode: 'roam' });
+    expect(engine.voices[2].pan).toMatchObject({ mode: 'roam', at: 0.4, lo: -1, hi: 0.9 });
+    for (let i = 0; i < 50; i++) engine.evolve();
+    play(engine, ctx, 2);
+    expect(engine.voices[3].pan).toMatchObject({ mode: 'fixed', at: -0.7 });
+    engine.stop();
+    const saved = engine.toRecipe('t').voices;
+    expect(saved[2].pan).toEqual([-1, 0.9]);
+    expect(saved[3].pan).toBe(-0.7);
+
+    // an older beat's one PANNING width: every row without its own pan roams that wide
+    engine.applyRecipe(recipe({ panning: 30 }, [{ pattern: x, role: 'kick' }, { pattern: x, pan: 0.5 }]));
+    expect(engine.voices[0].pan).toMatchObject({ mode: 'roam', lo: -0.3, hi: 0.3 });
+    expect(engine.voices[1].pan).toMatchObject({ mode: 'fixed', at: 0.5 });
+
+    // a second row of the same role goes to the other side
+    engine.applyRecipe(recipe({}, [
+      { pattern: x, role: 'hat' },
+      { pattern: x, role: 'snare' },
+      { pattern: x, role: 'hat' },
+      { pattern: x, role: 'snare' },
+    ]));
+    expect(engine.voices[0].pan).toMatchObject({ mode: 'roam', lo: 0.1, hi: 0.4 });
+    expect(engine.voices[2].pan).toMatchObject({ mode: 'roam', lo: -0.4, hi: -0.1 });
+    expect(engine.voices[1].pan.at).toBeCloseTo(-0.1);
+    expect(engine.voices[3].pan.at).toBeCloseTo(0.1);
   });
 
   it('sets a row to a quick pattern at once and evolve leaves it', () => {
@@ -473,7 +536,7 @@ describe('BeatEngine', () => {
     expect(t.end - t.start).toBeCloseTo(32 * step, 6);
     expect(t.loops).toBe(2);
     // the head recreates the state at the start
-    expect(t.head.map((x) => x.k)).toEqual(expect.arrayContaining(['fx', 'tempo', 'width', 'sends']));
+    expect(t.head.map((x) => x.k)).toEqual(expect.arrayContaining(['fx', 'tempo', 'sends']));
     // every hit heard in those two bars is on the tape, and nothing else
     const hits = t.cmds.filter((x) => x.k === 'hit');
     const heard = started.filter((s) => s.when >= t.start - 1e-9 && s.when < t.end - 1e-9);

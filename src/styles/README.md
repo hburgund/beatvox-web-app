@@ -40,6 +40,7 @@ The format is the BeatVox recipe format (see `src/lib/recipe.ts`), the same one 
 - `pattern`: required.
 - `role`: `kick`, `snare`, `hat`, `perc`, `tonal` or `any`. This picks which slice of the voice plays it.
 - `level`: the track's mix level, 0–1. 1 (the default) is the recording's natural level; 0.5 is about 6 dB quieter. It stays put; the beat-wide `humanize` makes each hit wander below it.
+- `pan`: where the voice sits, -1 (left) to 1 (right). One number keeps it there (FIXED); a pair like `[-0.6, 0.6]` lets it wander between them (ROAM). Leave it out for the default by role, spread like a drum kit in a mix: kick fixed in the middle, snare fixed 10% left, hats roaming 10–40% right, percussion roaming wide (-40% to 70%), tonal roaming the middle 40%, anything else the middle 60%. A second voice of the same role goes to the other side (a second hat roams 10–40% left), so they spread out.
 - `on`: `false` to start the voice muted.
 - `delaySend`, `reverbSend`: 0–1.
 
@@ -49,7 +50,7 @@ Up to 8 voices.
 - `bpm`: tempo.
 - `swing`: 0–0.5, how late the off-beat sixteenths land.
 - `pitch`: playback rate, 1 = normal.
-- `panning`: 0–100.
+- `panning`: older beats only, 0–100: how wide every voice without its own `pan` roams. Use `pan` on each voice instead.
 - `humanize`: 0–1, how much each hit's loudness wanders, like a person playing. 1 (the default) is v1.93's amount: hits drift between about 45% and 100% of the track's level. 0 makes every hit exactly the level.
 - `space`: 0–100, the Space knob.
 - `evolve`: `{"auto": true, "every": 3}` keeps changing the beat every 3 seconds.

@@ -14,9 +14,8 @@ export const VOICE_CHANNELS = 8;
 export type Cmd =
   /** play a slice: gate up over `a`, hold until `h`, down to 0 at `len` */
   | { k: 'hit'; t: number; voice: number; offset: number; len: number; rate: number; level: number; a: number; h: number }
-  /** an auto-pan ramp (values -1..1, scaled by the pan width) */
-  | { k: 'pan'; t: number; voice: number; dur: number; curve: Float32Array }
-  | { k: 'width'; t: number; value: number }
+  /** a pan ramp, -1 (left) to 1 (right); `cut` replaces any ramp still running */
+  | { k: 'pan'; t: number; voice: number; dur: number; curve: Float32Array; cut?: boolean }
   | { k: 'sends'; t: number; voice: number; delay: number; reverb: number }
   | { k: 'fx'; t: number; params: FxParams }
   | { k: 'tempo'; t: number; bpm: number }
@@ -26,7 +25,6 @@ export type Cmd =
 interface Channel {
   input: GainNode;
   panSource: ConstantSourceNode;
-  panWidth: GainNode;
   delaySend: GainNode;
   reverbSend: GainNode;
   panner: StereoPannerNode;
@@ -46,7 +44,6 @@ export class VoiceBank {
   private buffer: AudioBuffer | null = null;
 
   // what was last asked for, so a tape can start mid-performance
-  private width = 0;
   private sends: { delay: number; reverb: number }[] = [];
   private pans: PanCmd[][] = [];
   private fxParams: FxParams;
@@ -62,9 +59,7 @@ export class VoiceBank {
       panner.pan.value = 0;
       const panSource = ctx.createConstantSource();
       panSource.offset.value = 0;
-      const panWidth = ctx.createGain();
-      panWidth.gain.value = 0;
-      panSource.connect(panWidth).connect(panner.pan);
+      panSource.connect(panner.pan);
       panSource.start();
       const delaySend = ctx.createGain();
       delaySend.gain.value = 0;
@@ -74,7 +69,7 @@ export class VoiceBank {
       panner.connect(fx.dry);
       panner.connect(delaySend).connect(fx.delaySend);
       panner.connect(reverbSend).connect(fx.reverbSend);
-      this.channels.push({ input, panSource, panWidth, delaySend, reverbSend, panner });
+      this.channels.push({ input, panSource, delaySend, reverbSend, panner });
       this.last.push(null);
       this.sends.push({ delay: 0, reverb: 0 });
       this.pans.push([]);
@@ -90,18 +85,18 @@ export class VoiceBank {
     switch (c.k) {
       case 'hit':
         return this.hit(c);
-      case 'pan':
+      case 'pan': {
+        const offset = this.channels[c.voice].panSource.offset;
+        // a pan you just moved replaces the ramp under way; its curve starts where the row is
+        if (c.cut) offset.cancelScheduledValues(c.t);
         try {
-          this.channels[c.voice].panSource.offset.setValueCurveAtTime(c.curve, c.t, c.dur);
+          offset.setValueCurveAtTime(c.curve, c.t, c.dur);
         } catch {
           // overlapping automation (rare after a stop/start); skip this ramp
         }
-        this.pans[c.voice] = [...this.pans[c.voice].slice(-2), c];
+        this.pans[c.voice] = c.cut ? [c] : [...this.pans[c.voice].slice(-2), c];
         return;
-      case 'width':
-        this.width = c.value;
-        for (const ch of this.channels) ch.panWidth.gain.setTargetAtTime(c.value, c.t, 0.05);
-        return;
+      }
       case 'sends': {
         const ch = this.channels[c.voice];
         ch.delaySend.gain.setTargetAtTime(c.delay, c.t, 0.05);
@@ -130,20 +125,23 @@ export class VoiceBank {
 
   /**
    * Commands that recreate the current state at time `at`: effects, tempo,
-   * pan width, sends, and any pan ramps still running (cut to start at `at`).
+   * sends, and each row's pan: the ramp still running (cut to start at `at`),
+   * or where the last one left it.
    */
   snapshot(at: number): Cmd[] {
     const out: Cmd[] = [
       { k: 'fx', t: at, params: { ...this.fxParams } },
       { k: 'tempo', t: at, bpm: this.bpm },
-      { k: 'width', t: at, value: this.width },
     ];
     this.sends.forEach((s, voice) => out.push({ k: 'sends', t: at, voice, ...s }));
-    this.pans.forEach((list) => {
-      for (const p of list) {
-        const end = p.t + p.dur;
-        if (end <= at) continue;
-        out.push(p.t >= at ? p : cutCurve(p, at));
+    this.pans.forEach((list, voice) => {
+      const running = list.filter((p) => p.t + p.dur > at);
+      for (const p of running) out.push(p.t >= at ? p : cutCurve(p, at));
+      const done = list[list.length - 1];
+      // a row that's stopped moving (FIXED, or between ramps): hold it there
+      if (!running.some((p) => p.t <= at) && done) {
+        const v = done.t + done.dur <= at ? done.curve[done.curve.length - 1] : done.curve[0];
+        out.unshift({ k: 'pan', t: at, voice, dur: 0.01, curve: new Float32Array([v, v]) });
       }
     });
     return out;
