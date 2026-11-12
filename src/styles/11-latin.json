@@ -1,0 +1,168 @@
+{
+  "format": "beatvox-recipe",
+  "version": 1,
+  "name": "Latin",
+  "kind": "style",
+  "bpm": 96,
+  "swing": 0,
+  "humanize": 0.4,
+  "space": 25,
+  "evolve": {"auto": false},
+  "beats": [
+    {
+      "name": "Samba",
+      "source": "drummer5/session2/18#1",
+      "bpm": 93,
+      "voices": [
+        {"pattern": "o..oo..oo..oo..o", "role": "kick", "level": 0.35},
+        {"pattern": "..x......X......", "role": "snare", "level": 1},
+        {"pattern": "..x...x...x...x.", "role": "hat", "level": 0.65},
+        {"pattern": "x.xoo.o.o.oox.x.", "role": "hat", "level": 0.55},
+        {"pattern": "x....x.X....x.x.", "role": "tonal", "level": 0.95}
+      ]
+    },
+    {
+      "name": "Uptown",
+      "source": "drummer8/session2/36#1",
+      "bpm": 118,
+      "voices": [
+        {"pattern": "x....o..x....o..", "role": "kick", "level": 0.55},
+        {"pattern": ".xX.X.XX.xX.xXoX", "role": "hat", "level": 1},
+        {"pattern": ".x..x.x...x..x..", "role": "perc", "level": 0.65}
+      ]
+    },
+    {
+      "name": "Bai\u00e3o",
+      "source": "drummer1/session1/145#1",
+      "bpm": 95,
+      "voices": [
+        {"pattern": "o..o....o..o....", "role": "kick", "level": 0.45},
+        {"pattern": "xoX.xo..xo..xo..", "role": "hat", "level": 0.55},
+        {"pattern": "..X...X...X...x.", "role": "hat", "level": 1},
+        {"pattern": "......x.......o.", "role": "perc", "level": 0.6}
+      ]
+    },
+    {
+      "name": "Backbeat",
+      "source": "drummer8/session2/7#1",
+      "bpm": 95,
+      "voices": [
+        {"pattern": ".oX...X..x.....o", "role": "kick", "level": 0.5},
+        {"pattern": "....X.......X...", "role": "snare", "level": 1},
+        {"pattern": "oxx...XooXoo..xX", "role": "hat", "level": 0.5},
+        {"pattern": "..X.............", "role": "hat", "level": 1}
+      ]
+    },
+    {
+      "name": "Samba, light",
+      "source": "drummer5/session2/18#2",
+      "bpm": 93,
+      "voices": [
+        {"pattern": "o..oo..oo..oo..o", "role": "kick", "level": 0.35},
+        {"pattern": "..x...o...x...x.", "role": "hat", "level": 0.65},
+        {"pattern": "o.ooo.o.o.ooo.x.", "role": "hat", "level": 0.55},
+        {"pattern": "x.x..X.x.X..X.x.", "role": "tonal", "level": 1}
+      ]
+    },
+    {
+      "name": "Bai\u00e3o, rolling",
+      "source": "drummer1/session1/146#2",
+      "bpm": 95,
+      "voices": [
+        {"pattern": "o..o..o.o..o..o.", "role": "kick", "level": 0.6},
+        {"pattern": "xooxooxoooooooxo", "role": "snare", "level": 0.55},
+        {"pattern": "..x...x...x...x.", "role": "hat", "level": 1}
+      ]
+    },
+    {
+      "name": "Samba, fast",
+      "source": "drummer5/session2/17#1",
+      "bpm": 110,
+      "voices": [
+        {"pattern": "o..oo..oo..oo..o", "role": "kick", "level": 0.4},
+        {"pattern": "oXxoxxoXoXxoxxxx", "role": "snare", "level": 0.8},
+        {"pattern": "..x...x...x...x.", "role": "hat", "level": 0.7},
+        {"pattern": "....x...........", "role": "perc", "level": 1}
+      ]
+    },
+    {
+      "name": "Street",
+      "source": "drummer8/session2/8#2",
+      "bpm": 95,
+      "swing": 0.04,
+      "voices": [
+        {"pattern": ".oX...X..x.....o", "role": "kick", "level": 0.55},
+        {"pattern": "....XX......X...", "role": "snare", "level": 1},
+        {"pattern": "oXX...X.oXo..oxX", "role": "hat", "level": 0.8},
+        {"pattern": "..X.............", "role": "hat", "level": 1}
+      ]
+    },
+    {
+      "name": "Sparse",
+      "source": "drummer8/session1/13#2",
+      "bpm": 118,
+      "voices": [
+        {"pattern": "x...............", "role": "kick", "level": 0.55},
+        {"pattern": "....x......x....", "role": "snare", "level": 0.75},
+        {"pattern": "....x.......x...", "role": "hat", "level": 0.7},
+        {"pattern": "X..X..xX..x.X...", "role": "hat", "level": 1},
+        {"pattern": ".......x.......x", "role": "tonal", "level": 0.85}
+      ]
+    },
+    {
+      "name": "Bomba",
+      "source": "drummer1/session3/12#1",
+      "voices": [
+        {"pattern": "x..x....x..x....", "role": "kick", "level": 0.7},
+        {"pattern": "x...x...x...x...", "role": "hat", "level": 0.75},
+        {"pattern": "o.oo.oo.o.oo.oo.", "role": "perc", "level": 0.45},
+        {"pattern": "......x..x....X.", "role": "tonal", "level": 1}
+      ]
+    },
+    {
+      "name": "Samba, full",
+      "source": "drummer5/session2/17#2",
+      "bpm": 110,
+      "voices": [
+        {"pattern": "o..oo..oo..oo..o", "role": "kick", "level": 0.4},
+        {"pattern": "oxoox.oXox.oxox.", "role": "snare", "level": 0.75},
+        {"pattern": "..x...x...x...x.", "role": "hat", "level": 0.95},
+        {"pattern": ".x...x....x....x", "role": "perc", "level": 1}
+      ]
+    },
+    {
+      "name": "Bells",
+      "source": "drummer8/session1/27#1",
+      "bpm": 122,
+      "voices": [
+        {"pattern": "o...x...o...o...", "role": "kick", "level": 0.45},
+        {"pattern": "x.x.x.x.x.x.x.x.", "role": "hat", "level": 0.75},
+        {"pattern": "oo.ox.o.oo.ox.o.", "role": "perc", "level": 0.35},
+        {"pattern": "..X.Xo.X..X.Xx.X", "role": "tonal", "level": 1}
+      ]
+    },
+    {
+      "name": "Slow burn",
+      "source": "drummer8/session2/25#1",
+      "bpm": 84,
+      "swing": 0.04,
+      "voices": [
+        {"pattern": "X..ox..ox....x..", "role": "kick", "level": 0.55},
+        {"pattern": "..X...XooX.X...X", "role": "snare", "level": 1},
+        {"pattern": "..XoXoXoxox.xoX.", "role": "hat", "level": 0.6},
+        {"pattern": "X...............", "role": "hat", "level": 1}
+      ]
+    },
+    {
+      "name": "Bossa",
+      "source": "drummer5/session1/1#1",
+      "bpm": 127,
+      "voices": [
+        {"pattern": "o.oo....o.oo....", "role": "kick", "level": 0.35},
+        {"pattern": "......x.......x.", "role": "hat", "level": 0.75},
+        {"pattern": "o.o.o.x.o.o.x.o.", "role": "hat", "level": 0.45},
+        {"pattern": "............X...", "role": "tonal", "level": 1}
+      ]
+    }
+  ]
+}

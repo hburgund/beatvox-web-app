@@ -1,0 +1,100 @@
+{
+  "format": "beatvox-recipe",
+  "version": 1,
+  "name": "Afrobeat",
+  "kind": "style",
+  "bpm": 94,
+  "swing": 0,
+  "humanize": 0.4,
+  "space": 25,
+  "evolve": {"auto": false},
+  "beats": [
+    {
+      "name": "Steady",
+      "source": "drummer8/session2/13#1",
+      "bpm": 103,
+      "voices": [
+        {"pattern": "X......x..X..x..", "role": "kick", "level": 0.85},
+        {"pattern": "....X.......X...", "role": "snare", "level": 1},
+        {"pattern": "o.X.o.x.o.x.x.o.", "role": "hat", "level": 0.55},
+        {"pattern": "...X............", "role": "hat", "level": 1}
+      ]
+    },
+    {
+      "name": "Busy hats",
+      "source": "drummer8/session2/14#1",
+      "bpm": 103,
+      "voices": [
+        {"pattern": "X......x..X..x..", "role": "kick", "level": 0.85},
+        {"pattern": "....X.......X...", "role": "snare", "level": 1},
+        {"pattern": "ooX.o.xXooX.o.ox", "role": "hat", "level": 0.4},
+        {"pattern": "...X............", "role": "hat", "level": 1}
+      ]
+    },
+    {
+      "name": "Off the one",
+      "source": "drummer8/session1/16#1",
+      "bpm": 90,
+      "voices": [
+        {"pattern": "..X...x...x...xx", "role": "kick", "level": 0.65},
+        {"pattern": ".X..X....X..X...", "role": "snare", "level": 1},
+        {"pattern": "o...x.X.o...x.x.", "role": "hat", "level": 0.6},
+        {"pattern": "..X.......X.....", "role": "hat", "level": 1}
+      ]
+    },
+    {
+      "name": "Driving",
+      "source": "drummer8/session2/3#1",
+      "bpm": 114,
+      "swing": 0.08,
+      "voices": [
+        {"pattern": "x.o.....x.o.....", "role": "kick", "level": 0.45},
+        {"pattern": "....X......X.oXX", "role": "snare", "level": 0.85},
+        {"pattern": "..o.x.o...o.o.o.", "role": "hat", "level": 0.35},
+        {"pattern": "X...X...X...X...", "role": "hat", "level": 1}
+      ]
+    },
+    {
+      "name": "Hand drums",
+      "source": "drummer1/session3/11#1",
+      "voices": [
+        {"pattern": "x..x....x..x....", "role": "kick", "level": 0.95},
+        {"pattern": "oox.oox.oox.oox.", "role": "hat", "level": 0.7},
+        {"pattern": "...o..xx...x..xx", "role": "perc", "level": 1}
+      ]
+    },
+    {
+      "name": "Bell and drums",
+      "source": "drummer1/session3/11#2",
+      "voices": [
+        {"pattern": "x...oo..x...oo..", "role": "kick", "level": 0.7},
+        {"pattern": "x...x...x...x...", "role": "hat", "level": 0.8},
+        {"pattern": "ooo.ooo.ooo.ooo.", "role": "hat", "level": 0.6},
+        {"pattern": "..xx......xx....", "role": "perc", "level": 0.95},
+        {"pattern": "......x.......xx", "role": "tonal", "level": 1}
+      ]
+    },
+    {
+      "name": "Heavy",
+      "source": "drummer8/session2/18#2",
+      "bpm": 85,
+      "voices": [
+        {"pattern": "X.X...Xx..Xx.X..", "role": "kick", "level": 1},
+        {"pattern": "....X....X..X...", "role": "snare", "level": 0.9},
+        {"pattern": "x...X.XXx..XoX..", "role": "hat", "level": 1},
+        {"pattern": "..X.............", "role": "hat", "level": 1}
+      ]
+    },
+    {
+      "name": "Shuffle",
+      "source": "drummer8/session1/26#2",
+      "swing": 0.06,
+      "voices": [
+        {"pattern": "..x...oo.ox..o..", "role": "kick", "level": 0.55},
+        {"pattern": ".X..Xo..Xo..Xo.o", "role": "snare", "level": 1},
+        {"pattern": "x...x...x...x...", "role": "hat", "level": 0.85},
+        {"pattern": "X.xox.xoX.X.X.o.", "role": "hat", "level": 0.9}
+      ]
+    }
+  ]
+}

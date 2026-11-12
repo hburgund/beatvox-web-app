@@ -123,6 +123,13 @@
         <li><a href="https://maplibre.org" target="_blank" rel="noopener">MapLibre</a>: drawing the map</li>
         <li><a href="https://photon.komoot.io" target="_blank" rel="noopener">Photon by Komoot</a>: place search</li>
         <li><a href="https://mediabunny.dev" target="_blank" rel="noopener">Mediabunny</a>: making the videos</li>
+        <li>
+          <a href="https://magenta.tensorflow.org/datasets/groove" target="_blank" rel="noopener">Groove MIDI Dataset</a> by Google Magenta (<a
+            href="https://creativecommons.org/licenses/by/4.0/"
+            target="_blank"
+            rel="noopener">CC BY 4.0</a
+          >): the Afrobeat, Funk and Latin beats, from real drummers' playing
+        </li>
         <li>Courier Prime: the type</li>
       </ul>
     </details>

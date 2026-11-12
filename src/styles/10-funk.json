@@ -1,0 +1,146 @@
+{
+  "format": "beatvox-recipe",
+  "version": 1,
+  "name": "Funk",
+  "kind": "style",
+  "bpm": 100,
+  "swing": 0,
+  "humanize": 0.4,
+  "space": 25,
+  "evolve": {"auto": false},
+  "beats": [
+    {
+      "name": "Ghost kick",
+      "source": "drummer7/eval_session/2#1",
+      "bpm": 105,
+      "swing": 0.06,
+      "voices": [
+        {"pattern": "o..o...o.oo.....", "role": "kick", "level": 0.35},
+        {"pattern": "....x.......x...", "role": "snare", "level": 0.95},
+        {"pattern": "x.o.x.o.x...x.o.", "role": "hat", "level": 0.8},
+        {"pattern": "..........x.....", "role": "hat", "level": 1}
+      ]
+    },
+    {
+      "name": "Tight",
+      "source": "drummer7/session3/49#1",
+      "bpm": 112,
+      "voices": [
+        {"pattern": "o.o.......o.....", "role": "kick", "level": 0.35},
+        {"pattern": "....x..o.o..x..o", "role": "snare", "level": 0.35},
+        {"pattern": "x.x.X.o.x...X.x.", "role": "hat", "level": 0.7},
+        {"pattern": "..........X.....", "role": "hat", "level": 1}
+      ]
+    },
+    {
+      "name": "Ghost notes",
+      "source": "drummer7/session2/72#1",
+      "swing": 0.12,
+      "voices": [
+        {"pattern": "o.o.......o.....", "role": "kick", "level": 0.7},
+        {"pattern": ".o..Xo.o.o..Xo.o", "role": "snare", "level": 0.55},
+        {"pattern": "x...X.ooo...x.oo", "role": "hat", "level": 0.6},
+        {"pattern": "..x.......x.....", "role": "hat", "level": 1}
+      ]
+    },
+    {
+      "name": "Sixteenths",
+      "source": "drummer8/eval_session/5#1",
+      "bpm": 84,
+      "swing": 0.04,
+      "voices": [
+        {"pattern": "x..o......x..o..", "role": "kick", "level": 0.55},
+        {"pattern": "....X..X....X...", "role": "snare", "level": 1},
+        {"pattern": "XxXxXxxXxxxxXxxx", "role": "hat", "level": 0.7}
+      ]
+    },
+    {
+      "name": "Fast",
+      "source": "drummer7/eval_session/1#1",
+      "bpm": 138,
+      "voices": [
+        {"pattern": "o.o.......oo....", "role": "kick", "level": 0.45},
+        {"pattern": "....X..x.o..X..o", "role": "snare", "level": 0.7},
+        {"pattern": "X.x.X.x.X.x.X.x.", "role": "hat", "level": 1}
+      ]
+    },
+    {
+      "name": "Pocket",
+      "source": "drummer7/session2/79#1",
+      "swing": 0.12,
+      "voices": [
+        {"pattern": "o.x.......x.....", "role": "kick", "level": 0.65},
+        {"pattern": ".o..Xo.o.o..Xo.o", "role": "snare", "level": 0.45},
+        {"pattern": "o.x.X.ooo...X.oo", "role": "hat", "level": 0.45},
+        {"pattern": "..x.......x.....", "role": "hat", "level": 1}
+      ]
+    },
+    {
+      "name": "Slow drag",
+      "source": "drummer8/session1/6#1",
+      "bpm": 80,
+      "voices": [
+        {"pattern": "x......ox..o..x.", "role": "kick", "level": 0.5},
+        {"pattern": "..X..X...X..X...", "role": "snare", "level": 1},
+        {"pattern": "XoXoxoxoxoxo..Xo", "role": "hat", "level": 0.6},
+        {"pattern": "............X...", "role": "hat", "level": 1}
+      ]
+    },
+    {
+      "name": "Classic",
+      "source": "drummer8/session1/1#2",
+      "bpm": 95,
+      "voices": [
+        {"pattern": "x..x.x.ox.......", "role": "kick", "level": 0.55},
+        {"pattern": "....X.......X...", "role": "snare", "level": 1},
+        {"pattern": "X.o.X.o.o...x.o.", "role": "hat", "level": 0.4},
+        {"pattern": "..........X.....", "role": "hat", "level": 1}
+      ]
+    },
+    {
+      "name": "Clap",
+      "source": "drummer7/session3/47#1",
+      "bpm": 112,
+      "swing": 0.04,
+      "voices": [
+        {"pattern": "o.o.......o.....", "role": "kick", "level": 0.35},
+        {"pattern": ".......o.o.....o", "role": "snare", "level": 0.45},
+        {"pattern": "x.o.x.o.o.o.x.o.", "role": "hat", "level": 0.8},
+        {"pattern": "....x.......x...", "role": "perc", "level": 1}
+      ]
+    },
+    {
+      "name": "Lazy",
+      "source": "drummer1/session1/1#1",
+      "bpm": 80,
+      "voices": [
+        {"pattern": "..o..o....o..o..", "role": "kick", "level": 0.7},
+        {"pattern": "....o..o....o..o", "role": "snare", "level": 1},
+        {"pattern": "ooooooooooooo.xo", "role": "hat", "level": 0.85},
+        {"pattern": ".............o..", "role": "hat", "level": 0.75}
+      ]
+    },
+    {
+      "name": "Up-tempo",
+      "source": "drummer8/eval_session/1#2",
+      "bpm": 138,
+      "voices": [
+        {"pattern": "..oo......x.....", "role": "kick", "level": 0.5},
+        {"pattern": ".o..Xo.x.x....X.", "role": "snare", "level": 1},
+        {"pattern": "o.o.X.o.x.x.o.X.", "role": "hat", "level": 0.65}
+      ]
+    },
+    {
+      "name": "Rolling",
+      "source": "drummer8/session2/5#1",
+      "bpm": 91,
+      "swing": 0.04,
+      "voices": [
+        {"pattern": "x..o...oo..o..x.", "role": "kick", "level": 0.45},
+        {"pattern": "....XooooX..X...", "role": "snare", "level": 0.35},
+        {"pattern": "xox.X.xoxoxox.o.", "role": "hat", "level": 0.5},
+        {"pattern": "..............X.", "role": "hat", "level": 1}
+      ]
+    }
+  ]
+}

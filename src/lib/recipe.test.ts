@@ -31,7 +31,7 @@ describe('recipes', () => {
   it('loads every file in src/styles', () => {
     expect(STYLE_ERRORS).toEqual([]);
     expect(STYLES.map((s) => s.name)).toEqual([
-      'BeatVox', 'House', 'Boom Bap', 'Rock', 'Breakbeat', 'Dembow', 'Trap', 'Drum & Bass',
+      'BeatVox', 'House', 'Boom Bap', 'Rock', 'Breakbeat', 'Dembow', 'Trap', 'Drum & Bass', 'Afrobeat', 'Funk', 'Latin',
     ]);
   });
 
