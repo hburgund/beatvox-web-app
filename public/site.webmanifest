@@ -1,7 +1,7 @@
 {
   "name": "BeatVox",
   "short_name": "BeatVox",
-  "description": "Turn your voice into a beat.",
+  "description": "Putting rhythm into your voice.",
   "start_url": "/",
   "icons": [
     { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },

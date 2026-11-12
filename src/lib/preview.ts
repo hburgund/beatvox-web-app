@@ -24,7 +24,7 @@ export const SITE_CARD = '/og/beatvox.png';
 
 const SITE_PAGES: Record<string, { title: string; description: string }> = {
   '/': {
-    title: 'BeatVox: turn your voice into a beat',
+    title: 'BeatVox: putting rhythm into your voice',
     description: 'Beats made from people’s voices, on a map of the world. Listen, wander, and make your own.',
   },
   '/studio': {

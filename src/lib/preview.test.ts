@@ -71,7 +71,7 @@ describe('injectMeta', () => {
 describe('sitePreview', () => {
   it('gives the map, the studio and About the site card, at a clean address', () => {
     const home = sitePreview('https://beatvox.app/');
-    expect(home?.title).toBe('BeatVox: turn your voice into a beat');
+    expect(home?.title).toBe('BeatVox: putting rhythm into your voice');
     expect(home?.image).toBe('https://beatvox.app/og/beatvox.png');
     expect(sitePreview('https://beatvox.app/studio?revox=12')?.url).toBe('https://beatvox.app/studio');
     expect(sitePreview('https://beatvox.app/about/')?.title).toBe('About BeatVox');
