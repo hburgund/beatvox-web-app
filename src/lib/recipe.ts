@@ -74,8 +74,8 @@ export interface Recipe {
   /** 0..0.5: how late the off-beat sixteenths land */
   swing?: number;
   pitch?: number;
-  /** older beats only (before per-row pan): every row roamed this wide,
-   *  0..100. Rows without their own `pan` still do. */
+  /** older beats only (before per-row pan): the Pan knob, 0..100. Ignored
+   *  now: their rows get the default pan for their role. */
   panning?: number;
   /** 0..1: how much each hit's loudness wanders, like a person playing
    *  (default 1 = v1.93; 0 = machine-steady) */

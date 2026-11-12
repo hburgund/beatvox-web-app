@@ -240,9 +240,9 @@ describe('BeatEngine', () => {
     expect(saved[2].pan).toEqual([-1, 0.9]);
     expect(saved[3].pan).toBe(-0.7);
 
-    // an older beat's one PANNING width: every row without its own pan roams that wide
+    // an older beat's Pan knob is ignored: rows without their own pan get the role defaults
     engine.applyRecipe(recipe({ panning: 30 }, [{ pattern: x, role: 'kick' }, { pattern: x, pan: 0.5 }]));
-    expect(engine.voices[0].pan).toMatchObject({ mode: 'roam', lo: -0.3, hi: 0.3 });
+    expect(engine.voices[0].pan).toMatchObject({ mode: 'fixed', at: 0 });
     expect(engine.voices[1].pan).toMatchObject({ mode: 'fixed', at: 0.5 });
 
     // a second row of the same role goes to the other side

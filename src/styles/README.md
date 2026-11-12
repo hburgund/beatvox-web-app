@@ -50,7 +50,6 @@ Up to 8 voices.
 - `bpm`: tempo.
 - `swing`: 0–0.5, how late the off-beat sixteenths land.
 - `pitch`: playback rate, 1 = normal.
-- `panning`: older beats only, 0–100: how wide every voice without its own `pan` roams. Use `pan` on each voice instead.
 - `humanize`: 0–1, how much each hit's loudness wanders, like a person playing. 1 (the default) is v1.93's amount: hits drift between about 45% and 100% of the track's level. 0 makes every hit exactly the level.
 - `space`: 0–100, the Space knob.
 - `evolve`: `{"auto": true, "every": 3}` keeps changing the beat every 3 seconds.

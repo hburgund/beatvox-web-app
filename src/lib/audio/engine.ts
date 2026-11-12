@@ -85,14 +85,14 @@ export interface PanSetting {
 const panRole = (rv: Recipe['voices'][number]): Role => (rv.role && rv.role !== 'any' ? rv.role : (rv.sliceRole ?? 'any'));
 
 /**
- * A recipe row's pan: its own, else an older beat's one width for every row,
- * else by role. `nth` counts the rows of the same role before it.
+ * A recipe row's pan: its own, else by role (older beats from before per-row
+ * pan too: they start from the defaults). `nth` counts the rows of the same
+ * role before it.
  */
-function recipePan(rv: Recipe['voices'][number], nth: number, panning?: number): PanSetting {
+function recipePan(rv: Recipe['voices'][number], nth: number): PanSetting {
   const base = defaultPan(panRole(rv), nth);
   if (typeof rv.pan === 'number') return { ...base, mode: 'fixed', at: rv.pan };
   if (Array.isArray(rv.pan)) return { ...base, mode: 'roam', lo: Math.min(...rv.pan), hi: Math.max(...rv.pan) };
-  if (panning !== undefined) return { mode: 'roam', at: 0, lo: -panning / 100, hi: panning / 100 };
   return base;
 }
 
@@ -851,7 +851,7 @@ export class BeatEngine {
       v.on = rv.on ?? true;
       v.role = rv.role ?? 'any';
       v.level = Math.min(1, Math.max(0, rv.level ?? 1));
-      v.pan = recipePan(rv, r.voices.slice(0, i).filter((o) => panRole(o) === panRole(rv)).length, r.panning);
+      v.pan = recipePan(rv, r.voices.slice(0, i).filter((o) => panRole(o) === panRole(rv)).length);
       v.human = this.randomHuman();
       if (rv.delaySend !== undefined) v.delaySend = rv.delaySend;
       if (rv.reverbSend !== undefined) v.reverbSend = rv.reverbSend;
