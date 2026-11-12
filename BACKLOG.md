@@ -1,6 +1,6 @@
 # BeatVox Backlog
 
-Ideas and requests not yet scheduled. See [PROPOSAL.md](PROPOSAL.md) for the plan and phases.
+Ideas and requests not yet scheduled. See [PROPOSAL.md](PROPOSAL.md) for the plan and phases, and [IDEAS.md](IDEAS.md) for ideas we may or may not do.
 
 ## Patterns and recipes
 
@@ -81,4 +81,5 @@ Ideas and requests not yet scheduled. See [PROPOSAL.md](PROPOSAL.md) for the pla
   - **The map is worth wandering:** clear out test mixes and have a good spread of real beats in different places, since the Wander shot uses only public beats. Loudness-normalizing voices would help them sit together.
   - **The Groove MIDI credit on About** if any of its grooves ship.
   - **A run-through on iPhone** of the exact flow being filmed (recording, mapping, sharing), so nothing breaks on camera.
+- [ ] **Analytics before going live.** Know how many people visit, record, send to the map and share. Google Analytics is free but sets cookies, so it needs a consent banner for visitors in Europe and the UK. Free options that don't use cookies (so no banner): Cloudflare Web Analytics (free, page views only), GoatCounter (free for non-commercial sites, simple, supports custom events) or Umami Cloud (free tier, custom events). Whichever we pick, count the moments that matter as events: voice recorded, beat saved, sent to the map, shared (and how), reVox made, Wander started. Mention it in the privacy note on About.
 - [ ] **Tell Jay Sweet (Newport Folk Festival) at launch.**
