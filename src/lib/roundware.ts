@@ -18,6 +18,10 @@
 // moment that matters (POST /events/), and a listening-history row for every
 // asset heard (POST on start, PATCH with its duration on stop). Logging never
 // throws and never holds anything up. See `LogMode`.
+//
+// A session is a visit: kept in sessionStorage, so a refresh or going from
+// the map to the studio carries on with it, until the tab closes or nothing
+// has been logged for SESSION_IDLE_MS.
 
 export const RW_API = 'https://api.roundware.app/api/3';
 export const RW_PROJECT = 103;
@@ -56,6 +60,33 @@ export const RW_TAGS = {
 export const RW_JSON = { mediaType: 'data', ext: 'json', type: 'application/json' } as const;
 
 const DEVICE_KEY = 'beatvox.rw.device';
+const SESSION_KEY = 'beatvox.rw.session';
+/** a visit ends after this long with nothing logged or sent */
+export const SESSION_IDLE_MS = 30 * 60 * 1000;
+
+interface KeptSession {
+  id: number;
+  project: number;
+  /** when it was last used (ms) */
+  last: number;
+}
+
+function readSession(): KeptSession | null {
+  try {
+    const k = JSON.parse(sessionStorage.getItem(SESSION_KEY) ?? 'null') as KeptSession | null;
+    return k && typeof k.id === 'number' && typeof k.last === 'number' ? k : null;
+  } catch {
+    return null;
+  }
+}
+
+function keepSession(k: KeptSession) {
+  try {
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(k));
+  } catch {
+    /* no storage: a session per page load */
+  }
+}
 
 /**
  * Where usage logging goes: `send` to Roundware, `console` to the browser
@@ -122,6 +153,8 @@ function deviceId(make: () => string): string {
 export class Roundware {
   private token: Promise<{ token: string; participant: number }> | null = null;
   private session: Promise<number> | null = null;
+  /** when this page last used the session (ms) */
+  private lastUsed = 0;
   private project: Promise<RwProject> | null = null;
   private started = false;
   /** listens under way: their row, once the server has made it */
@@ -140,7 +173,14 @@ export class Roundware {
   startVisit() {
     if (this.started || this.log === 'off') return;
     this.started = true;
-    this.event('start_session');
+    if (this.log === 'console') {
+      const k = this.liveSession(Date.now());
+      if (k) console.info('[roundware] carrying on session', k.id);
+      else {
+        console.info('[roundware] event', { event_type: 'start_session' });
+        keepSession({ id: 0, project: this.projectId, last: Date.now() });
+      }
+    } else void this.visit().catch(() => {});
     globalThis.addEventListener?.('pagehide', () => {
       for (const asset of [...this.heard.keys()]) this.unhear(asset, true);
     });
@@ -150,7 +190,11 @@ export class Roundware {
   event(type: string, extra: RwEventExtra = {}) {
     if (this.log === 'off') return;
     const body = { event_type: type, client_time: new Date().toISOString(), ...extra };
-    if (this.log === 'console') return console.info('[roundware] event', body);
+    if (this.log === 'console') {
+      const k = readSession();
+      if (k) keepSession({ ...k, last: Date.now() });
+      return console.info('[roundware] event', body);
+    }
     this.visit()
       .then((session_id) => this.call('POST', '/events/', { session_id, ...body }))
       .catch(() => {});
@@ -214,22 +258,45 @@ export class Roundware {
     return this.token;
   }
 
-  /** This visit. (No timezone: the server wants a 4-character offset and fails on a name.) */
+  /** The session kept from earlier in this visit, if it hasn't gone idle. */
+  private liveSession(now: number): KeptSession | null {
+    const k = readSession();
+    return k && k.project === this.projectId && now - k.last < SESSION_IDLE_MS ? k : null;
+  }
+
+  /**
+   * This visit's session: the one kept in this tab (a refresh, or another
+   * BeatVox page), or a new one, logged with start_session, when there's
+   * none or it went idle. (No timezone: the server wants a 4-character
+   * offset and fails on a name.)
+   */
   private visit() {
-    this.session ??= this.participant()
-      .then(({ participant }) =>
-        this.call<{ id: number }>('POST', '/sessions/', {
-          project_id: this.projectId,
-          participant_id: participant,
-          client_type: 'web',
-          client_system: navigator.userAgent.slice(0, 120),
-        }),
-      )
-      .then((s) => s.id)
-      .catch((e) => {
-        this.session = null;
-        throw e;
+    const now = Date.now();
+    if (this.session && now - this.lastUsed >= SESSION_IDLE_MS) this.session = null;
+    this.lastUsed = now;
+    if (!this.session) {
+      const kept = this.liveSession(now);
+      // the token still comes first: uploads need it
+      const session = (this.session = kept
+        ? this.participant().then(() => kept.id)
+        : this.participant()
+            .then(({ participant }) =>
+              this.call<{ id: number }>('POST', '/sessions/', {
+                project_id: this.projectId,
+                participant_id: participant,
+                client_type: 'web',
+                client_system: navigator.userAgent.slice(0, 120),
+              }),
+            )
+            .then((s) => {
+              if (this.log === 'send') void this.call('POST', '/events/', { session_id: s.id, event_type: 'start_session', client_time: new Date().toISOString() }).catch(() => {});
+              return s.id;
+            }));
+      session.catch(() => {
+        if (this.session === session) this.session = null;
       });
+    }
+    void this.session.then((id) => keepSession({ id, project: this.projectId, last: now })).catch(() => {});
     return this.session;
   }
 

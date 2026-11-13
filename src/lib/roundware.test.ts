@@ -129,4 +129,33 @@ describe('Roundware usage logging', () => {
     rw.unhear(1);
     await settle();
   });
+
+  it('carries a session on across page loads in the tab, until it goes idle', async () => {
+    const calls = server();
+    const store = new Map<string, string>();
+    vi.stubGlobal('sessionStorage', { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => store.set(k, v) });
+    let now = 1_000_000;
+    vi.spyOn(Date, 'now').mockImplementation(() => now);
+    const load = async () => {
+      const rw = new Roundware(() => 'd', 'https://rw.test', 103, 'send');
+      rw.startVisit();
+      await settle();
+      return rw;
+    };
+    await load();
+    now += 20 * 60 * 1000;
+    const second = await load();
+    expect(calls.filter((c) => c.path === '/sessions/')).toHaveLength(1);
+    expect(calls.filter((c) => c.body.event_type === 'start_session')).toHaveLength(1);
+    second.event('x');
+    await settle();
+    expect(calls.at(-1)).toMatchObject({ path: '/events/', body: { session_id: 9 }, method: 'POST' });
+    expect(calls.at(-1)!.body).not.toHaveProperty('event_type', 'start_session');
+    now += 31 * 60 * 1000;
+    second.event('y');
+    await settle();
+    expect(calls.filter((c) => c.path === '/sessions/')).toHaveLength(2);
+    expect(calls.filter((c) => c.body.event_type === 'start_session')).toHaveLength(2);
+    vi.restoreAllMocks();
+  });
 });
