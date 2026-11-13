@@ -394,7 +394,7 @@ export function drawFrame(g: Ctx, sc: VideoScript, sprout: Sprout, t: number, sh
     wrap(g, sc.title, L.endWidth, 1).forEach((line) => g.fillText(line, CX, Y + 40));
     g.font = `400 15px ${FONT}`;
     g.fillStyle = C.muted;
-    g.fillText('a beat made from one voice', CX, Y + 68);
+    g.fillText('a voice turned into a beat', CX, Y + 68);
     // the link, in a box
     g.font = `700 20px ${FONT}`;
     const w = Math.max(g.measureText(sc.link).width, 140) + 36;

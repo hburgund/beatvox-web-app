@@ -110,7 +110,7 @@ export function drawCard(g: CanvasRenderingContext2D, rows: RingRow[], text: Car
   wrap(g, text.title || 'Untitled', 500, 3).forEach((line, i) => g.fillText(line, x, 250 + i * 62));
   g.font = `400 24px ${FONT}`;
   g.fillStyle = C.muted;
-  g.fillText('a beat made from one voice', x, 540);
+  g.fillText('a voice turned into a beat', x, 540);
 }
 
 /** Up to `max` lines of `text` no wider than `width`, the last cut with … */

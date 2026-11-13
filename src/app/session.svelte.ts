@@ -300,7 +300,7 @@ export class Session {
     this.style = '';
     this.styleBeat = null;
     if (instrument.slices.length < 2) {
-      this.status = 'Not much to slice there. Try speaking or beatboxing a bit louder.';
+      this.status = 'Not much to slice there. Try speaking a bit louder!';
     } else {
       this.status = `${instrument.slices.length} slices`;
     }
@@ -881,8 +881,8 @@ export class Session {
     const t = this.shareTitle.trim();
     const name = t ? `My BeatVox, “${t}”` : 'My BeatVox';
     return this.sentMix
-      ? `${name}: a beat made from one voice. Hear it on the map and make your own: ${beatvoxShareUrl(this.sentMix.mixAsset)} #beatvox`
-      : `${name}: a beat made from one voice. Make your own: ${globalThis.location?.origin ?? ''} #beatvox`;
+      ? `${name}: a voice turned into a beat. Hear it on the map and make your own: ${beatvoxShareUrl(this.sentMix.mixAsset)} #beatvox`
+      : `${name}: a voice turned into a beat. Make your own: ${globalThis.location?.origin ?? ''} #beatvox`;
   }
 
   private videoFile(shape: Shape) {

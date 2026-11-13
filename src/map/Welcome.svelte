@@ -26,7 +26,7 @@
       <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="2.4" /></svg>
     </button>
   </div>
-  <p>Every dot on this map is a beat someone made from a few seconds of their own voice. BeatVox cuts the voice into slices and plays them like a drum machine.</p>
+  <p>Every dot on this map is a beat someone made from a few seconds of their voice. BeatVox slices the voice into chunks and plays them like a drum machine.</p>
 
   <div class="how" aria-hidden="true">
     <span class="step">

@@ -74,7 +74,7 @@
   async function share() {
     if (!live) return;
     const url = beatvoxShareUrl(live.mix.id);
-    const text = `${live.mix.title}: a beat made from one voice on BeatVox`;
+    const text = `${live.mix.title}: a voice turned into a beat with BeatVox`;
     try {
       if (navigator.share) {
         await navigator.share({ title: live.mix.title, text, url });
@@ -118,9 +118,9 @@
       <p class="loading" aria-live="polite">Loading the beat…</p>
     {:else if data.status === 'pending'}
       <section class="card notice wait">
-        <p class="label">WAITING FOR APPROVAL</p>
+        <p class="label">WAITING FOR PROCESSING</p>
         <h1>This BeatVox isn't on the map yet.</h1>
-        <p>Every new BeatVox is checked by a person before it goes public. This link will play it as soon as it's approved.</p>
+        <p>Sometimes it takes a little while; other times there is a glitch! Please try again soon.</p>
       </section>
       <a class="btn primary big" href={STUDIO_PATH}>MAKE YOUR OWN</a>
     {:else if data.status === 'missing'}
@@ -166,7 +166,7 @@
         </Ring>
       </div>
       {#if !live.mix.recipe}
-        <p class="note">This beat was saved without its pattern, so the ring is empty. It still plays.</p>
+        <p class="note">This beat was saved without its pattern, so the ring is empty. It will still play.</p>
       {/if}
       <Votes asset={live.mix.id} />
 
@@ -200,7 +200,7 @@
   <div class="bar">
     {#if live.revoxAllowed}
       <a class="btn primary" href={revoxUrl(live.mix.id)}>REVOX THIS VOX</a>
-      <p>Make your own beat with this vox, or <a href={STUDIO_PATH}>record your own</a>.</p>
+      <p>Make your own beat with this source, or <a href={STUDIO_PATH}>record your own</a>.</p>
     {:else}
       <a class="btn primary" href={STUDIO_PATH}>MAKE YOUR OWN</a>
       <p>Record your voice and BeatVox makes a beat from it.</p>

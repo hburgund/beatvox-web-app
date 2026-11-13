@@ -34,7 +34,7 @@ What iMessage, WhatsApp, Slack, etc. show when someone pastes a BeatVox link, pl
   > BeatVox: putting rhythm into your voice
 
 - **When:** Preview description under that title  <!-- src/lib/preview.ts:28 -->
-  > Beats made from people’s voices, on a map of the world. Listen, wander, and make your own.
+  > Explore the globe filled with beats made from people’s voices. Then create and contribute your own.
 
 ### Link preview for the studio (beatvox.app/studio)
 
@@ -42,7 +42,7 @@ What iMessage, WhatsApp, Slack, etc. show when someone pastes a BeatVox link, pl
   > Make a BeatVox
 
 - **When:** Preview description under that title  <!-- src/lib/preview.ts:32 -->
-  > Say anything for 15 seconds and BeatVox cuts your voice into a beat. Play with it, share it, put it on the map.
+  > Record anything for up to 15 seconds and BeatVox slices it into a beat. Refine your creation, share it and add it to the map.
 
 ### Link preview for About (beatvox.app/about)
 
@@ -50,7 +50,7 @@ What iMessage, WhatsApp, Slack, etc. show when someone pastes a BeatVox link, pl
   > About BeatVox
 
 - **When:** Preview description under that title  <!-- src/lib/preview.ts:36 -->
-  > What BeatVox is, how it works, and who made it.
+  > What is BeatVox? How does it work and who made it?
 
 ### The site's preview picture
 
@@ -63,7 +63,8 @@ The picture itself (`public/og/beatvox.png`) is drawn from `dev/og-card.html`. C
   > Putting rhythm / into your voice.
 
 - **When:** Smaller text under the tagline on the site's preview picture  <!-- dev/og-card.html (class="sub") -->
-  > Say anything for 15 seconds. / BeatVox cuts it into a beat, / and shares it on the map.
+  > Record a short clip. / BeatVox slices it into a beat. / Play, refine and share it on the global map.
+  NOTE: need to remake the image with new text.
 
 - **When:** The web address on the site's preview picture, and on the share videos (bottom right of the square one, top of the tall one, and in a box on the end card)  <!-- dev/og-card.html (class="url"), src/lib/video/script.ts:12 -->
   > beatvox.app
@@ -80,13 +81,13 @@ The picture itself (`public/og/beatvox.png`) is drawn from `dev/og-card.html`. C
   > A BeatVox
 
 - **When:** Preview title for a reVox nobody named  <!-- src/lib/preview.ts:103 -->
-  > A reVox on BeatVox
+  > A reVox of BeatVox
 
 - **When:** Preview description for a BeatVox  <!-- src/lib/preview.ts:106 -->
-  > A beat made from one voice. Hear it, then make your own on BeatVox.
+  > A voice with rhythm added! Listen and make your own with BeatVox.
 
 - **When:** Preview description for a reVox  <!-- src/lib/preview.ts:105 -->
-  > A beat made from someone else’s voice. Hear it, then make your own on BeatVox.
+  > A voice with rhythm added! Listen and make your own with BeatVox.
 
 - **When:** (screen reader) Description of a BeatVox's preview picture (its animated ring)  <!-- src/lib/preview.ts:132 -->
   > {title}: the beat drawn as a ring
@@ -105,7 +106,7 @@ The welcome card's heading, "Putting rhythm / into your voice.", is listed in se
   > Close
 
 - **When:** The paragraph under the welcome heading  <!-- src/map/Welcome.svelte:29 -->
-  > Every dot on this map is a beat someone made from a few seconds of their own voice. BeatVox cuts the voice into slices and plays them like a drum machine.
+  > Every dot on this map is a beat someone made from a few seconds of their voice. BeatVox slices the voice into chunks and plays them like a drum machine.
 
 - **When:** Small caption under the first of three little pictures (a waveform)  <!-- src/map/Welcome.svelte:36 -->
   > YOUR VOICE
@@ -221,7 +222,7 @@ Its screen-reader name, "About BeatVox", is listed in section 1.
   > Can be reVoxed
 
 - **When:** Small note under the checkboxes  <!-- src/map/MapPage.svelte:478 -->
-  > Nothing ticked in a group shows all of it.
+  > Nothing checked in a group shows all of it.
 
 - **When:** Link bottom left of the filter panel: unticks everything  <!-- src/map/MapPage.svelte:480 -->
   > clear
@@ -383,7 +384,7 @@ These show as a small line at the bottom of the voice card.
   > That was very short. Try again.
 
 - **When:** The recording was too quiet to cut into at least two slices  <!-- src/app/session.svelte.ts:303 -->
-  > Not much to slice there. Try speaking or beatboxing a bit louder.
+  > Not much to slice there. Try speaking a bit louder!
 
 ### Voice card: after recording
 
@@ -759,7 +760,7 @@ Five small dials in a row; each name sits under its dial. Very short: about 6 ch
   > Choose a place first.
 
 - **When:** Small line under that button once there's a place but the terms aren't ticked  <!-- src/app/ShareSheet.svelte:163 -->
-  > Tick the terms to send.
+  > Check the terms to send.
 
 - **When:** Link at the bottom of step 2: go to sharing without the map  <!-- src/app/ShareSheet.svelte:165 -->
   > Skip the map, just save or share it →
@@ -900,10 +901,10 @@ Five small dials in a row; each name sits under its dial. Very short: about 6 ch
 ### What gets shared and saved (captions, titles, file names)
 
 - **When:** The caption copied to the clipboard (and sent with the video) once it's on the map. {name} is the next item or the one after; {link} is its page's address  <!-- src/app/session.svelte.ts:884 -->
-  > {name}: a beat made from one voice. Hear it on the map and make your own: {link} #beatvox
+  > {name}: a voice turned into a beat. Hear it on the map and make your own: {link} #beatvox
 
 - **When:** The same caption when it isn't on the map; {link} is the site's address  <!-- src/app/session.svelte.ts:885 -->
-  > {name}: a beat made from one voice. Make your own: {link} #beatvox
+  > {name}: a voice turned into a beat. Make your own: {link} #beatvox
 
 - **When:** {name} in the caption when you named it; {title} is the name, in curly quotes  <!-- src/app/session.svelte.ts:882 -->
   > My BeatVox, “{title}”
@@ -1266,7 +1267,7 @@ Also painted on the videos, but listed earlier: the BEATVOX wordmark (map page h
   > make your own
 
 - **When:** Small grey text in front of the web address, under the name, at the top of the tall video  <!-- src/lib/video/draw.ts:334 -->
-  > make your own · 
+  > make your own ·
 
 - **When:** Small label near the bottom while the video plays your voice (a waveform under it)  <!-- src/lib/video/draw.ts:352 -->
   > THE VOICE
@@ -1275,7 +1276,7 @@ Also painted on the videos, but listed earlier: the BEATVOX wordmark (map page h
   > THE BEAT · {bars} BARS
 
 - **When:** Small grey line under the name on the video's end card. Also bottom right of the animated GIF / link preview picture  <!-- src/lib/video/draw.ts:397, src/lib/card.ts:113 -->
-  > a beat made from one voice
+  > a voice turned into a beat
 
 ### The animated GIF / a BeatVox's link preview picture
 
@@ -1307,13 +1308,13 @@ The page a shared link opens. Its LIKE/FLAG, "made with the vox from", THE SOURC
   > Couldn't reach the BeatVox server. Check your connection and try again.
 
 - **When:** Label on the box shown when the beat hasn't been approved yet  <!-- src/share/SharePage.svelte:121 -->
-  > WAITING FOR APPROVAL
+  > WAITING FOR PROCESSING
 
 - **When:** Heading in that box  <!-- src/share/SharePage.svelte:122 -->
   > This BeatVox isn't on the map yet.
 
 - **When:** Text in that box  <!-- src/share/SharePage.svelte:123 -->
-  > Every new BeatVox is checked by a person before it goes public. This link will play it as soon as it's approved.
+  > Sometimes it takes a little while; other times there is a glitch! Please try again soon.
 
 - **When:** Label on the box shown when there's no such beat  <!-- src/share/SharePage.svelte:128 -->
   > NOT FOUND
@@ -1330,7 +1331,7 @@ The page a shared link opens. Its LIKE/FLAG, "made with the vox from", THE SOURC
   > Share this BeatVox
 
 - **When:** The text sent with the link by the phone's share menu; {title} is the beat's name  <!-- src/share/SharePage.svelte:77 -->
-  > {title}: a beat made from one voice on BeatVox
+  > {title}: a voice turned into a beat with BeatVox
 
 - **When:** (screen reader) The big ring  <!-- src/share/SharePage.svelte:149 -->
   > The beat as a circle: 8 rings of 16 steps, colored by sound
@@ -1339,7 +1340,7 @@ The page a shared link opens. Its LIKE/FLAG, "made with the vox from", THE SOURC
   > Pause the beat
 
 - **When:** Small note under the ring for an old beat saved without its pattern  <!-- src/share/SharePage.svelte:169 -->
-  > This beat was saved without its pattern, so the ring is empty. It still plays.
+  > This beat was saved without its pattern, so the ring is empty. It will still play.
 
 - **When:** Small line under "THE SOURCE VOX" on a BeatVox's page  <!-- src/share/SharePage.svelte:183 -->
   > the recording this beat is made from
@@ -1367,7 +1368,7 @@ The page a shared link opens. Its LIKE/FLAG, "made with the vox from", THE SOURC
 ### Bottom bar
 
 - **When:** Text beside REVOX THIS VOX, when the voice can be reVoxed. The link opens the studio  <!-- src/share/SharePage.svelte:203 -->
-  > Make your own beat with this vox, or [record your own](/studio).
+  > Make your own beat with this source, or [record your own](/studio).
 
 - **When:** Text beside MAKE YOUR OWN, when the voice can't be reVoxed  <!-- src/share/SharePage.svelte:206 -->
   > Record your voice and BeatVox makes a beat from it.
@@ -1437,7 +1438,7 @@ The heading "Putting rhythm / into your voice." is listed with the welcome card.
   > Record
 
 - **When:** Step 1, text  <!-- src/about/AboutContent.svelte:11 -->
-  > Say anything for up to 15 seconds: your name, a word, a beatbox.
+  > Record anything for up to 15 seconds: your name, a word, a beatbox.
 
 - **When:** Step 2, bold word  <!-- src/about/AboutContent.svelte:12 -->
   > Slice
@@ -1448,13 +1449,13 @@ The heading "Putting rhythm / into your voice." is listed with the welcome card.
 Step 3's bold word, "Beat", is listed with the studio's beat card (it's also the beat card's screen-reader name).
 
 - **When:** Step 3, text  <!-- src/about/AboutContent.svelte:13 -->
-  > Eight rows of slices play a beat that keeps changing. Tap the grid to make it yours.
+  > Eight rows of slices play a beat that keeps changing. Tap the grid to customize.
 
 - **When:** Step 4, bold words  <!-- src/about/AboutContent.svelte:14 -->
   > Map it
 
 - **When:** Step 4, text  <!-- src/about/AboutContent.svelte:14 -->
-  > Name it, pick a place, and send it to the map with everyone else’s.
+  > Choose a name, pick a place, and add it to the map with everyone else’s.
 
 - **When:** Step 5, bold words  <!-- src/about/AboutContent.svelte:15 -->
   > Share it
@@ -1465,7 +1466,7 @@ Step 3's bold word, "Beat", is listed with the studio's beat card (it's also the
 ### Since 2008
 
 - **When:** Box heading  <!-- src/about/AboutContent.svelte:38 -->
-  > SINCE 2008
+  > BORN IN 2008
 
 - **When:** (screen reader) Description of the photo of the 2008 booth  <!-- src/about/AboutContent.svelte:40 -->
   > Halsey Burgund beside the BeatVox booth, its plywood walls covered in visitors’ writing, at the Newport Folk Festival in 2008
@@ -1474,7 +1475,7 @@ Step 3's bold word, "Beat", is listed with the studio's beat card (it's also the
   > The BeatVox booth, Newport Folk Festival, 2008
 
 - **When:** Paragraph under the photo  <!-- src/about/AboutContent.svelte:44 -->
-  > BeatVox began in 2008 as an installation built in Max/MSP, shown at the [Newport Folk Festival](https://newportfolk.org/). Visitors stepped up to a microphone and heard their voices come back as beats. This is version 2, rebuilt in 2026 for phones and the web, with a map so the beats can travel.
+  > The first BeatVox experiment was in 2008 as an installation built in Max/MSP, shown at the [Newport Folk Festival](https://newportfolk.org/). Visitors stepped up to a microphone and heard their voices turned into beats. Then it took an 18 year break! This is version 2, rebuilt in 2026 for phones and the web, with a map so the beats can be a part of a global community.
 
 ### Made by
 
@@ -1485,7 +1486,7 @@ Step 3's bold word, "Beat", is listed with the studio's beat card (it's also the
   > Halsey Burgund
 
 - **When:** Your bio under your name  <!-- src/about/AboutContent.svelte:55 -->
-  > Halsey Burgund is an artist and Emmy-winning interactive director whose work focuses on the combination of modern technologies - from mobile phones to artificial intelligence - with fundamentally human “technologies”, primarily language, music and the spoken voice. He is the creator of [Roundware](https://roundware.org), the open source contributory audio AR platform, which has been used to create art and educational installations for cultural organizations internationally. More at [halseyburgund.com](https://halseyburgund.com)!
+  > Halsey Burgund is an artist and [Emmy-winning interactive director](https://moondisaster.halseyburgund.com) whose work focuses on the combination of modern technologies - from mobile phones to artificial intelligence - with fundamentally human “technologies”, primarily language, music and the spoken voice. He is the creator of [Roundware](https://roundware.org), the open source contributory audio AR platform, which has been used to create art and educational installations for cultural organizations internationally. More at [halseyburgund.com](https://halseyburgund.com)!
 
 ### What you make is yours (folding section)
 
@@ -1508,19 +1509,19 @@ Step 3's bold word, "Beat", is listed with the studio's beat card (it's also the
   > Credit is appreciated, not required.
 
 - **When:** Text under bold line 3  <!-- src/about/AboutContent.svelte:72 -->
-  > If you post one, “made with BeatVox” and a link is lovely. You don’t have to.
+  > If you post one or use it in another creation, “made with BeatVox” and a link is lovely and appreciated, but not required!
 
 - **When:** Bold line 4  <!-- src/about/AboutContent.svelte:73 -->
   > Only use what you have the right to use.
 
 - **When:** Text under bold line 4  <!-- src/about/AboutContent.svelte:74 -->
-  > Record your own voice, or someone else’s with their permission. No recordings of other people’s songs, speeches or shows.
+  > Record your own voice, or someone else’s with their permission. No recordings of other people’s songs, speeches or shows unless you are sure they are in the public domain or you otherwise have the right to do so.
 
 - **When:** Bold line 5  <!-- src/about/AboutContent.svelte:75 -->
   > reVoxes are opt-in.
 
 - **When:** Text under bold line 5 (it quotes the checkbox in the share sheet, so keep the two in step)  <!-- src/about/AboutContent.svelte:76 -->
-  > Others can make beats from your voice only if you tick “Others can reVox my voice” when you send it.
+  > Others can make beats from your voice only if you check “Others can reVox my voice” when you send it.
 
 ### Questions (folding section)
 
@@ -1531,16 +1532,16 @@ Step 3's bold word, "Beat", is listed with the studio's beat card (it's also the
   > Can I use my BeatVox commercially?
 
 - **When:** Answer 1  <!-- src/about/AboutContent.svelte:84 -->
-  > Yes. It’s yours: put it in a track, a video, an ad, anything.
+  > Yes. It’s yours: put it in a track, a video, an ad, anything. Just don't do that with other people's!
 
 - **When:** Question 2  <!-- src/about/AboutContent.svelte:85 -->
   > What’s a reVox?
 
 - **When:** Answer 2  <!-- src/about/AboutContent.svelte:86 -->
-  > A new beat made from someone else’s voice. It links back to the original, so you can follow a voice around the world.
+  > A new beat made from someone else’s voice. It links back to the original source so you can hear everything made from the same starting audio.
 
 - **When:** Question 3  <!-- src/about/AboutContent.svelte:87 -->
-  > How do I take mine off the map?
+  > How do I remove mine from the map?
 
 - **When:** Answer 3  <!-- src/about/AboutContent.svelte:88 -->
   > Email [hello@beatvox.app](mailto:hello@beatvox.app) with the link to its page and it will be removed.
@@ -1549,13 +1550,19 @@ Step 3's bold word, "Beat", is listed with the studio's beat card (it's also the
   > How exact is my place on the map?
 
 - **When:** Answer 4 (it names the WHERE I AM button, so keep the two in step)  <!-- src/about/AboutContent.svelte:90 -->
-  > Exactly where you put the pin. WHERE I AM uses your phone’s location, so at home you may prefer to search for your town and pick a spot.
+  > Exactly where you put the pin. WHERE I AM uses your phone’s location, so at home you may prefer to search for your town and pick a spot rather than sharing a specific private location.
 
 - **When:** Question 5  <!-- src/about/AboutContent.svelte:91 -->
   > Is anything uploaded before I send it?
 
 - **When:** Answer 5 (it names the SEND TO THE MAP button, so keep the two in step)  <!-- src/about/AboutContent.svelte:92 -->
-  > No. Your recording stays on your device until you press SEND TO THE MAP, and is gone when you leave the page if you don’t.
+  > No. Your recording stays on your device until you press SEND TO THE MAP, and is gone when you leave the page if you don’t. You can download your mix and video without sharing to the map (though we really hope you will share!).
+
+- **When:** Question 5b (added Nov 2026)  <!-- src/about/AboutContent.svelte -->
+  > What happens when I add my BeatVox to the map?
+
+- **When:** Answer 5b  <!-- src/about/AboutContent.svelte -->
+  > Everything is shared publicly on the map automatically and immediately when you add it, but I reserve the right to remove or otherwise curate the content in BeatVox at my own discretion.
 
 - **When:** Question 6  <!-- src/about/AboutContent.svelte:93 -->
   > Why does the sound stop when my screen goes dark?
@@ -1567,7 +1574,7 @@ Step 3's bold word, "Beat", is listed with the studio's beat card (it's also the
   > What do I need?
 
 - **When:** Answer 7  <!-- src/about/AboutContent.svelte:96 -->
-  > A recent phone or laptop browser with a microphone. No account, no app.
+  > A recent phone or laptop browser with a microphone. There are no accounts, nor do you need to download an app.
 
 ### Your recordings and privacy (folding section)
 

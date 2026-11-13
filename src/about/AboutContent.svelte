@@ -8,10 +8,10 @@
   import booth from './beatvox-2008-newport.jpg';
 
   const steps = [
-    ['Record', 'Say anything for up to 15 seconds: your name, a word, a beatbox.'],
+    ['Record', 'Record anything for up to 15 seconds: your name, a word, a beatbox.'],
     ['Slice', 'BeatVox cuts it into short slices, like the pads of a drum machine.'],
-    ['Beat', 'Eight rows of slices play a beat that keeps changing. Tap the grid to make it yours.'],
-    ['Map it', 'Name it, pick a place, and send it to the map with everyone else’s.'],
+    ['Beat', 'Eight rows of slices play a beat that keeps changing. Tap the grid to customize.'],
+    ['Map it', 'Choose a name, pick a place, and add it to the map with everyone else’s.'],
     ['Share it', 'Post the video, send the link, or save the MP3 and GIF.'],
   ];
 </script>
@@ -35,16 +35,16 @@
   </section>
 
   <section id="about-since" class="card box">
-    <h3 class="label">SINCE 2008</h3>
+    <h3 class="label">BORN IN 2008</h3>
     <figure>
       <img src={booth} width="360" height="240" alt="Halsey Burgund beside the BeatVox booth, its plywood walls covered in visitors’ writing, at the Newport Folk Festival in 2008" />
       <figcaption>The BeatVox booth, Newport Folk Festival, 2008</figcaption>
     </figure>
     <p>
-      BeatVox began in 2008 as an installation built in Max/MSP, shown at the
+      The first BeatVox experiment was in 2008 as an installation built in Max/MSP, shown at the
       <a href="https://newportfolk.org/" target="_blank" rel="noopener">Newport Folk Festival</a>. Visitors stepped up to a
-      microphone and heard their voices come back as beats. This is version 2, rebuilt in 2026 for phones and the web, with a map so the beats can
-      travel.
+      microphone and heard their voices turned into beats. Then it took an 18 year break! This is version 2, rebuilt in 2026 for phones and the web,
+      with a map so the beats can be a part of a global community.
     </p>
   </section>
 
@@ -52,7 +52,8 @@
     <h3 class="label">MADE BY</h3>
     <p class="name">Halsey Burgund</p>
     <p>
-      Halsey Burgund is an artist and Emmy-winning interactive director whose work focuses on the combination of modern technologies - from mobile phones
+      Halsey Burgund is an artist and
+      <a href="https://moondisaster.halseyburgund.com" target="_blank" rel="noopener">Emmy-winning interactive director</a> whose work focuses on the combination of modern technologies - from mobile phones
       to artificial intelligence - with fundamentally human “technologies”, primarily language, music and the spoken voice. He is the creator of
       <a href="https://roundware.org" target="_blank" rel="noopener">Roundware</a>, the open source contributory audio AR platform, which has been used
       to create art and educational installations for cultural organizations internationally. More at
@@ -69,11 +70,11 @@
         <dt>BeatVox may use them too.</dt>
         <dd>Anything you send to the map can be shared, highlighted and hosted by the project: on the map, on its own page and in Roundware.</dd>
         <dt>Credit is appreciated, not required.</dt>
-        <dd>If you post one, “made with BeatVox” and a link is lovely. You don’t have to.</dd>
+        <dd>If you post one or use it in another creation, “made with BeatVox” and a link is lovely and appreciated, but not required!</dd>
         <dt>Only use what you have the right to use.</dt>
-        <dd>Record your own voice, or someone else’s with their permission. No recordings of other people’s songs, speeches or shows.</dd>
+        <dd>Record your own voice, or someone else’s with their permission. No recordings of other people’s songs, speeches or shows unless you are sure they are in the public domain or you otherwise have the right to do so.</dd>
         <dt>reVoxes are opt-in.</dt>
-        <dd>Others can make beats from your voice only if you tick “Others can reVox my voice” when you send it.</dd>
+        <dd>Others can make beats from your voice only if you check “Others can reVox my voice” when you send it.</dd>
       </dl>
     </details>
 
@@ -81,19 +82,24 @@
       <summary>Questions <span class="pm" aria-hidden="true"></span></summary>
       <dl>
         <dt>Can I use my BeatVox commercially?</dt>
-        <dd>Yes. It’s yours: put it in a track, a video, an ad, anything.</dd>
+        <dd>Yes. It’s yours: put it in a track, a video, an ad, anything. Just don’t do that with other people’s!</dd>
         <dt>What’s a reVox?</dt>
-        <dd>A new beat made from someone else’s voice. It links back to the original, so you can follow a voice around the world.</dd>
-        <dt>How do I take mine off the map?</dt>
+        <dd>A new beat made from someone else’s voice. It links back to the original source so you can hear everything made from the same starting audio.</dd>
+        <dt>How do I remove mine from the map?</dt>
         <dd>Email <a class="mail" href="mailto:hello@beatvox.app">hello@beatvox.app</a> with the link to its page and it will be removed.</dd>
         <dt>How exact is my place on the map?</dt>
-        <dd>Exactly where you put the pin. WHERE I AM uses your phone’s location, so at home you may prefer to search for your town and pick a spot.</dd>
+        <dd>Exactly where you put the pin. WHERE I AM uses your phone’s location, so at home you may prefer to search for your town and pick a spot rather than sharing a specific private location.</dd>
         <dt>Is anything uploaded before I send it?</dt>
-        <dd>No. Your recording stays on your device until you press SEND TO THE MAP, and is gone when you leave the page if you don’t.</dd>
+        <dd>No. Your recording stays on your device until you press SEND TO THE MAP, and is gone when you leave the page if you don’t. You can download your mix and video without sharing to the map (though we really hope you will share!).</dd>
+        <dt>What happens when I add my BeatVox to the map?</dt>
+        <dd>
+          Everything is shared publicly on the map automatically and immediately when you add it, but I reserve the right to remove or otherwise curate
+          the content in BeatVox at my own discretion.
+        </dd>
         <dt>Why does the sound stop when my screen goes dark?</dt>
         <dd>Phones pause sound in the browser when they lock. Keep the screen on while you play.</dd>
         <dt>What do I need?</dt>
-        <dd>A recent phone or laptop browser with a microphone. No account, no app.</dd>
+        <dd>A recent phone or laptop browser with a microphone. There are no accounts, nor do you need to download an app.</dd>
       </dl>
     </details>
 

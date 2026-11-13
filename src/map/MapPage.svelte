@@ -475,7 +475,7 @@
       {/each}
     </fieldset>
   {/each}
-  <p class="f-note">Nothing ticked in a group shows all of it.</p>
+  <p class="f-note">Nothing checked in a group shows all of it.</p>
   <div class="f-foot">
     <button class="link" onclick={() => setChosen(new Set())} disabled={!chosenCount}>clear</button>
     <button class="btn primary" onclick={() => filterDlg?.close()}>SHOW {visible.length}</button>

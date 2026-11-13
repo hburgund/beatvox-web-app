@@ -160,7 +160,7 @@
         <button class="link terms" onclick={() => about.show('terms')}>Read the terms</button>
         <button class="btn primary send" disabled={!canSend} onclick={send}>SEND TO THE MAP</button>
         <p class="meta hint" aria-live="polite">
-          {#if !s.place}Choose a place first.{:else if !s.agreed}Tick the terms to send.{/if}
+          {#if !s.place}Choose a place first.{:else if !s.agreed}Check the terms to send.{/if}
         </p>
         <button class="link skip" onclick={toShare}>Skip the map, just save or share it →</button>
       </section>

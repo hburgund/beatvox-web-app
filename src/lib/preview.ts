@@ -25,15 +25,15 @@ export const SITE_CARD = '/og/beatvox.png';
 const SITE_PAGES: Record<string, { title: string; description: string }> = {
   '/': {
     title: 'BeatVox: putting rhythm into your voice',
-    description: 'Beats made from people’s voices, on a map of the world. Listen, wander, and make your own.',
+    description: 'Explore the globe filled with beats made from people’s voices. Then create and contribute your own.',
   },
   '/studio': {
     title: 'Make a BeatVox',
-    description: 'Say anything for 15 seconds and BeatVox cuts your voice into a beat. Play with it, share it, put it on the map.',
+    description: 'Record anything for up to 15 seconds and BeatVox slices it into a beat. Refine your creation, share it and add it to the map.',
   },
   '/about': {
     title: 'About BeatVox',
-    description: 'What BeatVox is, how it works, and who made it.',
+    description: 'What is BeatVox? How does it work and who made it?',
   },
 };
 
@@ -100,10 +100,8 @@ export async function previewFor(id: number, pageUrl: string, f: Fetch, api = 'h
   const name = mix.description.trim();
   return {
     // an untitled one is just "A BeatVox" (not "A BeatVox · a BeatVox")
-    title: name ? `${name} · ${revox ? 'a reVox' : 'a BeatVox'}` : revox ? 'A reVox on BeatVox' : 'A BeatVox',
-    description: revox
-      ? 'A beat made from someone else’s voice. Hear it, then make your own on BeatVox.'
-      : 'A beat made from one voice. Hear it, then make your own on BeatVox.',
+    title: name ? `${name} · ${revox ? 'a reVox' : 'a BeatVox'}` : revox ? 'A reVox of BeatVox' : 'A BeatVox',
+    description: 'A voice with rhythm added! Listen and make your own with BeatVox.',
     image,
     url: pageUrl,
   };
