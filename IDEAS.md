@@ -6,6 +6,8 @@ Things we may or may not do. When one becomes a plan, it moves to [BACKLOG.md](B
 
 - **Sing a topline or bassline over your loop.** Once the beat is made, record a second take while it plays: a melody, a bassline, a rap. It plays back in time over the beat and goes into the saved mix and share videos. Questions: headphones are needed so the beat doesn't bleed into the mic (or we accept the bleed as part of the sound); how to line the take up with the loop given the phone's recording delay; whether the take is chopped like the first voice or left whole.
 
+- **"Ask me a question!"** A button by RECORD that shows a playful question or prompt to answer, for anyone stuck on what to say. Each tap shows another. Examples of the kind: "What did you have for breakfast?", "Say your name like a game-show host", "Count to ten in every language you know", "What's the best sound in the world?". Prompts that draw out rhythm and varied sounds (counting, lists, sound effects, a catchphrase) make better slices. The question asked could be stored with the BeatVox, so its sheet on the map could show it.
+
 ## Look and feel
 
 - **Color themes that change on each visit.** A few playful palettes, picked at random when the site opens: the current one, a dark blue, a pink, maybe more. Each needs enough contrast to stay readable, and should carry through to the map, share pages and share videos. Possibly let people tap to try another, and keep the one a mix was made in so its share page looks the same.
