@@ -17,7 +17,7 @@
   import Check from '../lib/ui/Check.svelte';
   import { Player } from '../share/player.svelte';
   import { rw } from '../lib/rw';
-  import { loadMap, loadRecipe, passes, type MapData, type MapMix } from '../lib/mapData';
+  import { globeCenter, loadMap, loadRecipe, passes, type MapData, type MapMix } from '../lib/mapData';
   import { ringRows, type RingRow } from '../lib/shared';
   import { clockMarker } from '../lib/clockMarker';
   import { STUDIO_PATH } from '../lib/roundware';
@@ -172,7 +172,12 @@
     } else if (data.mixes.length > 1) {
       const b = new ml.LngLatBounds();
       data.mixes.forEach((x) => b.extend([x.longitude, x.latitude]));
-      map.fitBounds(b, { padding: 60, maxZoom: 5, duration: 0 });
+      if (b.getEast() - b.getWest() > 60 || b.getNorth() - b.getSouth() > 45) {
+        // spread across the world: the whole globe, turned to its busiest side
+        const c = globeCenter(data.mixes);
+        // (not tipped so far that a pole faces you)
+        map.jumpTo({ center: c ? [c.longitude, Math.max(-35, Math.min(45, c.latitude))] : [-30, 30], zoom: 1 });
+      } else map.fitBounds(b, { padding: 60, maxZoom: 5, duration: 0 });
     } else if (data.mixes.length) {
       map.jumpTo({ center: [data.mixes[0].longitude, data.mixes[0].latitude], zoom: 4 });
     }

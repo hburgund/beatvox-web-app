@@ -42,7 +42,9 @@
       pin = new ml.Marker({ element: dot });
       ready = true;
       map.on('click', (e) => {
-        place = { latitude: round(e.lngLat.lat), longitude: round(e.lngLat.lng) };
+        // the flat map repeats sideways: a tap on a copy is still -180..180
+        const p = e.lngLat.wrap();
+        place = { latitude: round(p.lat), longitude: round(p.lng) };
         query = '';
         note = '';
       });
@@ -79,7 +81,7 @@
   }
 
   function near() {
-    const c = map?.getCenter();
+    const c = map?.getCenter().wrap();
     // only once the map has been moved somewhere in particular
     return c && map!.getZoom() > 3 ? { latitude: c.lat, longitude: c.lng } : undefined;
   }

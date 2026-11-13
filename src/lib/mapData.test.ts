@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildFilters, passes, type MapMix } from './mapData';
+import { buildFilters, globeCenter, passes, wrapLng, type MapMix } from './mapData';
 
 const tags = [
   { id: 1124, value: 'beatvox-source', description: 'BeatVox Source Audio' },
@@ -48,5 +48,32 @@ describe('passes', () => {
     expect(passes(mix([1125]), groups, new Set([1128]))).toBe(false);
     expect(passes(mix([1128, 1129]), groups, new Set([1128, 1129]))).toBe(true);
     expect(passes(mix([1128]), groups, new Set([1128, 1129]))).toBe(false);
+  });
+});
+
+describe('wrapLng and globeCenter', () => {
+  it('brings a longitude from a repeated copy of the world back into range', () => {
+    expect(wrapLng(-321.7)).toBeCloseTo(38.3, 5);
+    expect(wrapLng(190)).toBeCloseTo(-170, 5);
+    expect(wrapLng(-75)).toBe(-75);
+  });
+  it('faces where the places cluster, not the middle of a box round them all', () => {
+    // mostly eastern US, one in Australia, one near the South Pole
+    const pts = [
+      { latitude: 39, longitude: -77 },
+      { latitude: 42, longitude: -71 },
+      { latitude: 35, longitude: -80 },
+      { latitude: 34, longitude: -118 },
+      { latitude: -33, longitude: 150 },
+      { latitude: -81, longitude: 38 },
+    ];
+    const c = globeCenter(pts)!;
+    expect(c.latitude).toBeGreaterThan(10);
+    expect(c.longitude).toBeGreaterThan(-120);
+    expect(c.longitude).toBeLessThan(-60);
+  });
+  it('is null for no places, or places spread evenly round the world', () => {
+    expect(globeCenter([])).toBeNull();
+    expect(globeCenter([{ latitude: 0, longitude: 0 }, { latitude: 0, longitude: 180 }])).toBeNull();
   });
 });

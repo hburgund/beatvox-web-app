@@ -105,6 +105,11 @@ async function getJson<T>(url: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+/** A longitude brought into -180..180 (some were saved from a repeated copy of the world). */
+export function wrapLng(lng: number): number {
+  return ((((lng + 180) % 360) + 360) % 360) - 180;
+}
+
 /**
  * The beat a link opens: the one it names, or for a link to the vox itself,
  * its first. A link to a beat that isn't live (deactivated) opens nothing,
@@ -165,7 +170,7 @@ export async function loadShared(id: number, api = RW_API, project = RW_PROJECT)
       title: a.description || 'A BeatVox',
       file: a.file!,
       latitude: a.latitude,
-      longitude: a.longitude,
+      longitude: wrapLng(a.longitude),
       createdAt: a.created_at,
       recipe: matched.get(a.id) ?? null,
     }))
@@ -176,7 +181,7 @@ export async function loadShared(id: number, api = RW_API, project = RW_PROJECT)
   return {
     status: 'live',
     mix,
-    vox: { id: root.id, file: root.file, latitude: root.latitude, longitude: root.longitude },
+    vox: { id: root.id, file: root.file, latitude: root.latitude, longitude: wrapLng(root.longitude) },
     family,
     revoxAllowed: instrument?.revoxAllowed === true,
     instrument,

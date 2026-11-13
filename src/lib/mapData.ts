@@ -5,7 +5,9 @@
 // project's "listen" tag groups like the Roundware web app's filter pane.
 // Recipes, needed for the clock markers and rings, load afterwards.
 import { RW_API, RW_PROJECT, RW_TAGS } from './roundware';
-import { matchRecipes, type ListedAsset } from './shared';
+import { matchRecipes, wrapLng, type ListedAsset } from './shared';
+
+export { wrapLng };
 import { parseRecipe, type Recipe } from './recipe';
 
 export interface MapMix {
@@ -112,6 +114,25 @@ export function passes(mix: MapMix, groups: FilterGroup[], chosen: Set<number>):
   });
 }
 
+/**
+ * Where the globe should face to show these places: the middle of where they
+ * cluster on the sphere (an average of their directions from the centre),
+ * so a spread across the world faces its busiest side rather than the middle
+ * of a box drawn around everything. Null when they spread evenly around.
+ */
+export function globeCenter(points: { latitude: number; longitude: number }[]): { latitude: number; longitude: number } | null {
+  let x = 0, y = 0, z = 0;
+  for (const p of points) {
+    const la = (p.latitude * Math.PI) / 180, lo = (p.longitude * Math.PI) / 180;
+    x += Math.cos(la) * Math.cos(lo);
+    y += Math.cos(la) * Math.sin(lo);
+    z += Math.sin(la);
+  }
+  const r = Math.hypot(x, y, z);
+  if (!points.length || r < points.length * 0.05) return null;
+  return { latitude: (Math.asin(z / r) * 180) / Math.PI, longitude: (Math.atan2(y, x) * 180) / Math.PI };
+}
+
 export async function loadMap(api = RW_API, project = RW_PROJECT): Promise<MapData> {
   const [audio, recipes, tags, groups] = await Promise.all([
     listAll(api, `project_id=${project}&media_type=audio`),
@@ -131,7 +152,7 @@ export async function loadMap(api = RW_API, project = RW_PROJECT): Promise<MapDa
       title: a.description || 'A BeatVox',
       file: a.file!,
       latitude: a.latitude,
-      longitude: a.longitude,
+      longitude: wrapLng(a.longitude),
       createdAt: a.created_at,
       revox: a.tag_ids.includes(RW_TAGS.revoxMix),
       tags: a.tag_ids,
