@@ -161,6 +161,17 @@
     };
   });
 
+  /**
+   * The zoom at which the globe is a little bigger than the map's shorter
+   * side, so it fills the view and crops a bit at the edges. (At zoom z the
+   * globe is 512·2^z/π px across.)
+   */
+  function globeZoom() {
+    const c = map!.getContainer();
+    const across = 1.1 * Math.min(c.clientWidth, c.clientHeight);
+    return Math.max(1, Math.log2((across * Math.PI) / 512));
+  }
+
   /** First view: the mix in ?m=, or every mix. */
   function place() {
     if (!map || !data || !ml || !ready) return;
@@ -178,7 +189,7 @@
         const mid = data.mixes.filter((x) => Math.abs(x.latitude) <= 60);
         const c = globeCenter(mid.length ? mid : data.mixes);
         // (not tipped so far that a pole faces you)
-        map.jumpTo({ center: c ? [c.longitude, Math.max(-35, Math.min(45, c.latitude))] : [-30, 30], zoom: 1 });
+        map.jumpTo({ center: c ? [c.longitude, Math.max(-35, Math.min(45, c.latitude))] : [-30, 30], zoom: globeZoom() });
       } else map.fitBounds(b, { padding: 60, maxZoom: 5, duration: 0 });
     } else if (data.mixes.length) {
       map.jumpTo({ center: [data.mixes[0].longitude, data.mixes[0].latitude], zoom: 4 });
