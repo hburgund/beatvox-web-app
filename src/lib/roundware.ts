@@ -12,6 +12,12 @@
 // Each device is a Roundware "participant": a device id kept in
 // localStorage, exchanged once per page load for a token that goes with
 // every request as X-Participant-Token.
+//
+// Usage is logged the way Roundware's own web app logs it, so the admin's
+// stats fill in: a session per page load (start_session), an event for each
+// moment that matters (POST /events/), and a listening-history row for every
+// asset heard (POST on start, PATCH with its duration on stop). Logging never
+// throws and never holds anything up. See `LogMode`.
 
 export const RW_API = 'https://api.roundware.app/api/3';
 export const RW_PROJECT = 103;
@@ -50,6 +56,24 @@ export const RW_TAGS = {
 export const RW_JSON = { mediaType: 'data', ext: 'json', type: 'application/json' } as const;
 
 const DEVICE_KEY = 'beatvox.rw.device';
+
+/**
+ * Where usage logging goes: `send` to Roundware, `console` to the browser
+ * console (the dev server, so testing doesn't fill the live stats), or `off`.
+ */
+export type LogMode = 'send' | 'console' | 'off';
+
+/** Extra fields on an event: `data` is free text, `tags` comma-separated ids. */
+export interface RwEventExtra {
+  data?: string;
+  tags?: string;
+}
+
+interface CallOpts {
+  /** let the request outlive the page (a listen's last duration, on leaving) */
+  keepalive?: boolean;
+  retried?: boolean;
+}
 
 export interface RwProject {
   id: number;
@@ -99,12 +123,67 @@ export class Roundware {
   private token: Promise<{ token: string; participant: number }> | null = null;
   private session: Promise<number> | null = null;
   private project: Promise<RwProject> | null = null;
+  private started = false;
+  /** listens under way: their row, once the server has made it */
+  private heard = new Map<number, Promise<{ id: number; t: number } | null>>();
 
   constructor(
     private newId: () => string,
     private api = RW_API,
     private projectId = RW_PROJECT,
+    private log: LogMode = 'off',
   ) {}
+
+  // ── Usage logging ─────────────────────────────────────────────────────
+
+  /** A page has opened: start the visit's session, and close any listen when the page goes. */
+  startVisit() {
+    if (this.started || this.log === 'off') return;
+    this.started = true;
+    this.event('start_session');
+    globalThis.addEventListener?.('pagehide', () => {
+      for (const asset of [...this.heard.keys()]) this.unhear(asset, true);
+    });
+  }
+
+  /** Log an event: `start_record`, `play_stream`, `share_map` and the like. */
+  event(type: string, extra: RwEventExtra = {}) {
+    if (this.log === 'off') return;
+    const body = { event_type: type, client_time: new Date().toISOString(), ...extra };
+    if (this.log === 'console') return console.info('[roundware] event', body);
+    this.visit()
+      .then((session_id) => this.call('POST', '/events/', { session_id, ...body }))
+      .catch(() => {});
+  }
+
+  /** An asset started playing. A second call before `unhear` is ignored. */
+  hear(asset: number) {
+    if (this.log === 'off' || this.heard.has(asset)) return;
+    const t = Date.now();
+    if (this.log === 'console') {
+      console.info('[roundware] listen', asset);
+      this.heard.set(asset, Promise.resolve({ id: 0, t }));
+      return;
+    }
+    const row = this.visit()
+      .then((session_id) => this.call<{ id: number }>('POST', '/listeninghistoryitems/', { session_id, asset_id: asset, started_at: new Date(t).toISOString() }))
+      .then(({ id }) => ({ id, t }))
+      .catch(() => null);
+    this.heard.set(asset, row);
+  }
+
+  /** It stopped: log how long it played (waiting for its row if that's still on the way). */
+  unhear(asset: number, leaving = false) {
+    const row = this.heard.get(asset);
+    if (!row) return;
+    this.heard.delete(asset);
+    void row.then((r) => {
+      if (!r) return;
+      const duration_sec = Math.round((Date.now() - r.t) / 100) / 10;
+      if (this.log === 'console') return console.info('[roundware] listened', asset, `${duration_sec} s`);
+      return this.call('PATCH', `/listeninghistoryitems/${r.id}/`, { duration_sec }, { keepalive: leaving }).catch(() => {});
+    });
+  }
 
   getProject(): Promise<RwProject> {
     this.project ??= this.call<RwProject>('GET', `/projects/${this.projectId}/`).catch((e) => {
@@ -180,10 +259,11 @@ export class Roundware {
     f.set('file', fields.file, fields.fileName);
     const asset = await this.call<RwAsset>('POST', '/assets/', f);
     if (!asset.file) throw new RoundwareError(`Roundware saved ${fields.fileName} without its file (asset ${asset.id}).`);
+    this.event('upload_asset', { data: `asset_id:${asset.id}` });
     return asset;
   }
 
-  private async call<T>(method: string, path: string, body?: object | FormData, retried = false): Promise<T> {
+  private async call<T>(method: string, path: string, body?: object | FormData, opts: CallOpts = {}): Promise<T> {
     const headers: Record<string, string> = {};
     if (path !== '/participants/' && this.token) headers['X-Participant-Token'] = (await this.token).token;
     let payload: BodyInit | undefined;
@@ -194,14 +274,14 @@ export class Roundware {
     }
     let res: Response;
     try {
-      res = await fetch(this.api + path, { method, headers, body: payload });
+      res = await fetch(this.api + path, { method, headers, body: payload, keepalive: opts.keepalive });
     } catch {
       throw new RoundwareError("Couldn't reach Roundware. Check your connection and try again.");
     }
-    if (res.status === 429 && !retried) {
+    if (res.status === 429 && !opts.retried && !opts.keepalive) {
       const wait = Math.min(10, Number(res.headers.get('Retry-After')) || 2);
       await new Promise((r) => setTimeout(r, wait * 1000));
-      return this.call(method, path, body, true);
+      return this.call(method, path, body, { ...opts, retried: true });
     }
     if (!res.ok) {
       let detail = res.statusText;

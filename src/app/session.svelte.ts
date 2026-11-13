@@ -13,8 +13,8 @@ import type { Slice } from '../lib/audio/slicer';
 import { cutInstrument, type Instrument } from '../lib/instrument';
 import { keepAwake } from '../lib/wakeLock';
 import { encodeWav } from '../lib/audio/wav';
-import { newId } from '../lib/instrument';
-import { Roundware, beatvoxShareUrl, RW_JSON, RW_TAGS, type RwPlace, type RwProject, type SendStep, type SentMix, type SentVoice } from '../lib/roundware';
+import { rw as sharedRw } from '../lib/rw';
+import { beatvoxShareUrl, RW_JSON, RW_TAGS, type RwPlace, type RwProject, type SendStep, type SentMix, type SentVoice } from '../lib/roundware';
 import { styleNamed, type Style } from '../lib/styles';
 import { ShuffleBag } from '../lib/shuffleBag';
 import { loadShared, ringRows } from '../lib/shared';
@@ -177,7 +177,7 @@ export class Session {
   private loopSrc: AudioBufferSourceNode | null = null;
 
   // send to Roundware
-  rw = new Roundware(newId);
+  rw = sharedRw;
   project = $state.raw<RwProject | null>(null);
   place = $state<RwPlace | null>(null);
   agreed = $state(false);
@@ -232,10 +232,12 @@ export class Session {
       return;
     }
     this.recording = true;
+    this.rw.event('start_record');
     this.status = '';
     this.recStart = ctx.currentTime;
     this.tick();
     const raw = await this.rec.finished;
+    this.rw.event('end_record', { data: `seconds: ${raw.duration.toFixed(1)}` });
     this.recording = false;
     this.rec = null;
     this.remaining = MAX_RECORD_SEC;
@@ -347,6 +349,7 @@ export class Session {
         of: { mixId: d.mix.id, title: d.mix.title },
         recipe: d.mix.recipe,
       });
+      this.rw.event('start_revox', { data: `asset_id:${d.mix.id}` });
     } catch {
       this.status = "Couldn't load that vox. Check your connection and try again.";
     } finally {
@@ -637,6 +640,7 @@ export class Session {
     const raw = this.raw ?? voice;
     const recordedAt = this.recordedAt;
     this.go();
+    this.rw.event('save_loop');
     const taped = this.engine!.capture(SHARE_LOOPS);
     this.share = 'waiting';
     this.shareProgress = 0;
@@ -762,6 +766,7 @@ export class Session {
     const a = document.createElement('a');
     a.href = this.shareResult[kind].url;
     a.download = this.shareFileName(kind);
+    this.rw.event('save_file', { data: kind === 'full' ? 'mp3' : 'mp3 loop' });
     document.body.append(a);
     a.click();
     a.remove();
@@ -806,6 +811,7 @@ export class Session {
   async saveGif() {
     try {
       download(this.gifFile(await this.cardGif()));
+      this.rw.event('save_file', { data: 'gif' });
     } catch {
       this.shareStatus = "Couldn't save the GIF. Try again.";
     }
@@ -908,8 +914,13 @@ export class Session {
       () => false,
     );
     try {
-      if (this.canShareVideo()) await navigator.share({ files: [file], title: this.shareTitle || 'My BeatVox', text: caption });
-      else download(file);
+      if (this.canShareVideo()) {
+        await navigator.share({ files: [file], title: this.shareTitle || 'My BeatVox', text: caption });
+        this.rw.event('share_video', { data: `video ${this.videoShape}` });
+      } else {
+        download(file);
+        this.rw.event('save_file', { data: `video ${this.videoShape}` });
+      }
       this.captionCopied = (await copied) ?? false;
     } catch (e) {
       this.captionCopied = (await copied) ?? false;
@@ -920,7 +931,9 @@ export class Session {
   /** Save the picked video to this device. */
   saveVideo() {
     const file = this.videoFile(this.videoShape);
-    if (file) download(file);
+    if (!file) return;
+    download(file);
+    this.rw.event('save_file', { data: `video ${this.videoShape}` });
   }
 
   /** After sending: a new beat with the same voice (its voice isn't sent again). */
@@ -938,9 +951,11 @@ export class Session {
     try {
       if (typeof navigator.share === 'function') {
         await navigator.share({ url, title });
+        this.rw.event('share_map', { data: `url: ${url} (studio, share sheet)` });
         return 'shared';
       }
       await navigator.clipboard.writeText(url);
+      this.rw.event('share_map', { data: `url: ${url} (studio, copied)` });
       return 'copied';
     } catch (e) {
       return (e as Error).name === 'AbortError' ? 'shared' : 'failed';
@@ -1069,6 +1084,7 @@ export class Session {
       }
       this.send = 'sent';
       this.sendStep = null;
+      this.rw.event('send_to_map', { data: `asset_id:${m.mixAsset}${this.revoxOf ? ` revox of ${this.revoxOf.mixId}` : ''}` });
     } catch (e) {
       this.send = 'idle';
       this.sendError = (e as Error).message;

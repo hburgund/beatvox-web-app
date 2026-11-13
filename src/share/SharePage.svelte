@@ -10,6 +10,7 @@
   import { Player } from './player.svelte';
   import { loadShared, ringRows, type Shared, type SharedMix } from '../lib/shared';
   import { MAP_PATH, STUDIO_PATH, beatvoxShareUrl, mapUrl, revoxUrl } from '../lib/roundware';
+  import { rw } from '../lib/rw';
 
   let { id }: { id: number } = $props();
 
@@ -60,13 +61,13 @@
   const bpmOf = (m: SharedMix) => m.recipe?.bpm ?? 120;
 
   function playMain() {
-    if (live) void p.toggle('main', live.mix.file, { loop: true, bpm: bpmOf(live.mix) });
+    if (live) void p.toggle('main', live.mix.file, { loop: true, bpm: bpmOf(live.mix), asset: live.mix.id });
   }
   function playVox() {
-    if (live) void vp.toggle('vox', live.vox.file, { loop: false });
+    if (live) void vp.toggle('vox', live.vox.file, { loop: false, asset: live.vox.id });
   }
   function playFamily(m: SharedMix) {
-    void p.toggle(m.id === live?.mix.id ? 'main' : `mix${m.id}`, m.file, { loop: true, bpm: bpmOf(m) });
+    void p.toggle(m.id === live?.mix.id ? 'main' : `mix${m.id}`, m.file, { loop: true, bpm: bpmOf(m), asset: m.id });
   }
 
   async function share() {
@@ -76,9 +77,11 @@
     try {
       if (navigator.share) {
         await navigator.share({ title: live.mix.title, text, url });
+        rw.event('share_map', { data: `url: ${url} (share page, share sheet)` });
         return;
       }
       await navigator.clipboard.writeText(url);
+      rw.event('share_map', { data: `url: ${url} (share page, copied)` });
       note = 'Link copied.';
     } catch (e) {
       if ((e as Error).name !== 'AbortError') note = url;

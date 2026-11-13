@@ -1,7 +1,9 @@
 // Plays one thing at a time on the share page: the beat's loop (gapless,
 // round and round), the source vox once, or another beat from the family.
 // While a loop plays, `step` follows it from the audio clock, so the ring's
-// wedge stays on the beat.
+// wedge stays on the beat. Each play of an asset is a Roundware listen.
+
+import { rw } from '../lib/rw';
 
 export interface PlayOpts {
   loop: boolean;
@@ -12,6 +14,8 @@ export interface PlayOpts {
   fadeIn?: number;
   /** a one-shot: seconds to fade out before its end */
   fadeOut?: number;
+  /** its Roundware asset, logged as a listen while it plays */
+  asset?: number;
 }
 
 export class Player {
@@ -28,6 +32,8 @@ export class Player {
   private src: AudioBufferSourceNode | null = null;
   private gain: GainNode | null = null;
   private raf = 0;
+  /** the asset being heard, for the listen log */
+  private asset: number | null = null;
 
   private audio() {
     this.ctx ??= new AudioContext();
@@ -100,6 +106,10 @@ export class Player {
     this.src = src;
     this.gain = gain;
     this.playing = key;
+    if (opts.asset !== undefined) {
+      this.asset = opts.asset;
+      rw.hear(opts.asset);
+    }
     if (opts.bpm) {
       const barLen = 240 / opts.bpm;
       const bars = Math.max(1, Math.round(buf.duration / barLen));
@@ -135,5 +145,7 @@ export class Player {
     this.playing = null;
     this.loading = null;
     this.step = -1;
+    if (this.asset !== null) rw.unhear(this.asset);
+    this.asset = null;
   }
 }

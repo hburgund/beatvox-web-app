@@ -16,6 +16,7 @@
   import { about } from '../about/aboutState.svelte';
   import Check from '../lib/ui/Check.svelte';
   import { Player } from '../share/player.svelte';
+  import { rw } from '../lib/rw';
   import { loadMap, loadRecipe, passes, type MapData, type MapMix } from '../lib/mapData';
   import { ringRows, type RingRow } from '../lib/shared';
   import { clockMarker } from '../lib/clockMarker';
@@ -271,7 +272,7 @@
     const r = await loadRecipe(data?.recipeUrls.get(m.id));
     const bpm = r?.bpm ?? 120;
     // wandering: once through, faded in and out, then a pause, then the next
-    const opts = wandering ? { loop: false, bpm, fadeIn: FADE, fadeOut: FADE, onend: () => later(next, GAP) } : { loop: true, bpm };
+    const opts = wandering ? { loop: false, bpm, fadeIn: FADE, fadeOut: FADE, onend: () => later(next, GAP), asset: m.id } : { loop: true, bpm, asset: m.id };
     void player.play(`mix${m.id}`, m.file, opts);
   }
 
@@ -300,6 +301,7 @@
   }
 
   function stopWander() {
+    if (wandering) rw.event('pause_stream', { data: 'wander' });
     wandering = false;
     clearTimeout(pending);
   }
@@ -328,7 +330,7 @@
     );
     const m = pool.find((x) => x.id === id);
     if (!m) {
-      wandering = false;
+      stopWander();
       return;
     }
     selected = m;
@@ -343,6 +345,7 @@
       return;
     }
     wandering = true;
+    rw.event('play_stream', { data: `wander ${scope === 'vox' ? 'this vox' : 'everywhere'}` });
     if (selected) bag.mark(selected.id);
     if (selected && player.playing !== `mix${selected.id}`) void playMix(selected);
     else if (!selected) next();
@@ -355,11 +358,17 @@
     if (!wandering) player.stop();
   }
 
+  /** the filter tags picked; logged as Roundware's filter_stream */
+  function setChosen(s: Set<number>) {
+    chosen = s;
+    rw.event('filter_stream', { tags: [...s].join(',') });
+  }
+
   function toggleTag(tagId: number, on: boolean) {
     const s = new Set(chosen);
     if (on) s.add(tagId);
     else s.delete(tagId);
-    chosen = s;
+    setChosen(s);
     if (selected && data && !passes(selected, data.filters, s)) close();
   }
 </script>
@@ -468,7 +477,7 @@
   {/each}
   <p class="f-note">Nothing ticked in a group shows all of it.</p>
   <div class="f-foot">
-    <button class="link" onclick={() => ((chosen = new Set()), undefined)} disabled={!chosenCount}>clear</button>
+    <button class="link" onclick={() => setChosen(new Set())} disabled={!chosenCount}>clear</button>
     <button class="btn primary" onclick={() => filterDlg?.close()}>SHOW {visible.length}</button>
   </div>
 </dialog>
