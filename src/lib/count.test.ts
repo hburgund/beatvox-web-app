@@ -59,16 +59,16 @@ describe('events', () => {
 describe('sendHits', () => {
   it('posts to the site with the key, and does nothing unconfigured', async () => {
     const f = vi.fn(async () => new Response(null, { status: 202 }));
-    expect(await sendHits({ site: 'roundware', token: 't' }, [{ path: '/' }], f)).toBe(true);
+    expect(await sendHits({ site: 'roundware', token: 't' }, [{ path: '/' }], f)).toBe('sent');
     expect(f).toHaveBeenCalledWith('https://roundware.goatcounter.com/api/v0/count', expect.objectContaining({ method: 'POST' }));
     const init = (f.mock.calls[0] as unknown as [string, RequestInit])[1];
     expect((init.headers as Record<string, string>).authorization).toBe('Bearer t');
     expect(JSON.parse(init.body as string)).toEqual({ no_sessions: true, hits: [{ path: '/' }] });
-    expect(await sendHits({ site: 'roundware' }, [{ path: '/' }], f)).toBe(false);
+    expect(await sendHits({ site: 'roundware' }, [{ path: '/' }], f)).toBe('off');
     expect(f).toHaveBeenCalledTimes(1);
   });
   it('never throws', async () => {
-    expect(await sendHits({ site: 's', token: 't' }, [{ path: '/' }], async () => { throw new Error('down'); })).toBe(false);
-    expect(await sendHits({ site: 's', token: 't' }, [{ path: '/' }], async () => new Response(null, { status: 401 }))).toBe(false);
+    expect(await sendHits({ site: 's', token: 't' }, [{ path: '/' }], async () => { throw new Error('down'); })).toBe('error down');
+    expect(await sendHits({ site: 's', token: 't' }, [{ path: '/' }], async () => new Response('{"error":"no"}', { status: 401 }))).toBe('http 401 {"error":"no"}');
   });
 });

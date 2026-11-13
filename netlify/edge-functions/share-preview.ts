@@ -22,7 +22,9 @@ function countView(req: Request, context: Context) {
   try {
     const hit = pageHit(req, { ip: context.ip, country: context.geo?.country?.code });
     if (!hit) return;
-    const sent = sendHits({ site: Netlify.env.get('GOATCOUNTER_SITE'), token: Netlify.env.get('GOATCOUNTER_TOKEN') }, [hit]);
+    const sent = sendHits({ site: Netlify.env.get('GOATCOUNTER_SITE'), token: Netlify.env.get('GOATCOUNTER_TOKEN') }, [hit]).then((r) => {
+      if (r !== 'sent') console.log(`goatcounter page view ${hit.path}: ${r}`);
+    });
     if (context.waitUntil) context.waitUntil(sent);
     else void sent;
   } catch {

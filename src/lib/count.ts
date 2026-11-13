@@ -133,22 +133,28 @@ export interface GoatConfig {
   token?: string;
 }
 
-/** Send hits to GoatCounter; never throws. False if not sent. */
+/**
+ * Send hits to GoatCounter; never throws. What happened: `sent`, `off`
+ * (not configured, or nothing to send), `http <status>` or `error <message>`,
+ * for the edge functions' logs.
+ */
 export async function sendHits(
   cfg: GoatConfig,
   hits: Hit[],
   fetcher: (url: string, init: RequestInit) => Promise<Response> = fetch,
-): Promise<boolean> {
-  if (!cfg.site || !cfg.token || !hits.length) return false;
+): Promise<string> {
+  if (!cfg.site || !cfg.token || !hits.length) return 'off';
   try {
-    const res = await fetcher(`https://${cfg.site}.goatcounter.com/api/v0/count`, {
+    const res = await fetcher(`https://${cfg.site.trim()}.goatcounter.com/api/v0/count`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${cfg.token}` },
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${cfg.token.trim()}` },
       body: JSON.stringify({ no_sessions: true, hits }),
     });
-    return res.ok;
-  } catch {
-    return false;
+    if (res.ok) return 'sent';
+    const why = (await res.text().catch(() => '')).slice(0, 200).replace(/\s+/g, ' ');
+    return `http ${res.status}${why ? ` ${why}` : ''}`;
+  } catch (e) {
+    return `error ${e instanceof Error ? e.message : String(e)}`;
   }
 }
 

@@ -9,7 +9,6 @@ declare const Netlify: { env: { get(key: string): string | undefined } };
 interface Context {
   ip?: string;
   geo?: { country?: { code?: string } };
-  waitUntil?: (p: Promise<unknown>) => void;
 }
 
 /** From one of our pages: same origin, by the browser's word or the Origin header. */
@@ -27,18 +26,19 @@ function ours(req: Request): boolean {
 export default async (req: Request, context: Context) => {
   if (req.method !== 'POST') return new Response(null, { status: 405, headers: { allow: 'POST' } });
   if (!ours(req)) return new Response(null, { status: 403 });
+  // what happened, as a header (never the key): sent, skipped, off, http <status>...
+  let outcome = 'skipped';
   try {
     const name = (await req.text()).trim().slice(0, 64);
     const hit = eventHit(req, name, { ip: context.ip, country: context.geo?.country?.code });
     if (hit) {
-      const sent = sendHits({ site: Netlify.env.get('GOATCOUNTER_SITE'), token: Netlify.env.get('GOATCOUNTER_TOKEN') }, [hit]);
-      if (context.waitUntil) context.waitUntil(sent);
-      else await sent;
+      outcome = await sendHits({ site: Netlify.env.get('GOATCOUNTER_SITE'), token: Netlify.env.get('GOATCOUNTER_TOKEN') }, [hit]);
+      if (outcome !== 'sent') console.log(`goatcounter event ${name}: ${outcome}`);
     }
-  } catch {
-    /* nothing to tell the page */
+  } catch (e) {
+    outcome = `error ${e instanceof Error ? e.message : String(e)}`;
   }
-  return new Response(null, { status: 204 });
+  return new Response(null, { status: 204, headers: { 'x-count': outcome.slice(0, 200).replace(/[^\x20-\x7e]/g, '') } });
 };
 
 export const config = { path: '/api/count' };
