@@ -3,9 +3,10 @@
   then folding sections. Plain markup, so the words are easy to rewrite.
   Each section's id (about-<name>) is what /about#<name> and the in-app
   links open; keep them in step with SECTIONS in aboutState.svelte.ts.
-  <mark class="todo"> marks text that still needs filling in.
 -->
 <script lang="ts">
+  import booth from './beatvox-2008-newport.jpg';
+
   const steps = [
     ['Record', 'Say anything for up to 15 seconds: your name, a word, a beatbox.'],
     ['Slice', 'BeatVox cuts it into short slices, like the pads of a drum machine.'],
@@ -35,24 +36,28 @@
 
   <section id="about-since" class="card box">
     <h3 class="label">SINCE 2008</h3>
+    <figure>
+      <img src={booth} width="360" height="240" alt="Halsey Burgund beside the BeatVox booth, its plywood walls covered in visitors’ writing, at the Newport Folk Festival in 2008" />
+      <figcaption>The BeatVox booth, Newport Folk Festival, 2008</figcaption>
+    </figure>
     <p>
-      BeatVox began in 2008 as an installation built in Max/MSP, shown at <mark class="todo">[WHERE IT WAS SHOWN]</mark>. Visitors stepped up to a
+      BeatVox began in 2008 as an installation built in Max/MSP, shown at the
+      <a href="https://newportfolk.org/" target="_blank" rel="noopener">Newport Folk Festival</a>. Visitors stepped up to a
       microphone and heard their voices come back as beats. This is version 2, rebuilt in 2026 for phones and the web, with a map so the beats can
       travel.
     </p>
   </section>
 
   <section class="card box maker">
-    <div class="photo" role="img" aria-label="Photo of Halsey Burgund"><mark class="todo">PHOTO</mark></div>
-    <div>
-      <h3 class="label">MADE BY</h3>
-      <p class="name">Halsey Burgund</p>
-      <p>
-        <mark class="todo">[YOUR BIO, 2–3 sentences]</mark> Sound artist and technologist. Halsey made the first BeatVox in 2008, and Roundware, the platform
-        it runs on.
-      </p>
-      <a href="https://halseyburgund.com" target="_blank" rel="noopener">halseyburgund.com →</a>
-    </div>
+    <h3 class="label">MADE BY</h3>
+    <p class="name">Halsey Burgund</p>
+    <p>
+      Halsey Burgund is an artist and Emmy-winning interactive director whose work focuses on the combination of modern technologies - from mobile phones
+      to artificial intelligence - with fundamentally human “technologies”, primarily language, music and the spoken voice. He is the creator of
+      <a href="https://roundware.org" target="_blank" rel="noopener">Roundware</a>, the open source contributory audio AR platform, which has been used
+      to create art and educational installations for cultural organizations internationally. More at
+      <a href="https://halseyburgund.com" target="_blank" rel="noopener">halseyburgund.com</a>!
+    </p>
   </section>
 
   <div class="folds">
@@ -100,7 +105,17 @@
         <dt>It doesn’t ask for:</dt>
         <dd>your name, email or an account.</dd>
         <dt>Where it’s kept:</dt>
-        <dd>on Roundware, the platform BeatVox runs on. <mark class="todo">[CHECK: hosting location and any analytics]</mark></dd>
+        <dd>
+          on Roundware, the platform BeatVox runs on, on DigitalOcean servers in the US.
+          <a href="https://roundware.app/legal/privacy/" target="_blank" rel="noopener">Roundware’s privacy policy</a> explains how it’s kept and how to have
+          it removed.
+        </dd>
+        <dt>Visits are counted anonymously.</dt>
+        <dd>
+          BeatVox counts page views and moments like sending to the map with GoatCounter, from its own server: no cookies, no tracking scripts, nothing that
+          identifies you. Roundware also notes what gets played, so the project knows which BeatVoxes are heard. Your browser keeps a random ID for this and
+          remembers your likes; neither is tied to your name.
+        </dd>
       </dl>
     </details>
 
@@ -110,7 +125,10 @@
         <li>BeatVox is an art project, offered as is, with no warranty.</li>
         <li>It may change, pause or close. Beats on the map may not be kept forever.</li>
         <li>The project may remove anything, for any reason, including on request.</li>
-        <li>Sending a BeatVox means you agree to these terms and to Roundware’s. <mark class="todo">[LINK: Roundware terms]</mark></li>
+        <li>
+          Sending a BeatVox means you agree to these terms. Roundware stores it for the project under
+          <a href="https://roundware.app/legal/privacy/" target="_blank" rel="noopener">Roundware’s privacy policy</a>.
+        </li>
       </ul>
     </details>
 
@@ -204,17 +222,31 @@
     align-items: center;
     justify-content: center;
   }
-  .maker {
-    display: flex;
-    gap: 14px;
-    align-items: flex-start;
+  figure {
+    margin: 0 0 12px;
+  }
+  figure img {
+    display: block;
+    width: 100%;
+    max-width: 480px; /* a small 2008 photo: past this it goes soft */
+    height: auto;
+    box-sizing: border-box;
+    border: 2px solid var(--ink);
+    border-radius: 6px;
+  }
+  figcaption {
+    margin-top: 6px;
+    font: 12px var(--mono);
+    color: var(--muted);
   }
   .maker .name {
     font: 700 20px var(--mono);
     color: var(--ink);
     margin: -4px 0 6px;
   }
-  .maker a,
+  .about p a,
+  .about dd a,
+  .about li a,
   .mail {
     font-weight: 700;
     color: var(--ink);
@@ -222,23 +254,6 @@
   .credits a {
     font: 700 14px var(--mono);
     color: var(--ink);
-  }
-  .maker a {
-    display: inline-block;
-    margin-top: 8px;
-  }
-  .photo {
-    width: 76px;
-    height: 76px;
-    flex: none;
-    box-sizing: border-box;
-    border: 2px solid var(--ink);
-    border-radius: 50%;
-    background: repeating-linear-gradient(45deg, var(--soft) 0 2px, var(--card) 2px 9px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font: 700 10px var(--mono);
   }
   details {
     border-top: 2px solid var(--ink);
@@ -322,11 +337,5 @@
   .small {
     font: 12px var(--mono);
     color: var(--muted);
-  }
-  /* text still to fill in */
-  .todo {
-    background: var(--now);
-    color: var(--ink);
-    padding: 0 2px;
   }
 </style>
