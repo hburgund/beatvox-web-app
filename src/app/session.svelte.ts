@@ -286,8 +286,8 @@ export class Session {
    */
   private setVoice(raw: AudioBuffer, revox?: { instrument: Instrument; sent: SentVoice; of: { mixId: number; title: string }; recipe: Recipe | null }) {
     const ctx = this.audio();
-    const voice = prepareVoice(ctx, raw);
-    const mono = voice.getChannelData(0);
+    // mono (peak-normalized) to slice and draw; voice (leveled) to play
+    const { voice, mono } = prepareVoice(ctx, raw);
     const instrument = revox?.instrument ?? cutInstrument(mono, voice.sampleRate);
     this.raw = raw;
     this.recordedAt = new Date();

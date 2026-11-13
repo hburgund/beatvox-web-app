@@ -16,7 +16,8 @@
 
 <section class="card beat" aria-label="Beat">
   <div class="head">
-    <span class="label">BEAT</span>
+    <!-- BEAT is also the way back to the grid from MIX, PATTERN or PAN -->
+    <button class="label home" aria-label="Beat grid" aria-pressed={view === 'boxes'} onclick={() => (view = 'boxes')}>BEAT</button>
     <button class="btn mix" class:on={view === 'mix'} aria-pressed={view === 'mix'} disabled={!ready} onclick={() => flip('mix')}>MIX</button>
     <button class="btn mix" class:on={view === 'pattern'} aria-pressed={view === 'pattern'} disabled={!ready} onclick={() => flip('pattern')}>PATTERN</button>
     <button class="btn mix last" class:on={view === 'pan'} aria-pressed={view === 'pan'} disabled={!ready} onclick={() => flip('pan')}>PAN</button>
@@ -102,6 +103,14 @@
 </section>
 
 <style>
+  /* BEAT looks like the card's other labels, but takes you back to the grid */
+  .home {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+  }
   .beat {
     display: flex;
     flex-direction: column;
