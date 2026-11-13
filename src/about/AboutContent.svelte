@@ -17,7 +17,7 @@
 
 <div class="about">
   <section class="intro">
-    <h2 id="about-title">One voice,<br />many beats.</h2>
+    <h2 id="about-title">Putting rhythm<br />into your voice.</h2>
     <p>
       BeatVox turns a few seconds of your voice into a beat. Record anything, and it cuts the sound into slices and plays them as an eight-row drum
       machine that keeps changing. Put your beat on the map with everyone else’s, and let others make new beats from your voice.

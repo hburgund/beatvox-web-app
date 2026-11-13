@@ -301,8 +301,8 @@ Notes on the mapping:
 |---|---|
 | **0. Spike** ✅ (iPhone 16e tested; Android not yet) | Record on iPhone, Android and a laptop. **Slicer test page** comparing Syllables / Attacks / Mixed on the 2008 recordings. Play an 8×16 beat with basic reverb. |
 | **1. Faithful port** ✅ | v1.93 engine + FX module + Simple mode; maxkit UI in phone and laptop layouts; keep the screen awake while playing (Screen Wake Lock), since mobile browsers pause audio when the screen locks. Done when it sounds like `and_justice.mp3`. |
-| **2. Share** (capture, render, MP3, save/share and Roundware upload built) | Loop capture, offline render, MP3, Roundware v3 submit with location, built-in save/share. |
-| **3. Advanced + reVox** | Advanced mode, grid editing, slice view, reVox browse / remix / credit. |
+| **2. Share** ✅ (live at beatvox.app, Nov 2026, with the map and share pages) | Loop capture, offline render, MP3, Roundware v3 submit with location, built-in save/share. |
+| **3. Advanced + reVox** (mostly done: grid editing, MIX / PATTERN / PAN views, undo, reVox from share pages with credit; no separate Advanced mode) | Advanced mode, grid editing, slice view, reVox browse / remix / credit. |
 | **4. Improvements** | Craziness, swing, XY pad, word slicing, etc. |
 | Later | Kiosk mode, performance mode (quad, MIDI). |
 
@@ -321,10 +321,10 @@ Notes on the mapping:
    - Does the text-attachment type accept `.json` files?
    - Could a project keep uploaded audio as-is (no FFmpeg conversion) for the `beatvox-source` voice?
    - The participant docs mention people who "made a loop": is there a v3 loop feature BeatVox should use?
-   - Should a BeatVox share page live in this app, or use your Roundware app's `/share/<id>`?
+   - *(settled: share pages live in this app, at `/b/<id>`)*
 2. **Slicing:** settled: Mixed is the default, all three methods stay as options. Still open: is the AGPL license on Essentia.js a problem (is BeatVox going to be open source anyway)?
 3. **Waves settings:** do you remember roughly what the EQ and RVox did? Otherwise I'll tune by ear.
 4. **Grid editing in 1.93:** could visitors toggle cells, or was the grid display only?
 5. *(settled: Svelte; BeatVox talks to the v3 API directly and doesn't use the React Roundware app)*
-6. **reVox defaults:** off by default with an opt-in checkbox. Is that right?
-7. **Hosting / domain:** any preference?
+6. *(settled: reVox is off by default, with an opt-in checkbox)*
+7. *(settled: Netlify, at beatvox.app)*

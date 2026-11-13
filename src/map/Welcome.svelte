@@ -21,7 +21,7 @@
 
 <section class="welcome" aria-labelledby="welcome-title">
   <div class="top">
-    <h2 id="welcome-title">One voice,<br />many beats.</h2>
+    <h2 id="welcome-title">Putting rhythm<br />into your voice.</h2>
     <button class="btn close" aria-label="Close" onclick={onclose}>
       <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="2.4" /></svg>
     </button>
