@@ -17,6 +17,10 @@ Ideas and requests not yet scheduled. See [PROPOSAL.md](PROPOSAL.md) for the pla
 
 ## Sharing, reVox and storage
 
+- [x] **Taking things off the map** (Nov 2026). In the Roundware admin, deactivate (un-submit) a contribution:
+  - **One beat:** deactivate its mix (the audio tagged mix or reVox mix). It leaves the map, Wander and its voice's other share pages, and its own link (`/b/<id>`) shows NOT FOUND with no link preview.
+  - **A voice and everything made from it:** deactivate the voice (the source vox). Every beat made from it leaves the map, including other people's reVoxes, and their links show WAITING FOR PROCESSING.
+  - The recipe and instrument files never show on their own, so they can stay as they are. Reactivating brings things back.
 - [x] **Instruments and recipes are separate.** An instrument (`src/lib/instrument.ts`) is a voice and its exact slices with drum-role scores; a recipe is how it's played. A beat names its instrument; on another instrument it picks slices by role. A reVox is someone else's instrument played with your own beats.
 - [x] **BeatVox's own map** (Nov 2026), the home page: only mixes, each at its maker's place, joined by lines from the first mix of the same vox (the constellation); dots zoomed out, clock markers zoomed in; details in a sheet or side panel; filters from the project's listen tags plus reVox permission; wander (random next mix, from anywhere or the same vox, map flies to it).
 - [x] **Riso globe** (Nov 2026): every map is MapLibre with BeatVox's own riso style on OpenFreeMap's OpenStreetMap vector tiles; the home map is a globe.

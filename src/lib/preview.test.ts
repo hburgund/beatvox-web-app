@@ -29,6 +29,14 @@ const routes = {
 };
 
 describe('previewFor', () => {
+  it('gives a deactivated beat no preview, even on its own link', async () => {
+    const off = { results: list.results.map((a) => (a.id === 21 ? { ...a, submitted: false } : a)) };
+    const r = { ...routes, [`${API}/assets/?project_id=103&parent_asset_id=10`]: off };
+    expect(await previewFor(21, 'https://bv.test/b/21', fakeFetch(r), API)).toBeNull();
+    // its siblings are unaffected
+    expect((await previewFor(11, 'https://bv.test/b/11', fakeFetch(r), API))?.title).toContain('Morning Kettle');
+  });
+
   it('names the beat and finds its card through its recipe', async () => {
     const m = await previewFor(11, 'https://bv.test/b/11', fakeFetch(routes), API);
     expect(m?.title).toBe('Morning Kettle · a BeatVox');

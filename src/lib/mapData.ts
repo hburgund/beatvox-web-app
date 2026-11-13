@@ -120,10 +120,11 @@ export async function loadMap(api = RW_API, project = RW_PROJECT): Promise<MapDa
     getJson<RwUiGroup[]>(`${api}/uigroups/?project_id=${project}`).catch(() => [] as RwUiGroup[]),
   ]);
   const voxFiles = new Map<number, string>();
-  for (const a of audio) if (a.file && a.tag_ids.includes(RW_TAGS.source)) voxFiles.set(a.id, a.file);
+  for (const a of audio) if (a.file && a.submitted && a.tag_ids.includes(RW_TAGS.source)) voxFiles.set(a.id, a.file);
 
   const mixes: MapMix[] = audio
-    .filter((a) => a.file && a.submitted && a.parent_asset_id !== null && a.tag_ids.some((t) => MIX_TAGS.includes(t)))
+    // live beats of live voices: deactivating a voice takes every beat made from it off the map
+    .filter((a) => a.file && a.submitted && a.parent_asset_id !== null && voxFiles.has(a.parent_asset_id) && a.tag_ids.some((t) => MIX_TAGS.includes(t)))
     .map((a) => ({
       id: a.id,
       voxId: a.parent_asset_id!,

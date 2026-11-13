@@ -64,6 +64,7 @@ interface Listed {
   description: string;
   file: string | null;
   created_at: string;
+  submitted?: boolean;
 }
 
 type Fetch = (url: string) => Promise<Response>;
@@ -79,9 +80,11 @@ export async function previewFor(id: number, pageUrl: string, f: Fetch, api = 'h
   if (!root || root.status !== 'live') return null;
   const list = await json<{ results: Listed[] }>(f, `${api}/assets/?project_id=${project}&parent_asset_id=${root.id}&paginate=true&page_size=200`);
   const kids = list?.results ?? [];
-  const mixes = kids.filter((a) => a.media_type === 'audio' && a.tag_ids.some((t) => t === MIX || t === REVOX_MIX));
-  // a link to the vox itself shows its first beat
-  const mix = mixes.find((m) => m.id === id) ?? [...mixes].sort((a, b) => a.created_at.localeCompare(b.created_at))[0];
+  // live beats only: a deactivated one gets no preview, even on its own link
+  const mixes = kids.filter((a) => a.media_type === 'audio' && a.submitted !== false && a.tag_ids.some((t) => t === MIX || t === REVOX_MIX));
+  // a link to the vox itself shows its first beat; a link to a beat that isn't live, nothing
+  const first = [...mixes].sort((a, b) => a.created_at.localeCompare(b.created_at))[0];
+  const mix = mixes.find((m) => m.id === id) ?? (id === root.id ? first : undefined);
   if (!mix) return null;
   const revox = mix.tag_ids.includes(REVOX_MIX);
   // its recipe names it (mixAssetId) and the card (cardUrl); newest first, a few at most

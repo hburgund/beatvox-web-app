@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { matchRecipes, ringRows } from './shared';
+import { chooseMix, matchRecipes, ringRows } from './shared';
 import type { Recipe } from './recipe';
 
 const r = (name: string, mixAssetId?: number) => ({ name, mixAssetId });
@@ -75,4 +75,12 @@ describe('share links', () => {
     expect(sharePageId('/')).toBeNull();
     expect(sharePageId('/b/abc')).toBeNull();
   });
+});
+
+describe('chooseMix', () => {
+  const family = [{ id: 11 }, { id: 21 }];
+  it('opens the beat a link names', () => expect(chooseMix(family, 21, 10)?.id).toBe(21));
+  it('opens the first beat for a link to the vox', () => expect(chooseMix(family, 10, 10)?.id).toBe(11));
+  it("opens nothing for a beat that isn't live, not a sibling", () => expect(chooseMix(family, 31, 10)).toBeNull());
+  it('opens nothing when the vox has no live beats', () => expect(chooseMix([], 10, 10)).toBeNull());
 });

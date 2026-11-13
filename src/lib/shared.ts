@@ -105,6 +105,15 @@ async function getJson<T>(url: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+/**
+ * The beat a link opens: the one it names, or for a link to the vox itself,
+ * its first. A link to a beat that isn't live (deactivated) opens nothing,
+ * not some other beat of the same voice.
+ */
+export function chooseMix<T extends { id: number }>(family: T[], id: number, voxId: number): T | null {
+  return family.find((m) => m.id === id) ?? (id === voxId ? (family[0] ?? null) : null);
+}
+
 export async function loadShared(id: number, api = RW_API, project = RW_PROJECT): Promise<Shared> {
   let root: { status: string; id: number; file: string; latitude: number; longitude: number };
   try {
@@ -124,7 +133,8 @@ export async function loadShared(id: number, api = RW_API, project = RW_PROJECT)
     next = page.next;
   }
   const mixAssets = kids.filter(
-    (a) => a.media_type === 'audio' && a.file && a.tag_ids.some((t) => MIX_TAGS.includes(t)) && (a.submitted || a.id === id),
+    // only live beats: a deactivated one is gone, even from its own link
+    (a) => a.media_type === 'audio' && a.file && a.tag_ids.some((t) => MIX_TAGS.includes(t)) && a.submitted,
   );
   const recipeAssets = kids.filter((a) => a.media_type === 'data' && a.file && a.tag_ids.includes(RW_TAGS.recipe));
   const instrumentAsset = kids.find((a) => a.media_type === 'data' && a.file && a.tag_ids.includes(RW_TAGS.instrument));
@@ -161,8 +171,7 @@ export async function loadShared(id: number, api = RW_API, project = RW_PROJECT)
     }))
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 
-  // a link to the vox itself opens its first beat
-  const mix = family.find((m) => m.id === id) ?? family[0];
+  const mix = chooseMix(family, id, root.id);
   if (!mix) return { status: 'missing' };
   return {
     status: 'live',
