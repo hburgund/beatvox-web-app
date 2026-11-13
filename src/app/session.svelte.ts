@@ -334,7 +334,7 @@ export class Session {
     try {
       const d = await loadShared(mixId);
       if (d.status !== 'live') {
-        this.status = d.status === 'pending' ? "That BeatVox isn't approved yet, so its vox can't be reVoxed." : "Couldn't find that BeatVox.";
+        this.status = d.status === 'pending' ? "That BeatVox is still processing, so its vox can't be reVoxed yet." : "Couldn't find that BeatVox.";
         return;
       }
       if (!d.revoxAllowed || !d.instrument || d.instrumentAsset === null) {

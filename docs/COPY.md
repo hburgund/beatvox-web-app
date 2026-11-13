@@ -245,7 +245,7 @@ On a phone this rises from the bottom; on a computer it's a panel on the right.
 - **When:** In the sheet if the beat can't be loaded  <!-- src/map/MixDetail.svelte:73 -->
   > Couldn't load this BeatVox. Check your connection and try again.
 
-- **When:** In the sheet if the beat has been taken down or isn't approved  <!-- src/map/MixDetail.svelte:75 -->
+- **When:** In the sheet if the beat has been taken down or isn't on the map yet  <!-- src/map/MixDetail.svelte:75 -->
   > This BeatVox isn't available right now.
 
 - **When:** (screen reader) The beat drawn as a ring of squares  <!-- src/lib/ui/Ring.svelte:21, src/map/MixDetail.svelte:78 -->
@@ -287,7 +287,7 @@ On a phone this rises from the bottom; on a computer it's a panel on the right.
 - **When:** Pink button beside it, when the maker lets others use their voice: opens the studio with this voice. Also the big button at the bottom of a BeatVox's page (button, ~16 chars)  <!-- src/map/MixDetail.svelte:147, src/share/SharePage.svelte:202 -->
   > REVOX THIS VOX
 
-- **When:** Pink button in the same spot when the voice can't be reVoxed; also on a BeatVox's page (bottom bar, and under "waiting for approval" / "not found"): opens the studio. Also the small label in the box on the share videos' end card (button, ~16 chars)  <!-- src/map/MixDetail.svelte:149, src/share/SharePage.svelte:125, src/share/SharePage.svelte:132, src/share/SharePage.svelte:205, src/lib/video/draw.ts:415 -->
+- **When:** Pink button in the same spot when the voice can't be reVoxed; also on a BeatVox's page (bottom bar, and under "waiting for processing" / "not found"): opens the studio. Also the small label in the box on the share videos' end card (button, ~16 chars)  <!-- src/map/MixDetail.svelte:149, src/share/SharePage.svelte:125, src/share/SharePage.svelte:132, src/share/SharePage.svelte:205, src/lib/video/draw.ts:415 -->
   > MAKE YOUR OWN
 
 ### LIKE and FLAG (under the ring, on the map sheet and on a BeatVox's page)
@@ -419,8 +419,8 @@ The voice card's label for a reVox, "REVOX", is listed with the map's filters.
 - **When:** Button under the waveform in a reVox, instead of RE-RECORD: switch to recording your own voice (button, ~14 chars)  <!-- src/app/VoiceCard.svelte:66 -->
   > RECORD YOURS
 
-- **When:** The link pointed at a beat that's still waiting for approval  <!-- src/app/session.svelte.ts:337 -->
-  > That BeatVox isn't approved yet, so its vox can't be reVoxed.
+- **When:** The link pointed at a beat that isn't on the map yet (still processing)  <!-- src/app/session.svelte.ts:337 -->
+  > That BeatVox is still processing, so its vox can't be reVoxed yet.
 
 - **When:** The link pointed at a beat that doesn't exist  <!-- src/app/session.svelte.ts:337 -->
   > Couldn't find that BeatVox.
@@ -1307,7 +1307,7 @@ The page a shared link opens. Its LIKE/FLAG, "made with the vox from", THE SOURC
 - **When:** The text in that box  <!-- src/share/SharePage.svelte:40 -->
   > Couldn't reach the BeatVox server. Check your connection and try again.
 
-- **When:** Label on the box shown when the beat hasn't been approved yet  <!-- src/share/SharePage.svelte:121 -->
+- **When:** Label on the box shown when the beat isn't on the map yet (still processing)  <!-- src/share/SharePage.svelte:121 -->
   > WAITING FOR PROCESSING
 
 - **When:** Heading in that box  <!-- src/share/SharePage.svelte:122 -->
