@@ -34,6 +34,11 @@
   /** zoomed in far enough for clocks instead of dots; markers are only redrawn when this flips */
   const clocks = $derived(zoom >= 4);
   let wide = $state(false);
+  /** the phone sheet pulled down, so the map shows: just the title and the top of the ring */
+  let mini = $state(false);
+  let panelEl = $state<HTMLElement>();
+  /** the pulled-down sheet's height: down to the middle of the ring */
+  let miniH = $state(150);
   let wandering = $state(false);
   let scope = $state<'anywhere' | 'vox'>('anywhere');
   let filterDlg = $state<HTMLDialogElement>();
@@ -279,7 +284,8 @@
       if (!map) return;
       const sheet = document.querySelector('.panel') as HTMLElement | null;
       const h = map.getContainer().clientHeight;
-      const offset: [number, number] = !sheet ? [0, 0] : wide ? [-sheet.offsetWidth / 2, 0] : [0, -Math.min(sheet.offsetHeight, h * 0.7) / 2];
+      const tall = mini ? miniH : sheet?.offsetHeight ?? 0;
+      const offset: [number, number] = !sheet ? [0, 0] : wide ? [-sheet.offsetWidth / 2, 0] : [0, -Math.min(tall, h * 0.7) / 2];
       const center: [number, number] = [m.longitude, m.latitude];
       if (fly) map.flyTo({ center, offset, zoom: Math.max(map.getZoom(), 3.5), duration: 2200, essential: true });
       else map.easeTo({ center, offset, duration: 500 });
@@ -373,7 +379,50 @@
 
   function close() {
     selected = null;
+    mini = false;
     if (!wandering) player.stop();
+  }
+
+  // keep the pulled-down height at the ring's middle as the sheet's top changes
+  // (a long title wraps, the "made with" line arrives)
+  $effect(() => {
+    const p = panelEl;
+    if (!p || wide) return;
+    const measure = () => {
+      const ring = p.querySelector('.detail > .ring') as HTMLElement | null;
+      if (ring) miniH = ring.offsetTop + ring.offsetHeight / 2;
+    };
+    const ro = new ResizeObserver(measure);
+    ro.observe(p.firstElementChild ?? p);
+    measure();
+    return () => ro.disconnect();
+  });
+
+  /** Pull the sheet down (or back up), and keep the open mix in view. */
+  function setMini(on: boolean) {
+    if (on === mini) return;
+    mini = on;
+    if (on && panelEl) panelEl.scrollTop = 0;
+    if (selected) reveal(selected);
+  }
+  // the grab handle: tap to toggle, or swipe it down or up
+  let grabY: number | null = null;
+  let swiped = false;
+  function grabDown(e: PointerEvent) {
+    grabY = e.clientY;
+    swiped = false;
+  }
+  function grabUp(e: PointerEvent) {
+    if (grabY === null) return;
+    const dy = e.clientY - grabY;
+    grabY = null;
+    if (Math.abs(dy) < 24) return;
+    swiped = true;
+    setMini(dy > 0);
+  }
+  function grabClick() {
+    if (swiped) swiped = false;
+    else setMini(!mini);
   }
 
   /** the filter tags picked; logged as Roundware's filter_stream */
@@ -447,7 +496,18 @@
   </div>
 
   {#if selected}
-    <aside class="panel" class:side={wide} aria-label="{selected.title}: details">
+    <aside class="panel" class:side={wide} class:mini={mini && !wide} style:--mini-h="{miniH}px" bind:this={panelEl} aria-label="{selected.title}: details">
+      {#if !wide}
+        <button
+          class="grab"
+          aria-label={mini ? 'Show all the details' : 'Make smaller to see the map'}
+          aria-expanded={!mini}
+          onpointerdown={grabDown}
+          onpointerup={grabUp}
+          onpointercancel={() => (grabY = null)}
+          onclick={grabClick}><span></span></button
+        >
+      {/if}
       <MixDetail
         mix={selected}
         {player}
@@ -686,6 +746,35 @@
     border-radius: 14px 14px 0 0;
     z-index: 3;
     animation: up 220ms ease;
+    transition: max-height 260ms ease;
+  }
+  .panel.mini {
+    max-height: var(--mini-h);
+    overflow: hidden;
+  }
+  .grab {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: calc(100% + 32px);
+    height: 26px;
+    margin: -14px -16px 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    touch-action: none;
+  }
+  .grab span {
+    width: 44px;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--ink);
+    opacity: 0.35;
+  }
+  .grab:hover span,
+  .grab:focus-visible span {
+    opacity: 0.7;
   }
   .panel.side {
     left: auto;
@@ -776,6 +865,7 @@
     .panel,
     .panel.side {
       animation: none;
+      transition: none;
     }
   }
 </style>
