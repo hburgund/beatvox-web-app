@@ -174,7 +174,9 @@
       data.mixes.forEach((x) => b.extend([x.longitude, x.latitude]));
       if (b.getEast() - b.getWest() > 60 || b.getNorth() - b.getSouth() > 45) {
         // spread across the world: the whole globe, turned to its busiest side
-        const c = globeCenter(data.mixes);
+        // places beyond 60° north or south (Antarctica, the Arctic) don't steer it
+        const mid = data.mixes.filter((x) => Math.abs(x.latitude) <= 60);
+        const c = globeCenter(mid.length ? mid : data.mixes);
         // (not tipped so far that a pole faces you)
         map.jumpTo({ center: c ? [c.longitude, Math.max(-35, Math.min(45, c.latitude))] : [-30, 30], zoom: 1 });
       } else map.fitBounds(b, { padding: 60, maxZoom: 5, duration: 0 });
