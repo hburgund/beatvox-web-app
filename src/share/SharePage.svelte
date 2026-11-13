@@ -3,6 +3,7 @@
   // its loop player, the source vox, a small map of every beat made from the
   // same vox (tap it for the bigger map), and a way to make your own.
   import Ring from '../lib/ui/Ring.svelte';
+  import Votes from '../lib/ui/Votes.svelte';
   import MiniClock from '../lib/ui/MiniClock.svelte';
   import FamilyMap from './FamilyMap.svelte';
   import About from '../about/About.svelte';
@@ -167,6 +168,7 @@
       {#if !live.mix.recipe}
         <p class="note">This beat was saved without its pattern, so the ring is empty. It still plays.</p>
       {/if}
+      <Votes asset={live.mix.id} />
 
       <div class="vox">
         <button class="vox-play" aria-label={vp.playing === 'vox' ? 'Stop the source vox' : 'Hear the source vox'} aria-pressed={vp.playing === 'vox'} onclick={playVox}>

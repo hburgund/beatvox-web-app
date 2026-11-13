@@ -200,6 +200,24 @@ export class Roundware {
       .catch(() => {});
   }
 
+  /**
+   * A like or a flag on an asset (Roundware's votes). Unlike the other
+   * logging, someone pressed a button and is waiting: true once it's in.
+   */
+  async vote(asset: number, type: 'like' | 'flag'): Promise<boolean> {
+    if (this.log !== 'send') {
+      if (this.log === 'console') console.info('[roundware] vote', type, asset);
+      return true;
+    }
+    try {
+      const session_id = await this.visit();
+      await this.call('POST', '/votes/', { session_id, asset_id: asset, type });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   /** An asset started playing. A second call before `unhear` is ignored. */
   hear(asset: number) {
     if (this.log === 'off' || this.heard.has(asset)) return;

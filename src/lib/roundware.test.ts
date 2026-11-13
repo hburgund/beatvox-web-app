@@ -158,4 +158,13 @@ describe('Roundware usage logging', () => {
     expect(calls.filter((c) => c.body.event_type === 'start_session')).toHaveLength(2);
     vi.restoreAllMocks();
   });
+
+  it('sends a vote and says whether it got in', async () => {
+    const calls = server();
+    const rw = new Roundware(() => 'd', 'https://rw.test', 103, 'send');
+    expect(await rw.vote(55, 'flag')).toBe(true);
+    expect(calls.at(-1)).toMatchObject({ method: 'POST', path: '/votes/', body: { session_id: 9, asset_id: 55, type: 'flag' } });
+    vi.stubGlobal('fetch', async () => new Response('{}', { status: 500 }));
+    expect(await new Roundware(() => 'd', 'https://rw.test', 103, 'send').vote(55, 'like')).toBe(false);
+  });
 });

@@ -4,6 +4,7 @@
   // Shown in a sheet on a phone and a side panel on a bigger screen.
   import Ring from '../lib/ui/Ring.svelte';
   import MiniClock from '../lib/ui/MiniClock.svelte';
+  import Votes from '../lib/ui/Votes.svelte';
   import { loadShared, ringRows, type Shared, type SharedMix } from '../lib/shared';
   import { beatvoxShareUrl, revoxUrl, STUDIO_PATH } from '../lib/roundware';
   import { Player } from '../share/player.svelte';
@@ -94,6 +95,7 @@
         </button>
       </Ring>
     </div>
+    {#if live}<Votes asset={mix.id} />{/if}
     {#if wandering && player.playing === key}<p class="sub center">Wandering: the next one starts when this one ends.</p>{/if}
 
     {#if live}
@@ -102,7 +104,7 @@
           class="vox-play"
           aria-label={vp.playing === 'vox' ? 'Stop the source vox' : 'Hear the source vox'}
           aria-pressed={vp.playing === 'vox'}
-          onclick={() => vp.toggle('vox', live.vox.file, { loop: false })}
+          onclick={() => vp.toggle('vox', live.vox.file, { loop: false, asset: live.vox.id })}
         >
           {#if vp.playing === 'vox'}
             <svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="2" width="10" height="10" fill="currentColor" /></svg>
