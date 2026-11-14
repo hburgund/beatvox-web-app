@@ -126,10 +126,15 @@
   let stopLooking: (() => void) | null = null;
   $effect(() => () => stopLooking?.());
 
+  /** On the dev server, what the location lookup did, for the console. */
+  const trace = (...a: unknown[]) => {
+    if (import.meta.env.DEV) console.info('[where i am]', ...a);
+  };
+
   /**
-   * WHERE I AM. Watches for the location and takes the first one, rather
-   * than asking once (getCurrentPosition): Chrome on a Mac can leave a
-   * one-off request hanging while a watch gets an answer at once.
+   * WHERE I AM. Asks once (getCurrentPosition) and watches (watchPosition)
+   * at the same time, and takes whichever answers first: Chrome on a Mac
+   * has been seen to leave one or the other hanging.
    */
   function here() {
     stopLooking?.();
@@ -138,37 +143,49 @@
     fyi = false;
     const geo = navigator.geolocation;
     if (!geo) {
+      trace('no navigator.geolocation');
       void fallBack("This browser can't tell where you are. Tap the map instead.");
       return;
     }
+    const t0 = performance.now();
+    const ms = () => Math.round(performance.now() - t0) + ' ms';
     let lastError = 0;
+    let done = false;
     const stop = () => {
+      done = true;
       geo.clearWatch(watch);
       clearTimeout(timer);
       if (stopLooking === stop) stopLooking = null;
     };
-    const watch = geo.watchPosition(
-      (p) => {
-        stop();
-        locating = false;
-        pinAt(p.coords.latitude, p.coords.longitude, 13);
-      },
-      (e) => {
-        // refused: respect that, no guessing. Anything else may clear up
-        // while we're still watching, so wait for the time limit.
-        if (e.code !== e.PERMISSION_DENIED) {
-          lastError = e.code;
-          return;
-        }
-        stop();
-        locating = false;
-        note = 'Location is blocked for this site. Allow it in your browser, or tap the map instead.';
-      },
-      { enableHighAccuracy: false, maximumAge: 600000 },
-    );
+    const opts = { enableHighAccuracy: false, maximumAge: 600000 };
+    const found = (how: string) => (p: GeolocationPosition) => {
+      trace(how, 'answered', ms(), `±${Math.round(p.coords.accuracy)} m`, done ? '(already done)' : '');
+      if (done) return;
+      stop();
+      locating = false;
+      pinAt(p.coords.latitude, p.coords.longitude, 13);
+    };
+    const failed = (how: string) => (e: GeolocationPositionError) => {
+      trace(how, 'error', e.code, e.message, ms(), done ? '(already done)' : '');
+      if (done) return;
+      // refused: respect that, no guessing. Anything else may clear up (the
+      // other way of asking may still answer), so wait for the time limit.
+      if (e.code !== e.PERMISSION_DENIED) {
+        lastError = e.code;
+        return;
+      }
+      stop();
+      locating = false;
+      note = 'Location is blocked for this site. Allow it in your browser, or tap the map instead.';
+    };
+    trace('asking');
+    const watch = geo.watchPosition(found('watchPosition'), failed('watchPosition'), opts);
+    // its own timeout well past ours, so it can't end early on its own
+    geo.getCurrentPosition(found('getCurrentPosition'), failed('getCurrentPosition'), { ...opts, timeout: 60000 });
     // a laptop can be very slow to find itself, or never manage it: after
     // 20 s, fall back to roughly
     const timer = setTimeout(() => {
+      trace('gave up', ms(), 'last error', lastError || 'none');
       stop();
       void fallBack(
         lastError === 2
