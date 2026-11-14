@@ -383,6 +383,9 @@ These show as a small line at the bottom of the voice card.
 - **When:** The recording was under half a second  <!-- src/app/session.svelte.ts:246 -->
   > That was very short. Try again.
 
+- **When:** The mic was allowed but nothing came through it (almost always the wrong mic picked, like a USB device with nothing plugged in). {mic} is the mic's name in quotes, or "the microphone" if the browser won't say  <!-- src/app/session.svelte.ts:254 -->
+  > We didn't hear anything from {mic}. Check that's the mic you're talking into (your browser's site settings let you change it), then try again.
+
 - **When:** The recording was too quiet to cut into at least two slices  <!-- src/app/session.svelte.ts:303 -->
   > Not much to slice there. Try speaking a bit louder!
 

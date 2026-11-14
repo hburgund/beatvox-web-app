@@ -8,7 +8,7 @@ import { renderShare, voiceSpan } from '../lib/audio/render';
 import type { Recipe } from '../lib/recipe';
 import { prepareVoice } from '../lib/audio/prepare';
 import { playSlice } from '../lib/audio/beatPreview';
-import { startRecording, type Recording } from '../lib/audio/recorder';
+import { SILENT_PEAK, startRecording, type Recording } from '../lib/audio/recorder';
 import type { Slice } from '../lib/audio/slicer';
 import { cutInstrument, type Instrument } from '../lib/instrument';
 import { keepAwake } from '../lib/wakeLock';
@@ -236,7 +236,8 @@ export class Session {
     this.status = '';
     this.recStart = ctx.currentTime;
     this.tick();
-    const raw = await this.rec.finished;
+    const rec = this.rec;
+    const raw = await rec.finished;
     this.rw.event('end_record', { data: `seconds: ${raw.duration.toFixed(1)}` });
     this.recording = false;
     this.rec = null;
@@ -244,6 +245,13 @@ export class Session {
     this.level = 0;
     if (raw.duration < 0.5) {
       this.status = 'That was very short. Try again.';
+      return;
+    }
+    // mic allowed, but nothing came through it: most likely the wrong one
+    // (the browser may offer a different mic than the one you talk into)
+    if (rec.loudest() < SILENT_PEAK) {
+      const which = rec.mic ? `“${rec.mic}”` : 'the microphone';
+      this.status = `We didn't hear anything from ${which}. Check that's the mic you're talking into (your browser's site settings let you change it), then try again.`;
       return;
     }
     this.setVoice(raw);
