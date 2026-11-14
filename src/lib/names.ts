@@ -1,4 +1,6 @@
-// Random names for a BeatVox: one word from each list, like "Wobbly Kazoo".
+// Random names for a BeatVox: one word from each list, like "Wobbly Kazoo",
+// and a quarter of the time a flourish: a "!" or "?" on the end, or one
+// word in quotes.
 // Edit freely: one word per entry, capitalised as it should show. Every
 // word is meant to work with every other, and the names go public on the
 // map, so keep them kind, silly and safe for kids.
@@ -77,15 +79,33 @@ export const NOUNS = [
 
 const pick = <T>(list: readonly T[], rand: () => number) => list[Math.floor(rand() * list.length)];
 
-/** A random name like "Wobbly Kazoo", never the same as `not` (the one showing now). */
+/** How often a name gets a flourish: "Toasty Microphone!", "Toasty Microphone?", Toasty "Microphone". */
+export const FLOURISH = 0.25;
+
+/** One of the flourishes, at random. */
+function flourish(a: string, n: string, rand: () => number): string {
+  switch (Math.floor(rand() * 4)) {
+    case 0:
+      return `${a} ${n}!`;
+    case 1:
+      return `${a} ${n}?`;
+    case 2:
+      return `"${a}" ${n}`;
+    default:
+      return `${a} "${n}"`;
+  }
+}
+
+/** A random name like "Wobbly Kazoo", now and then with a flourish, never the same as `not` (the one showing now). */
 export function randomName(not = '', rand: () => number = Math.random): string {
+  let name = '';
   for (let i = 0; i < 10; i++) {
     const a = pick(ADJECTIVES, rand);
     const n = pick(NOUNS, rand);
     // "Remixed Remix", "Crayon Crayon": a word that's in both lists only once
     if (a.toLowerCase().startsWith(n.toLowerCase().slice(0, 5))) continue;
-    const name = `${a} ${n}`;
+    name = rand() < FLOURISH ? flourish(a, n, rand) : `${a} ${n}`;
     if (name !== not) return name;
   }
-  return `${pick(ADJECTIVES, rand)} ${pick(NOUNS, rand)}`;
+  return name || `${pick(ADJECTIVES, rand)} ${pick(NOUNS, rand)}`;
 }

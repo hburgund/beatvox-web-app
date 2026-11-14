@@ -22,24 +22,41 @@ describe('random names', () => {
     expect(longest).toBeLessThanOrEqual(60);
   });
 
+  /** a rand() that returns these in turn, then 0 */
+  const seq = (...xs: number[]) => {
+    let i = 0;
+    return () => xs[i++] ?? 0;
+  };
+  const A = ADJECTIVES[0];
+  const N = NOUNS[0];
+  const plain = (name: string) => name.replace(/["!?]/g, '');
+
   it('gives an adjective and a noun', () => {
-    const name = randomName();
-    expect(ADJECTIVES.some((a) => name.startsWith(a + ' ') && NOUNS.includes(name.slice(a.length + 1)))).toBe(true);
+    for (let k = 0; k < 200; k++) {
+      const name = plain(randomName());
+      expect(ADJECTIVES.some((a) => name.startsWith(a + ' ') && NOUNS.includes(name.slice(a.length + 1)))).toBe(true);
+    }
+  });
+
+  it('adds a flourish a quarter of the time', () => {
+    // adjective, noun, then the flourish roll
+    expect(randomName('', seq(0, 0, 0.5))).toBe(`${A} ${N}`);
+    expect(randomName('', seq(0, 0, 0.1, 0))).toBe(`${A} ${N}!`);
+    expect(randomName('', seq(0, 0, 0.1, 0.3))).toBe(`${A} ${N}?`);
+    expect(randomName('', seq(0, 0, 0.1, 0.6))).toBe(`"${A}" ${N}`);
+    expect(randomName('', seq(0, 0, 0.1, 0.9))).toBe(`${A} "${N}"`);
+    let fancy = 0;
+    for (let k = 0; k < 4000; k++) if (/["!?]/.test(randomName())) fancy++;
+    expect(fancy / 4000).toBeGreaterThan(0.2);
+    expect(fancy / 4000).toBeLessThan(0.3);
   });
 
   it('never repeats the one showing', () => {
-    const fixed = () => 0; // always the first of each list
-    const first = `${ADJECTIVES[0]} ${NOUNS[0]}`;
-    expect(randomName('', fixed)).toBe(first);
-    let n = 0;
-    const alternating = () => (n++ < 2 ? 0 : 0.5);
-    expect(randomName(first, alternating)).not.toBe(first);
+    expect(randomName(`${A} ${N}`, seq(0, 0, 0.5, 0.5, 0.5, 0.9))).not.toBe(`${A} ${N}`);
   });
 
   it('skips a word paired with itself', () => {
-    const seq = [ADJECTIVES.indexOf('Remixed'), NOUNS.indexOf('Remix'), 0, 1];
-    let i = 0;
-    const rand = () => (seq[i] ?? 0) / (i++ < 1 ? ADJECTIVES.length : NOUNS.length) + 1e-9;
-    expect(randomName('', rand)).not.toBe('Remixed Remix');
+    const r = seq(ADJECTIVES.indexOf('Remixed') / ADJECTIVES.length, NOUNS.indexOf('Remix') / NOUNS.length, 0, 0, 0.5);
+    expect(randomName('', r)).toBe(`${A} ${N}`);
   });
 });
