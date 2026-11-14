@@ -122,34 +122,61 @@
     } else note = why;
   }
 
+  /** stops a location lookup still running */
+  let stopLooking: (() => void) | null = null;
+  $effect(() => () => stopLooking?.());
+
+  /**
+   * WHERE I AM. Watches for the location and takes the first one, rather
+   * than asking once (getCurrentPosition): Chrome on a Mac can leave a
+   * one-off request hanging while a watch gets an answer at once.
+   */
   function here() {
+    stopLooking?.();
     locating = true;
     note = '';
     fyi = false;
-    if (!navigator.geolocation) {
+    const geo = navigator.geolocation;
+    if (!geo) {
       void fallBack("This browser can't tell where you are. Tap the map instead.");
       return;
     }
-    navigator.geolocation.getCurrentPosition(
+    let lastError = 0;
+    const stop = () => {
+      geo.clearWatch(watch);
+      clearTimeout(timer);
+      if (stopLooking === stop) stopLooking = null;
+    };
+    const watch = geo.watchPosition(
       (p) => {
+        stop();
         locating = false;
         pinAt(p.coords.latitude, p.coords.longitude, 13);
       },
       (e) => {
-        // refused: respect that, no guessing. Otherwise (a laptop can be very
-        // slow to find itself, or have no idea) fall back to roughly.
-        if (e.code === e.PERMISSION_DENIED) {
-          locating = false;
-          note = 'Location is blocked for this site. Allow it in your browser, or tap the map instead.';
-        } else
-          void fallBack(
-            e.code === e.TIMEOUT
-              ? 'Finding your location took too long. Try again, or tap the map instead.'
-              : "Your device couldn't find where you are. Check that Location Services is on for this browser, or tap the map instead.",
-          );
+        // refused: respect that, no guessing. Anything else may clear up
+        // while we're still watching, so wait for the time limit.
+        if (e.code !== e.PERMISSION_DENIED) {
+          lastError = e.code;
+          return;
+        }
+        stop();
+        locating = false;
+        note = 'Location is blocked for this site. Allow it in your browser, or tap the map instead.';
       },
-      { enableHighAccuracy: false, timeout: 20000, maximumAge: 600000 },
+      { enableHighAccuracy: false, maximumAge: 600000 },
     );
+    // a laptop can be very slow to find itself, or never manage it: after
+    // 20 s, fall back to roughly
+    const timer = setTimeout(() => {
+      stop();
+      void fallBack(
+        lastError === 2
+          ? "Your device couldn't find where you are. Check that Location Services is on for this browser, or tap the map instead."
+          : 'Finding your location took too long. Try again, or tap the map instead.',
+      );
+    }, 20000);
+    stopLooking = stop;
   }
 </script>
 
