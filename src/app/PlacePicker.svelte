@@ -132,9 +132,12 @@
   };
 
   /**
-   * WHERE I AM. Asks once (getCurrentPosition) and watches (watchPosition)
-   * at the same time, and takes whichever answers first: Chrome on a Mac
-   * has been seen to leave one or the other hanging.
+   * WHERE I AM. Watches with high accuracy and asks once at the same time,
+   * and takes whichever answers first, then stops. The high-accuracy watch
+   * is what location test pages use, and what gets Chrome on a Mac going
+   * from cold: there, low-accuracy requests alone were never answered unless
+   * another tab already had location running. On a phone the first fix
+   * comes quickly either way, and it stops after one.
    */
   function here() {
     stopLooking?.();
@@ -158,6 +161,7 @@
       if (stopLooking === stop) stopLooking = null;
     };
     const opts = { enableHighAccuracy: false, maximumAge: 600000 };
+    const watchOpts = { enableHighAccuracy: true, maximumAge: 0 };
     const found = (how: string) => (p: GeolocationPosition) => {
       trace(how, 'answered', ms(), `±${Math.round(p.coords.accuracy)} m`, done ? '(already done)' : '');
       if (done) return;
@@ -179,9 +183,9 @@
       note = 'Location is blocked for this site. Allow it in your browser, or tap the map instead.';
     };
     trace('asking');
-    const watch = geo.watchPosition(found('watchPosition'), failed('watchPosition'), opts);
+    const watch = geo.watchPosition(found('watchPosition (high)'), failed('watchPosition (high)'), watchOpts);
     // its own timeout well past ours, so it can't end early on its own
-    geo.getCurrentPosition(found('getCurrentPosition'), failed('getCurrentPosition'), { ...opts, timeout: 60000 });
+    geo.getCurrentPosition(found('getCurrentPosition (low)'), failed('getCurrentPosition (low)'), { ...opts, timeout: 60000 });
     // a laptop can be very slow to find itself, or never manage it: after
     // 20 s, fall back to roughly
     const timer = setTimeout(() => {
