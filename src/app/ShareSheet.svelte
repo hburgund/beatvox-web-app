@@ -7,6 +7,7 @@
   import SendDialog from './SendDialog.svelte';
   import VideoBox from './VideoBox.svelte';
   import Check from '../lib/ui/Check.svelte';
+  import { randomName } from '../lib/names';
   import { about } from '../about/aboutState.svelte';
   import { mapUrl } from '../lib/roundware';
   import type { Shape } from '../lib/video/draw';
@@ -142,10 +143,11 @@
         </div>
       </section>
 
-      <label class="name">
-        <span class="label">NAME IT</span>
-        <input type="text" maxlength="60" placeholder="optional" bind:value={s.shareTitle} disabled={s.send !== 'idle'} />
-      </label>
+      <div class="name">
+        <label class="label" for="bv-name">NAME IT</label>
+        <input id="bv-name" type="text" maxlength="60" placeholder="optional" bind:value={s.shareTitle} disabled={s.send !== 'idle'} />
+        <button class="btn random" disabled={s.send !== 'idle'} onclick={() => (s.shareTitle = randomName(s.shareTitle))}>RANDOM!</button>
+      </div>
 
       <section class="map">
         <div class="label">PUT IT ON THE BEATVOX MAP</div>
@@ -293,8 +295,17 @@
   }
   .name {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 10px;
+    gap: 6px 10px;
+  }
+  .name .label {
+    flex-basis: 100%;
+  }
+  .name .random {
+    flex: none;
+    min-height: 44px;
+    padding: 0 10px;
   }
   .name input {
     flex: 1;
