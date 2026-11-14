@@ -20,6 +20,8 @@
   let ready = $state(false);
   let locating = $state(false);
   let note = $state('');
+  /** the note is news, not a problem */
+  let fyi = $state(false);
   /** the search box's text, cleared when the pin moves another way */
   let query = $state('');
 
@@ -86,33 +88,67 @@
     return c && map!.getZoom() > 3 ? { latitude: c.lat, longitude: c.lng } : undefined;
   }
 
-  function here() {
-    if (!navigator.geolocation) {
-      note = "This browser can't tell where you are. Tap the map instead.";
-      return;
+  /** Pin a place and show it close up. */
+  function pinAt(latitude: number, longitude: number, zoom: number) {
+    place = { latitude: round(latitude), longitude: round(longitude) };
+    query = '';
+    map?.flyTo({ center: [place.longitude, place.latitude], zoom });
+  }
+
+  /**
+   * Roughly where they are (their city, more or less), from their connection
+   * (netlify/edge-functions/where.ts), for when the browser can't say. Only
+   * on the live site; null if it can't tell.
+   */
+  async function roughly(): Promise<{ latitude: number; longitude: number } | null> {
+    try {
+      const r = await fetch('/api/where', { cache: 'no-store' });
+      if (!r.ok || !r.headers.get('content-type')?.includes('json')) return null;
+      const w = await r.json();
+      return w && typeof w.latitude === 'number' && typeof w.longitude === 'number' ? w : null;
+    } catch {
+      return null;
     }
+  }
+
+  /** The browser couldn't find them (but wasn't told no): use the rough place, or say so. */
+  async function fallBack(why: string) {
+    const r = await roughly();
+    locating = false;
+    if (r) {
+      pinAt(r.latitude, r.longitude, 10);
+      note = 'This is roughly where you are. Tap the map to put it right where you want.';
+      fyi = true;
+    } else note = why;
+  }
+
+  function here() {
     locating = true;
     note = '';
+    fyi = false;
+    if (!navigator.geolocation) {
+      void fallBack("This browser can't tell where you are. Tap the map instead.");
+      return;
+    }
     navigator.geolocation.getCurrentPosition(
       (p) => {
         locating = false;
-        place = { latitude: round(p.coords.latitude), longitude: round(p.coords.longitude) };
-        query = '';
-        map?.flyTo({ center: [place.longitude, place.latitude], zoom: 13 });
+        pinAt(p.coords.latitude, p.coords.longitude, 13);
       },
       (e) => {
-        locating = false;
-        // say which: refused by the browser, or the device couldn't tell
-        // (on a Mac that's usually Location Services being off for the
-        // browser), or too slow
-        note =
-          e.code === e.PERMISSION_DENIED
-            ? 'Location is blocked for this site. Allow it in your browser, or tap the map instead.'
-            : e.code === e.TIMEOUT
+        // refused: respect that, no guessing. Otherwise (a laptop can be very
+        // slow to find itself, or have no idea) fall back to roughly.
+        if (e.code === e.PERMISSION_DENIED) {
+          locating = false;
+          note = 'Location is blocked for this site. Allow it in your browser, or tap the map instead.';
+        } else
+          void fallBack(
+            e.code === e.TIMEOUT
               ? 'Finding your location took too long. Try again, or tap the map instead.'
-              : "Your device couldn't find where you are. Check that Location Services is on for this browser, or tap the map instead.";
+              : "Your device couldn't find where you are. Check that Location Services is on for this browser, or tap the map instead.",
+          );
       },
-      { enableHighAccuracy: false, timeout: 15000, maximumAge: 600000 },
+      { enableHighAccuracy: false, timeout: 20000, maximumAge: 600000 },
     );
   }
 </script>
@@ -124,7 +160,7 @@
   </div>
   <PlaceSearch {near} onpick={found} bind:query />
   <div class="map" bind:this={el}></div>
-  {#if note}<p class="note">{note}</p>{/if}
+  {#if note}<p class="note" class:fyi>{note}</p>{/if}
 </div>
 
 <style>
@@ -166,5 +202,8 @@
     margin: 0;
     font-size: 12px;
     color: var(--error);
+  }
+  .note.fyi {
+    color: var(--muted);
   }
 </style>

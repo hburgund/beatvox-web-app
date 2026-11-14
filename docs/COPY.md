@@ -741,13 +741,16 @@ Five small dials in a row; each name sits under its dial. Very short: about 6 ch
 - **When:** Small note under the little map when the browser has no location feature  <!-- src/app/PlacePicker.svelte:89 -->
   > This browser can't tell where you are. Tap the map instead.
 
+- **When:** Small note under the little map (in grey) when the browser couldn't find the location in time, so the pin went to roughly where they are, worked out from their connection (live site only)  <!-- src/app/PlacePicker.svelte -->
+  > This is roughly where you are. Tap the map to put it right where you want.
+
 - **When:** Small note under the little map when location permission was refused  <!-- src/app/PlacePicker.svelte:103 -->
   > Location is blocked for this site. Allow it in your browser, or tap the map instead.
 
-- **When:** Small note under the little map when finding the location took too long  <!-- src/app/PlacePicker.svelte:103 -->
+- **When:** Small note under the little map when finding the location took too long and the rough location wasn't available either  <!-- src/app/PlacePicker.svelte:103 -->
   > Finding your location took too long. Try again, or tap the map instead.
 
-- **When:** Small note under the little map when permission was given but the device couldn't find the location (on a Mac, usually Location Services off for the browser)  <!-- src/app/PlacePicker.svelte:103 -->
+- **When:** Small note under the little map when permission was given but the device couldn't find the location (on a Mac, usually Location Services off for the browser), and the rough location wasn't available either  <!-- src/app/PlacePicker.svelte:103 -->
   > Your device couldn't find where you are. Check that Location Services is on for this browser, or tap the map instead.
 
 - **When:** Checkbox under the map (not shown for a reVox)  <!-- src/app/ShareSheet.svelte:157 -->
