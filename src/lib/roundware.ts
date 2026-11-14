@@ -367,7 +367,9 @@ export class Roundware {
     try {
       res = await fetch(this.api + path, { method, headers, body: payload, keepalive: opts.keepalive });
     } catch {
-      throw new RoundwareError("Couldn't reach Roundware. Check your connection and try again.");
+      // no connection, or the server failed outright (its error then comes
+      // without the CORS header, so the browser can't tell us which)
+      throw new RoundwareError("Couldn't get through to Roundware just now. Check your connection, then try again in a moment.");
     }
     if (res.status === 429 && !opts.retried && !opts.keepalive) {
       const wait = Math.min(10, Number(res.headers.get('Retry-After')) || 2);

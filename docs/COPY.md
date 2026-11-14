@@ -803,8 +803,8 @@ Five small dials in a row; each name sits under its dial. Very short: about 6 ch
 - **When:** The error in that pop-up when there's no other explanation  <!-- src/app/SendDialog.svelte:41 -->
   > Something went wrong.
 
-- **When:** The error in that pop-up when the server can't be reached  <!-- src/lib/roundware.ts:364 -->
-  > Couldn't reach Roundware. Check your connection and try again.
+- **When:** The error in that pop-up when the server can't be reached, or failed outright (the browser can't tell which)  <!-- src/lib/roundware.ts:364 -->
+  > Couldn't get through to Roundware just now. Check your connection, then try again in a moment.
 
 - **When:** The error in that pop-up when the server refused; {status} is a number like 500 and {detail} is the server's own message  <!-- src/lib/roundware.ts:379 -->
   > Roundware said {status}: {detail}
