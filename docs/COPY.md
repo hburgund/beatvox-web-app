@@ -741,8 +741,14 @@ Five small dials in a row; each name sits under its dial. Very short: about 6 ch
 - **When:** Small note under the little map when the browser has no location feature  <!-- src/app/PlacePicker.svelte:89 -->
   > This browser can't tell where you are. Tap the map instead.
 
-- **When:** Small note under the little map when the location couldn't be found (or permission was refused)  <!-- src/app/PlacePicker.svelte:103 -->
-  > Couldn't get your location. Tap the map instead.
+- **When:** Small note under the little map when location permission was refused  <!-- src/app/PlacePicker.svelte:103 -->
+  > Location is blocked for this site. Allow it in your browser, or tap the map instead.
+
+- **When:** Small note under the little map when finding the location took too long  <!-- src/app/PlacePicker.svelte:103 -->
+  > Finding your location took too long. Try again, or tap the map instead.
+
+- **When:** Small note under the little map when permission was given but the device couldn't find the location (on a Mac, usually Location Services off for the browser)  <!-- src/app/PlacePicker.svelte:103 -->
+  > Your device couldn't find where you are. Check that Location Services is on for this browser, or tap the map instead.
 
 - **When:** Checkbox under the map (not shown for a reVox)  <!-- src/app/ShareSheet.svelte:157 -->
   > Others can reVox my voice (make their own beats with it)

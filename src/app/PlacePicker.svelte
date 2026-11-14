@@ -100,9 +100,17 @@
         query = '';
         map?.flyTo({ center: [place.longitude, place.latitude], zoom: 13 });
       },
-      () => {
+      (e) => {
         locating = false;
-        note = "Couldn't get your location. Tap the map instead.";
+        // say which: refused by the browser, or the device couldn't tell
+        // (on a Mac that's usually Location Services being off for the
+        // browser), or too slow
+        note =
+          e.code === e.PERMISSION_DENIED
+            ? 'Location is blocked for this site. Allow it in your browser, or tap the map instead.'
+            : e.code === e.TIMEOUT
+              ? 'Finding your location took too long. Try again, or tap the map instead.'
+              : "Your device couldn't find where you are. Check that Location Services is on for this browser, or tap the map instead.";
       },
       { enableHighAccuracy: false, timeout: 15000, maximumAge: 600000 },
     );
