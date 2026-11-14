@@ -47,7 +47,8 @@
   });
 
   const live = $derived(data?.status === 'live' ? data : null);
-  const rows = $derived(ringRows(live?.mix.recipe ?? null));
+  // the bar playing, so a beat that evolves changes as it plays
+  const rows = $derived(ringRows(live?.mix.recipe ?? null, p.playing === 'main' ? p.bar : -1));
   const ringSize = $derived(Math.min(340, width));
   // a reVox names the beat whose vox it plays
   const source = $derived(live?.mix.recipe?.revoxOf ? (live.family.find((m) => m.id === live.mix.recipe!.revoxOf) ?? null) : null);
@@ -230,7 +231,7 @@
         {@const key = m.id === live.mix.id ? 'main' : `mix${m.id}`}
         <li>
           <MiniClock
-            rows={ringRows(m.recipe)}
+            rows={ringRows(m.recipe, p.playing === key ? p.bar : -1)}
             current={m.id === live.mix.id}
             playing={p.playing === key}
             loading={p.loading === key}

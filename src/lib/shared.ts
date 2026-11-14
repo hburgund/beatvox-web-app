@@ -10,6 +10,7 @@
 import { parseRecipe, parsePattern, type Recipe, type Role } from './recipe';
 import { RW_API, RW_PROJECT, RW_TAGS } from './roundware';
 import { validateInstrument, type Instrument } from './instrument';
+import { decodeBar } from './played';
 
 export interface SharedMix {
   id: number;
@@ -90,12 +91,19 @@ export interface RingRow {
   sound: Role | undefined;
 }
 
-/** The recipe's 8 rows for the ring (missing rows are empty and resting). */
-export function ringRows(recipe: Recipe | null): RingRow[] {
+/**
+ * The recipe's 8 rows for the ring (missing rows are empty and resting).
+ * With `bar`, a beat that saved what it played shows that bar as heard
+ * (one that evolves changes as it plays); otherwise, how it started.
+ */
+export function ringRows(recipe: Recipe | null, bar = -1): RingRow[] {
+  const played = bar >= 0 && recipe?.played?.length ? decodeBar(recipe.played[bar % recipe.played.length]) : null;
   return Array.from({ length: 8 }, (_, i) => {
     const v = recipe?.voices[i];
+    const sound = v ? (v.sliceRole ?? (v.role !== 'any' ? v.role : undefined)) : undefined;
+    if (played) return { hits: played[i], on: (v ? v.on !== false : false) || played[i].some(Boolean), sound };
     if (!v) return { hits: Array(16).fill(false), on: false, sound: undefined };
-    return { hits: parsePattern(v.pattern).hits, on: v.on !== false, sound: v.sliceRole ?? (v.role !== 'any' ? v.role : undefined) };
+    return { hits: parsePattern(v.pattern).hits, on: v.on !== false, sound };
   });
 }
 

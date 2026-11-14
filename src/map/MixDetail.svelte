@@ -52,7 +52,8 @@
 
   const live = $derived(info?.status === 'live' ? info : null);
   const key = $derived(`mix${mix.id}`);
-  const rows = $derived(ringRows(live?.mix.recipe ?? null));
+  // the bar playing, so a beat that evolves changes as it plays
+  const rows = $derived(ringRows(live?.mix.recipe ?? null, player.playing === key ? player.bar : -1));
   const source = $derived(live?.mix.recipe?.revoxOf ? (live.family.find((m) => m.id === live.mix.recipe!.revoxOf) ?? null) : null);
   const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 </script>
@@ -126,7 +127,7 @@
               {@const k = `mix${m.id}`}
               <li>
                 <MiniClock
-                  rows={ringRows(m.recipe)}
+                  rows={ringRows(m.recipe, player.playing === k ? player.bar : -1)}
                   current={m.id === mix.id}
                   playing={player.playing === k}
                   loading={player.loading === k}

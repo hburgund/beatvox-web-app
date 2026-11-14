@@ -28,6 +28,7 @@
 // }
 
 import type { InstrumentRef } from './instrument';
+import { PLAYED_BAR } from './played';
 
 export const RECIPE_FORMAT = 'beatvox-recipe';
 export const RECIPE_VERSION = 1;
@@ -83,6 +84,9 @@ export interface Recipe {
   /** Simple-mode Space knob 0..100 */
   space?: number;
   evolve?: { auto: boolean; every?: number };
+  /** beats sent to the map (from Nov 2026): the steps each row played in
+   *  each saved bar, as heard (see played.ts). `voices` is how it started. */
+  played?: string[];
   /** up to 8; missing voices are off */
   voices: RecipeVoice[];
   seed?: number;
@@ -156,6 +160,8 @@ export function validateRecipe(value: unknown): Recipe {
         throw new Error('pan must be -1–1, or a [low, high] pair');
     }
   }
+  if (r.played !== undefined && (!Array.isArray(r.played) || r.played.length > 64 || !r.played.every((b) => typeof b === 'string' && PLAYED_BAR.test(b))))
+    throw new Error('played must be up to 64 bars of 32 hex digits');
   if (r.bpm !== undefined && !(r.bpm >= 20 && r.bpm <= 300)) throw new Error('bpm out of range');
   if (r.swing !== undefined && !(r.swing >= 0 && r.swing <= 0.5)) throw new Error('swing must be 0–0.5');
   if (r.humanize !== undefined && !(r.humanize >= 0 && r.humanize <= 1)) throw new Error('humanize must be 0–1');

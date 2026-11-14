@@ -23,6 +23,8 @@ export class Player {
   playing = $state<string | null>(null);
   /** the step (0–15) of the playing loop, or -1 */
   step = $state(-1);
+  /** the bar (from 0) of the playing loop, or -1 */
+  bar = $state(-1);
   /** what's loading */
   loading = $state<string | null>(null);
   error = $state('');
@@ -118,6 +120,7 @@ export class Player {
         // what's heard now is what was scheduled outputLatency ago
         const t = ctx.currentTime - t0 - (ctx.outputLatency || 0);
         this.step = t < 0 ? -1 : Math.floor(((t % bar) / bar) * 16) % 16;
+        this.bar = t < 0 ? -1 : Math.floor(t / bar) % bars;
         this.raf = requestAnimationFrame(tick);
       };
       tick();
@@ -145,6 +148,7 @@ export class Player {
     this.playing = null;
     this.loading = null;
     this.step = -1;
+    this.bar = -1;
     if (this.asset !== null) rw.unhear(this.asset);
     this.asset = null;
   }

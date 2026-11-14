@@ -5,6 +5,9 @@
 import { LEAD } from '../audio/render';
 import type { Tape } from '../audio/engine';
 import type { Role } from '../recipe';
+import { ROWS, stepOf } from '../played';
+
+export { stepOf };
 
 /** how long the end card holds after the last bar */
 export const END_CARD = 3;
@@ -47,13 +50,6 @@ export interface VideoSource {
   tape: Tape;
   voiceSpan: { start: number; end: number };
   slices: { start: number; end: number; role?: Exclude<Role, 'any'> }[];
-}
-
-const ROWS = 8;
-
-/** The step a taped hit belongs to. Swing and humanize land hits a little late, never early. */
-export function stepOf(t: number, start: number, step: number) {
-  return Math.floor((t - start) / step + 0.35);
 }
 
 export function buildScript(src: VideoSource, title: string, link = VIDEO_LINK): VideoScript {

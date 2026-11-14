@@ -8,6 +8,7 @@ import { renderShare, voiceSpan } from '../lib/audio/render';
 import type { Recipe } from '../lib/recipe';
 import { prepareVoice } from '../lib/audio/prepare';
 import { playSlice } from '../lib/audio/beatPreview';
+import { encodePlayed, heardHits } from '../lib/played';
 import { SILENT_PEAK, startRecording, type Recording } from '../lib/audio/recorder';
 import type { Slice } from '../lib/audio/slicer';
 import { cutInstrument, type Instrument } from '../lib/instrument';
@@ -1076,6 +1077,8 @@ export class Session {
           name: title || r.recipe.name,
           instrument: { id: r.instrument.id, assetId: v.voiceAsset },
           mixAssetId: m.mixAsset,
+          // the beat bar by bar as heard, so the map's ring evolves with it
+          played: encodePlayed(heardHits(r.tape)),
           ...(m.cardUrl ? { cardUrl: m.cardUrl } : {}),
           ...(this.revoxOf ? { revoxOf: this.revoxOf.mixId } : {}),
         };
