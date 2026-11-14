@@ -159,6 +159,26 @@ describe('Roundware usage logging', () => {
     vi.restoreAllMocks();
   });
 
+  it("uploads with a real session even after the dev server's console logging kept a stand-in", async () => {
+    const calls = server();
+    const store = new Map<string, string>();
+    vi.stubGlobal('sessionStorage', { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => store.set(k, v) });
+    const rw = new Roundware(() => 'd', 'https://rw.test', 103, 'console');
+    vi.spyOn(console, 'info').mockImplementation(() => {});
+    rw.startVisit();
+    expect(JSON.parse(store.get('beatvox.rw.session')!)).toMatchObject({ id: 0 });
+    vi.stubGlobal('fetch', async (url: string, init: RequestInit) => {
+      const path = url.replace('https://rw.test', '');
+      calls.push({ method: init.method!, path, body: init.body instanceof FormData ? Object.fromEntries(init.body) : {} });
+      const body = path === '/participants/' ? { id: 7, participant_token: 'tok' } : path === '/sessions/' ? { id: 9 } : { id: 40, file: 'https://cdn/x' };
+      return new Response(JSON.stringify(body), { status: 201 });
+    });
+    await rw.upload({ mediaType: 'data', file: new Blob(['{}']), fileName: 'i.json', place: { latitude: 1, longitude: 2 }, tags: [] });
+    expect(calls.map((c) => c.path)).toEqual(['/participants/', '/sessions/', '/assets/']);
+    expect(calls.at(-1)!.body.session_id).toBe('9');
+    vi.restoreAllMocks();
+  });
+
   it('sends a vote and says whether it got in', async () => {
     const calls = server();
     const rw = new Roundware(() => 'd', 'https://rw.test', 103, 'send');

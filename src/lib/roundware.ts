@@ -174,7 +174,9 @@ export class Roundware {
     if (this.started || this.log === 'off') return;
     this.started = true;
     if (this.log === 'console') {
-      const k = this.liveSession(Date.now());
+      // a stand-in session (id 0) marks the visit for the console; never used
+      // for a real call (liveSession skips it)
+      const k = this.liveSession(Date.now(), true);
       if (k) console.info('[roundware] carrying on session', k.id);
       else {
         console.info('[roundware] event', { event_type: 'start_session' });
@@ -276,10 +278,14 @@ export class Roundware {
     return this.token;
   }
 
-  /** The session kept from earlier in this visit, if it hasn't gone idle. */
-  private liveSession(now: number): KeptSession | null {
+  /**
+   * The session kept from earlier in this visit, if it hasn't gone idle.
+   * Only a real one, unless `standIn`: the dev server's console logging
+   * keeps a stand-in with id 0, and an upload sent with that fails.
+   */
+  private liveSession(now: number, standIn = false): KeptSession | null {
     const k = readSession();
-    return k && k.project === this.projectId && now - k.last < SESSION_IDLE_MS ? k : null;
+    return k && (standIn || k.id > 0) && k.project === this.projectId && now - k.last < SESSION_IDLE_MS ? k : null;
   }
 
   /**
