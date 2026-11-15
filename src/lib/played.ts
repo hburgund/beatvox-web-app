@@ -7,6 +7,7 @@
 //
 // Each bar is one string: 8 rows of 4 hex digits, 16 steps a row, the
 // first step the highest bit. "8888…" is four on the floor in row 1.
+// Written up, with a worked example, in docs/RECIPE.md.
 import type { Tape } from './audio/engine';
 
 export const ROWS = 8;
