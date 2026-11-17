@@ -62,6 +62,22 @@
   </section>
 
   <div class="folds">
+    <details id="about-human">
+      <summary>BeatVox celebrates human creativity! Not AI. <span class="pm" aria-hidden="true"></span></summary>
+      <div class="fold-text">
+        <p>
+          BeatVox is all about the diversity, musicality and creativity of humans and their voices. We are not opposed to AI in general, just feel
+          that it’s better used in some areas and better not used in others.
+        </p>
+        <p>
+          This entire website was built in collaboration with Claude and there is no way it would have happened without this resource (hence the
+          18 year hiatus!). AI can enhance, augment and enable human creativity, but we need to be careful and work hard to strike a sustainable
+          balance.
+        </p>
+        <p class="motto">Creativity by humans; technical expertise by AI.</p>
+      </div>
+    </details>
+
     <details id="about-own">
       <summary>What you make is yours <span class="pm" aria-hidden="true"></span></summary>
       <dl>
@@ -307,6 +323,16 @@
   }
   details[open] .pm::after {
     display: none;
+  }
+  .fold-text {
+    margin: 0 0 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .motto {
+    font: 400 15px var(--mono);
+    color: var(--ink);
   }
   dl {
     margin: 0 0 18px;
