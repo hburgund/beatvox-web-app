@@ -128,6 +128,9 @@ export interface RwPlace {
   longitude: number;
 }
 
+/** Waits (ms) before each retry of an upload whose parent isn't there yet. */
+export const PARENT_RETRIES = [1000, 2000, 4000];
+
 export class RoundwareError extends Error {
   constructor(
     message: string,
@@ -348,10 +351,29 @@ export class Roundware {
     if (fields.agreedTerms) f.set('agreed_terms', fields.agreedTerms);
     if (fields.recordedAt) f.set('recorded_at', fields.recordedAt.toISOString());
     f.set('file', fields.file, fields.fileName);
-    const asset = await this.call<RwAsset>('POST', '/assets/', f);
+    const asset = await this.postAsset(f, fields.parent !== undefined);
     if (!asset.file) throw new RoundwareError(`Roundware saved ${fields.fileName} without its file (asset ${asset.id}).`);
     this.event('upload_asset', { data: `asset_id:${asset.id}` });
     return asset;
+  }
+
+  /**
+   * Roundware answers an upload before it has committed it (its database
+   * session closes after the response, and after the new-contribution
+   * notifications), so a child sent straight after its parent can find no
+   * parent yet. The server checks the parent before storing anything, so
+   * trying again a moment later is safe.
+   */
+  private async postAsset(f: FormData, hasParent: boolean): Promise<RwAsset> {
+    for (let tries = 0; ; tries++) {
+      try {
+        return await this.call<RwAsset>('POST', '/assets/', f);
+      } catch (e) {
+        const notYet = hasParent && e instanceof RoundwareError && e.status === 422 && /parent_asset_id/.test(e.message);
+        if (!notYet || tries >= PARENT_RETRIES.length) throw e;
+        await new Promise((r) => setTimeout(r, PARENT_RETRIES[tries]));
+      }
+    }
   }
 
   private async call<T>(method: string, path: string, body?: object | FormData, opts: CallOpts = {}): Promise<T> {

@@ -45,6 +45,42 @@ describe('Roundware', () => {
     expect((f.get('file') as File).name).toBe('i.json');
   });
 
+  it("tries a child again while Roundware hasn't committed its parent yet", async () => {
+    vi.useFakeTimers();
+    let n = 0;
+    vi.stubGlobal('fetch', async () => {
+      n++;
+      if (n === 1) return new Response(JSON.stringify({ id: 1, participant_token: 't' }));
+      if (n === 2) return new Response(JSON.stringify({ id: 2 }));
+      if (n <= 4) return new Response(JSON.stringify({ detail: 'parent_asset_id must be an asset in the same project.' }), { status: 422 });
+      return new Response(JSON.stringify({ id: 9, file: 'https://cdn/x' }));
+    });
+    const rw = new Roundware(() => 'd', 'https://rw.test', 1);
+    const up = rw.upload({ mediaType: 'audio', file: new Blob(['x']), fileName: 'm.mp3', place: { latitude: 0, longitude: 0 }, tags: [1], parent: 5 });
+    await vi.runAllTimersAsync();
+    expect((await up).id).toBe(9);
+    expect(n).toBe(5);
+    vi.useRealTimers();
+  });
+
+  it('gives up on a missing parent after a few tries', async () => {
+    vi.useFakeTimers();
+    let n = 0;
+    vi.stubGlobal('fetch', async () => {
+      n++;
+      if (n === 1) return new Response(JSON.stringify({ id: 1, participant_token: 't' }));
+      if (n === 2) return new Response(JSON.stringify({ id: 2 }));
+      return new Response(JSON.stringify({ detail: 'parent_asset_id must be an asset in the same project.' }), { status: 422 });
+    });
+    const rw = new Roundware(() => 'd', 'https://rw.test', 1);
+    const up = rw.upload({ mediaType: 'audio', file: new Blob(['x']), fileName: 'm.mp3', place: { latitude: 0, longitude: 0 }, tags: [1], parent: 5 });
+    const done = expect(up).rejects.toThrow('parent_asset_id');
+    await vi.runAllTimersAsync();
+    await done;
+    expect(n).toBe(2 + 4);
+    vi.useRealTimers();
+  });
+
   it('reports the server detail, and an asset saved without its file', async () => {
     let n = 0;
     vi.stubGlobal('fetch', async () => {
