@@ -275,8 +275,7 @@
     markers.forEach((m) => m.remove());
     markers = [];
     const add = (el: HTMLElement, lng: number, lat: number, offset: [number, number] = [0, 0]) => {
-      // start faint if it's round the back, so it doesn't flash at full strength for a frame
-      if (map!.transform.isLocationOccluded(new ml!.LngLat(lng, lat))) el.style.opacity = FAR_SIDE;
+      // (MapLibre makes one round the back faint as it's added)
       markers.push(new ml!.Marker({ element: el, offset, opacityWhenCovered: FAR_SIDE }).setLngLat([lng, lat]).addTo(map!));
     };
     const mixEl = (m: MapMix) => {

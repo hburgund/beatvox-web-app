@@ -17,6 +17,9 @@ export async function risoMap(
 ): Promise<{ map: MlMap; ml: Maplibre }> {
   const ml = await import('maplibre-gl');
   await import('maplibre-gl/dist/maplibre-gl.css');
+  // MapLibre 6 looks for its worker beside its own file, which a bundled build
+  // doesn't keep; give it the copy the build ships instead
+  ml.setWorkerUrl((await import('maplibre-gl/dist/maplibre-gl-worker.mjs?url')).default);
   const { globe = false, roads = true, colors = RISO_LIGHT, foldCredit = false, ...rest } = opts;
   const map = new ml.Map({
     container,
@@ -25,8 +28,9 @@ export async function risoMap(
     attributionControl: { compact: true },
     ...rest,
   });
-  map.on('styleimagemissing', (e) => {
-    if (e.id === 'halftone' && !map.hasImage('halftone')) map.addImage('halftone', halftone(colors.dots));
+  // the sea's halftone dots, made when the style first asks for them
+  map.setMissingStyleImageResolver((id) => {
+    if (id === 'halftone' && !map.hasImage('halftone')) map.addImage('halftone', halftone(colors.dots));
   });
   if (foldCredit) {
     map.once('load', () => container.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show'));
