@@ -20,6 +20,7 @@
   import { globeCenter, loadMap, loadRecipe, passes, type MapData, type MapMix } from '../lib/mapData';
   import { ringRows, type RingRow } from '../lib/shared';
   import { clockMarker } from '../lib/clockMarker';
+  import { Pins, fanOffsets } from '../lib/pins';
   import { STUDIO_PATH } from '../lib/roundware';
   import { ShuffleBag } from '../lib/shuffleBag';
   import { greatCircle } from '../lib/greatCircle';
@@ -32,7 +33,8 @@
   let marks = $state.raw(new Map<number, RingRow[]>());
   let zoom = $state(2);
   /** zoomed in far enough for clocks instead of dots; markers are only redrawn when this flips */
-  const clocks = $derived(zoom >= 4);
+  const CLOCK_ZOOM = 4;
+  const clocks = $derived(zoom >= CLOCK_ZOOM);
   let wide = $state(false);
   /** the phone sheet pulled down, so the map shows: just the title and the top of the ring */
   let mini = $state(false);
@@ -46,6 +48,10 @@
   let map: MlMap | null = null;
   let ml: Maplibre | null = null;
   let markers: Marker[] = [];
+  /** a stack fanned out (mixes in one spot that no zoom pulls apart): it stays open while you pick through it */
+  let fan = $state.raw<{ ids: number[]; longitude: number; latitude: number } | null>(null);
+  /** clusters change only at whole zoom levels */
+  const zoomStep = $derived(Math.floor(zoom));
   /** how faint a mix on the far side of the globe shows through (MapLibre's default is 0.2) */
   const FAR_SIDE = '0.08';
 
@@ -95,6 +101,12 @@
   }
 
   const visible = $derived(data ? data.mixes.filter((m) => passes(m, data!.filters, chosen)) : []);
+  // the open mix and its family never stack, so its lines end at real markers; the open one last, on top
+  const pins = $derived.by(() => {
+    const sel = selected;
+    const loose = new Set(sel && data ? (data.families.get(sel.voxId) ?? []).map((m) => m.id) : []);
+    return new Pins([...visible].sort((a, b) => Number(a.id === sel?.id) - Number(b.id === sel?.id)), loose);
+  });
   const chosenCount = $derived(chosen.size);
 
   // a bigger screen gets a side panel instead of a sheet
@@ -113,7 +125,13 @@
       if (gone) return r.map.remove();
       map = r.map;
       ml = r.ml;
-      map.on('zoomend', () => (zoom = map!.getZoom()));
+      map.on('zoomend', () => {
+        // at another zoom level the stacks are different: fold a fan back up
+        if (Math.floor(map!.getZoom()) !== Math.floor(zoom)) fan = null;
+        zoom = map!.getZoom();
+      });
+      // a tap anywhere else folds a fanned-out stack back up
+      map.on('click', () => (fan = null));
       // markers update their own opacity as the globe turns; follow it
       map.on('render', markFarSide);
       map.on('load', () => {
@@ -224,6 +242,8 @@
     if (!ready || !map || !ml || !data) return;
     const show = visible;
     const sel = selected;
+    void fan;
+    void zoomStep;
     const big = clocks;
     const mk = marks;
     const ids = new Set(show.map((m) => m.id));
@@ -241,10 +261,15 @@
       }
     }
     (map.getSource('family') as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features });
-    // zoomed out a dot, zoomed in a clock; the chosen one drawn last, on top
+    // zoomed out a dot, zoomed in a clock; mixes that would overlap, a stack
     markers.forEach((m) => m.remove());
     markers = [];
-    for (const m of [...show].sort((a, b) => Number(a.id === sel?.id) - Number(b.id === sel?.id))) {
+    const add = (el: HTMLElement, lng: number, lat: number, offset: [number, number] = [0, 0]) => {
+      // start faint if it's round the back, so it doesn't flash at full strength for a frame
+      if (map!.transform.isLocationOccluded(new ml!.LngLat(lng, lat))) el.style.opacity = FAR_SIDE;
+      markers.push(new ml!.Marker({ element: el, offset, opacityWhenCovered: FAR_SIDE }).setLngLat([lng, lat]).addTo(map!));
+    };
+    const mixEl = (m: MapMix) => {
       const on = m.id === sel?.id;
       const el = document.createElement('button');
       el.className = `bv-pin${on ? ' on' : ''}`;
@@ -257,9 +282,49 @@
         e.stopPropagation();
         pick(m, true);
       });
-      // start faint if it's round the back, so it doesn't flash at full strength for a frame
-      if (map.transform.isLocationOccluded(new ml.LngLat(m.longitude, m.latitude))) el.style.opacity = FAR_SIDE;
-      markers.push(new ml.Marker({ element: el, opacityWhenCovered: FAR_SIDE }).setLngLat([m.longitude, m.latitude]).addTo(map));
+      return el;
+    };
+    const fanned = new Set(fan?.ids ?? []);
+    for (const p of pins.at(zoomStep, big, (z) => z >= CLOCK_ZOOM)) {
+      if (p.kind === 'mix' && fanned.has(p.mix.id)) continue;
+      if (p.kind === 'mix') {
+        add(mixEl(p.mix), p.mix.longitude, p.mix.latitude);
+        continue;
+      }
+      // the fan's mixes are drawn with the fan, below
+      if (fanned.has(p.mixes[0].id) && p.mixes.every((m) => fanned.has(m.id))) continue;
+      const n = p.mixes.length;
+      const el = document.createElement('button');
+      el.className = `bv-pin bv-stack${big ? ' clocks' : ''}`;
+      const apart = p.expansionZoom <= map.getMaxZoom();
+      el.setAttribute('aria-label', `${n} beats here: ${apart ? 'zoom in' : 'spread them out'}`);
+      el.title = p.mixes.map((m) => m.title).join(', ');
+      // a numbered disc, never a clock: it isn't a beat you can play
+      el.innerHTML = `<b>${n}</b>`;
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (apart) {
+          fan = null;
+          map!.easeTo({ center: [p.longitude, p.latitude], zoom: p.expansionZoom + 0.05, duration: 700 });
+        } else fan = { ids: p.mixes.map((m) => m.id), longitude: p.longitude, latitude: p.latitude };
+      });
+      add(el, p.longitude, p.latitude);
+    }
+    if (fan) {
+      // fanned out round the spot, with a line from it to each; the open one stays in its place
+      const fm = fan.ids.map((id) => show.find((m) => m.id === id)).filter((m): m is MapMix => !!m);
+      const offs = fanOffsets(fm.length, big ? 44 : 22);
+      const half = Math.ceil(Math.max(...offs.map(([x, y]) => Math.hypot(x, y))) + 4);
+      const hub = document.createElement('div');
+      hub.className = 'bv-fan';
+      hub.innerHTML =
+        `<svg width="${half * 2}" height="${half * 2}" viewBox="${-half} ${-half} ${half * 2} ${half * 2}" aria-hidden="true">` +
+        offs.map(([x, y]) => `<line x1="0" y1="0" x2="${x}" y2="${y}"/>`).join('') +
+        `<circle r="4"/></svg>`;
+      add(hub, fan.longitude, fan.latitude);
+      // the open one last, on top
+      const order = fm.map((m, k) => ({ m, k })).sort((a, b) => Number(a.m.id === sel?.id) - Number(b.m.id === sel?.id));
+      for (const { m, k } of order) add(mixEl(m), fan.longitude, fan.latitude, offs[k]);
     }
     markFarSide();
   });
@@ -654,6 +719,40 @@
     border-radius: 50%;
     background: var(--blue);
     border: 2px solid var(--ink);
+  }
+  /* a stack: a numbered disc, bigger among the clocks zoomed in */
+  .map :global(.bv-stack b) {
+    display: grid;
+    place-items: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 5px;
+    box-sizing: border-box;
+    border-radius: 12px;
+    background: var(--card);
+    border: 2px solid var(--ink);
+    box-shadow: 3px 3px 0 var(--blue);
+    font: 700 12px/1 var(--mono);
+    color: var(--ink);
+  }
+  .map :global(.bv-stack.clocks b) {
+    min-width: 34px;
+    height: 34px;
+    border-radius: 17px;
+    border-width: 2.5px;
+    font-size: 15px;
+  }
+  .map :global(.bv-fan) {
+    pointer-events: none;
+    line-height: 0;
+  }
+  .map :global(.bv-fan line) {
+    stroke: var(--ink);
+    stroke-width: 1.5;
+    stroke-dasharray: 3 3;
+  }
+  .map :global(.bv-fan circle) {
+    fill: var(--ink);
   }
   .map :global(.bv-dot.revox) {
     background: var(--yellow);
