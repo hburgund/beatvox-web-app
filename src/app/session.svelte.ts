@@ -45,6 +45,8 @@ interface Knobs {
 }
 
 const FX_KEYS = ['crush', 'filter', 'wobble', 'echo', 'echoTime', 'pump'] as const;
+/** where the Space knob starts */
+const SPACE_DEFAULT = 35;
 /** how long RANDOMIZE! takes to turn the knobs, ms */
 const RANDOMIZE_MS = 450;
 
@@ -130,7 +132,7 @@ export class Session {
   volume = $state(65);
   bpm = $state(89);
   pitch = $state(1);
-  space = $state(35);
+  space = $state(SPACE_DEFAULT);
   /** 0..100: how much each hit varies (start, pitch, loudness, timing) */
   humanize = $state(60);
   // the effects rack (fx.ts): each off at 0; filter is -100..100, echoTime 2/3/4 sixteenths
@@ -158,7 +160,7 @@ export class Session {
   canUndo = $state(false);
   canRedo = $state(false);
   /** the knobs as last sent to the engine, so a knob turn records the value before it */
-  private knobsNow: Knobs = { bpm: 89, pitch: 1, space: 35, humanize: 60, ...FX_KNOBS_OFF };
+  private knobsNow: Knobs = { bpm: 89, pitch: 1, space: SPACE_DEFAULT, humanize: 60, ...FX_KNOBS_OFF };
   /** taps and knob turns close together count as one step */
   private lastGroup: { key: string; at: number } | null = null;
   /** one change can call record() more than once (NEW BEAT → applyRecipe); keep the first */
@@ -671,10 +673,25 @@ export class Session {
    * turn there over a moment rather than jumping.
    */
   randomizeFx() {
+    this.glideFx(randomKnobs(this.fxKnobs()));
+  }
+
+  /** RESET: the rack back to how a beat starts: every effect off, Space at its default. One undo step. */
+  resetFx() {
+    this.glideFx({ ...FX_KNOBS_OFF }, SPACE_DEFAULT);
+  }
+
+  /** the rack (and Space, if given) as it starts */
+  get fxAtDefault() {
+    return FX_KEYS.every((n) => this[n] === FX_KNOBS_OFF[n]) && this.space === SPACE_DEFAULT;
+  }
+
+  /** Turn the rack's knobs to `to` over a moment, as one undo step. */
+  private glideFx(to: FxKnobs, space?: number) {
     this.audio();
     this.record();
-    const from = this.fxKnobs();
-    const to = randomKnobs(from);
+    const from = { ...this.fxKnobs(), space: this.space };
+    const target = { ...to, space: space ?? this.space };
     // the echo's time can't glide: it changes at once
     this.echoTime = to.echoTime;
     const run = ++this.glide;
@@ -683,7 +700,7 @@ export class Session {
       if (run !== this.glide) return;
       const x = Math.min(1, (performance.now() - t0) / RANDOMIZE_MS);
       const e = 1 - Math.pow(1 - x, 3);
-      for (const n of ['crush', 'filter', 'wobble', 'echo', 'pump'] as const) this[n] = Math.round(from[n] + (to[n] - from[n]) * e);
+      for (const n of ['crush', 'filter', 'wobble', 'echo', 'pump', 'space'] as const) this[n] = Math.round(from[n] + (target[n] - from[n]) * e);
       // part of the step just recorded, not knob turns of their own
       this.knobsNow = this.knobs();
       if (x < 1) requestAnimationFrame(frame);

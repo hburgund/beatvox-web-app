@@ -14,7 +14,14 @@
 <section class="card fx" aria-label="Effects">
   <div class="head">
     <span class="label">EFFECTS</span>
-    <button class="btn primary random" onclick={() => s.randomizeFx()}>RANDOMIZE!</button>
+    <div class="actions">
+      <button class="btn icon" disabled={s.fxAtDefault} aria-label="Reset effects" title="Reset: every effect off, Space back to its start" onclick={() => s.resetFx()}>
+        <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"
+          ><path d="M4.5 9.5a6 6 0 1 0 1.8-4.3M4 3v4.5h4.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="square" /></svg
+        >
+      </button>
+      <button class="btn primary random" onclick={() => s.randomizeFx()}>RANDOMIZE!</button>
+    </div>
   </div>
 
   <!-- left to right in the order the sound goes through them; arrows between, where there's room -->
@@ -49,8 +56,17 @@
     align-items: center;
     gap: 8px;
   }
-  .random {
+  .actions {
+    display: flex;
+    gap: 8px;
+  }
+  .random,
+  .icon {
     min-height: 40px;
+  }
+  .icon {
+    width: 44px;
+    padding: 0;
   }
   .dials {
     display: grid;
