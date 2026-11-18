@@ -63,10 +63,10 @@
 
   <div class="folds">
     <details id="about-human">
-      <summary>BeatVox celebrates human creativity! Not AI. <span class="pm" aria-hidden="true"></span></summary>
+      <summary>BeatVox celebrates human creativity! <span class="pm" aria-hidden="true"></span></summary>
       <div class="fold-text">
         <p>
-          BeatVox is all about the diversity, musicality and creativity of humans and their voices. We are not opposed to AI in general, just feel
+          BeatVox is all about the diversity, musicality and creativity of humans and their unique voices. There is no AI infused into the BeatVox creative process. We are not opposed to AI in general, just feel
           that it’s better used in some areas and better not used in others.
         </p>
         <p>
