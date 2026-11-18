@@ -4,6 +4,7 @@
   import Leds from '../lib/ui/Leds.svelte';
   import VoiceCard from './VoiceCard.svelte';
   import BeatCard from './BeatCard.svelte';
+  import FxCard from './FxCard.svelte';
   import GrooveAudition from './GrooveAudition.svelte';
   import SaveBar from './SaveBar.svelte';
   import ShareSheet from './ShareSheet.svelte';
@@ -22,7 +23,7 @@
 
   // push dial changes into the engine and effects
   $effect(() => {
-    void [s.volume, s.bpm, s.pitch, s.space, s.humanize];
+    void [s.volume, s.bpm, s.pitch, s.space, s.humanize, s.crush, s.filter, s.wobble, s.echo, s.echoTime, s.pump];
     s.applyMix();
   });
 
@@ -66,6 +67,7 @@
   <main>
     <VoiceCard {s} />
     <BeatCard {s} />
+    <FxCard {s} />
     {#if import.meta.env.DEV}<GrooveAudition {s} />{/if}
   </main>
 </div>

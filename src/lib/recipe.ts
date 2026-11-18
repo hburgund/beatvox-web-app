@@ -28,6 +28,7 @@
 // }
 
 import type { InstrumentRef } from './instrument';
+import type { FxKnobs } from './audio/fx';
 import { PLAYED_BAR } from './played';
 
 export const RECIPE_FORMAT = 'beatvox-recipe';
@@ -81,8 +82,11 @@ export interface Recipe {
   /** 0..1: how much each hit's loudness wanders, like a person playing
    *  (default 1 = v1.93; 0 = machine-steady) */
   humanize?: number;
-  /** Simple-mode Space knob 0..100 */
+  /** the Space knob 0..100 */
   space?: number;
+  /** beats (from Nov 2026): the effects rack's knobs as saved (see FxKnobs in
+   *  fx.ts). Absent: all off. */
+  fx?: FxKnobs;
   evolve?: { auto: boolean; every?: number };
   /** beats sent to the map (from Nov 2026): the steps each row played in
    *  each saved bar, as heard (see played.ts). `voices` is how it started. */

@@ -67,7 +67,8 @@ export async function renderShare(tape: Tape, voice: AudioBuffer, opts: RenderOp
   // voice gets the same EQ and compression as the beat
   for (const c of tape.head) bank.apply(c.k === 'pan' ? shift(c, tape, remixAt) : { ...c, t: 0 });
 
-  // the original voice, centred and dry, with short fades
+  // the original voice, centred and dry, with short fades, past the effects rack
+  // (it's the original), into the glue
   const src = ctx.createBufferSource();
   src.buffer = voice;
   const g = ctx.createGain();
@@ -76,7 +77,7 @@ export async function renderShare(tape: Tape, voice: AudioBuffer, opts: RenderOp
   g.gain.linearRampToValueAtTime(1, LEAD + fade);
   g.gain.setValueAtTime(1, LEAD + voiceDur - fade);
   g.gain.linearRampToValueAtTime(0, LEAD + voiceDur);
-  src.connect(g).connect(fx.dry);
+  src.connect(g).connect(fx.clean);
   src.start(LEAD, span.start, voiceDur);
 
   // the loops

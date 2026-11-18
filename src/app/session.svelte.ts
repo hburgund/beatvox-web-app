@@ -2,7 +2,7 @@
 // The audio engine is plain TypeScript; this class connects it to Svelte.
 
 import { BeatEngine, VOICES, STEPS, type BeatState, type PanSetting, type RowFill, type Voice, type Tape } from '../lib/audio/engine';
-import { FxChain, spaceToParams } from '../lib/audio/fx';
+import { FxChain, FX_KNOBS_OFF, knobsToParams, randomKnobs, type FxKnobs } from '../lib/audio/fx';
 import { encodeMp3 } from '../lib/audio/mp3';
 import { renderShare, voiceSpan } from '../lib/audio/render';
 import type { Recipe } from '../lib/recipe';
@@ -36,7 +36,17 @@ interface Knobs {
   pitch: number;
   space: number;
   humanize: number;
+  crush: number;
+  filter: number;
+  wobble: number;
+  echo: number;
+  echoTime: number;
+  pump: number;
 }
+
+const FX_KEYS = ['crush', 'filter', 'wobble', 'echo', 'echoTime', 'pump'] as const;
+/** how long RANDOMIZE! takes to turn the knobs, ms */
+const RANDOMIZE_MS = 450;
 
 /** one undo step: the beat, its knobs and the style it came from */
 interface Moment {
@@ -123,6 +133,14 @@ export class Session {
   space = $state(35);
   /** 0..100: how much each hit varies (start, pitch, loudness, timing) */
   humanize = $state(60);
+  // the effects rack (fx.ts): each off at 0; filter is -100..100, echoTime 2/3/4 sixteenths
+  crush = $state(FX_KNOBS_OFF.crush);
+  filter = $state(FX_KNOBS_OFF.filter);
+  wobble = $state(FX_KNOBS_OFF.wobble);
+  echo = $state(FX_KNOBS_OFF.echo);
+  echoTime = $state(FX_KNOBS_OFF.echoTime);
+  pump = $state(FX_KNOBS_OFF.pump);
+  private glide = 0;
   /** the beat row a slice is being dragged over */
   dropRow = $state<number | null>(null);
   /** the row a slice just landed on (it flashes), with a count so the same row can flash twice */
@@ -140,7 +158,7 @@ export class Session {
   canUndo = $state(false);
   canRedo = $state(false);
   /** the knobs as last sent to the engine, so a knob turn records the value before it */
-  private knobsNow: Knobs = { bpm: 89, pitch: 1, space: 35, humanize: 60 };
+  private knobsNow: Knobs = { bpm: 89, pitch: 1, space: 35, humanize: 60, ...FX_KNOBS_OFF };
   /** taps and knob turns close together count as one step */
   private lastGroup: { key: string; at: number } | null = null;
   /** one change can call record() more than once (NEW BEAT → applyRecipe); keep the first */
@@ -325,6 +343,8 @@ export class Session {
       if (recipe.space !== undefined) this.space = recipe.space;
       if (recipe.humanize !== undefined) this.humanize = Math.round(recipe.humanize * 100);
     }
+    // a reVox sounds as it was saved: its effects, or none for a beat saved before the rack
+    if (revox?.recipe) this.setFxKnobs({ ...FX_KNOBS_OFF, ...revox.recipe.fx });
     this.engine!.load(voice, instrument, recipe);
     this.knobsNow = this.knobs();
     this.clearHistory();
@@ -567,7 +587,7 @@ export class Session {
     }
     this.engine.set({ bpm: this.bpm, pitch: this.pitch, humanize: this.humanize / 100 });
     this.fx.setVolume(Math.pow(this.volume / 100, 2) * 1.25);
-    this.engine.setFx(spaceToParams(this.space / 100));
+    this.engine.setFx(knobsToParams(this.space, this.fxKnobs()));
   }
 
   // ── Undo ──────────────────────────────────────────────────────────────
@@ -609,6 +629,7 @@ export class Session {
   }
 
   private goTo(m: Moment) {
+    this.glide++;
     this.audio();
     this.lastGroup = null;
     this.style = m.style;
@@ -633,7 +654,41 @@ export class Session {
   }
 
   private knobs(): Knobs {
-    return { bpm: this.bpm, pitch: this.pitch, space: this.space, humanize: this.humanize };
+    return { bpm: this.bpm, pitch: this.pitch, space: this.space, humanize: this.humanize, ...this.fxKnobs() };
+  }
+
+  /** the effects rack's knobs (Space aside) */
+  fxKnobs(): FxKnobs {
+    return { crush: this.crush, filter: this.filter, wobble: this.wobble, echo: this.echo, echoTime: this.echoTime, pump: this.pump };
+  }
+
+  private setFxKnobs(k: FxKnobs) {
+    for (const n of FX_KEYS) this[n] = k[n];
+  }
+
+  /**
+   * RANDOMIZE!: new settings for the effects rack, one undo step. The knobs
+   * turn there over a moment rather than jumping.
+   */
+  randomizeFx() {
+    this.audio();
+    this.record();
+    const from = this.fxKnobs();
+    const to = randomKnobs(from);
+    // the echo's time can't glide: it changes at once
+    this.echoTime = to.echoTime;
+    const run = ++this.glide;
+    const t0 = performance.now();
+    const frame = () => {
+      if (run !== this.glide) return;
+      const x = Math.min(1, (performance.now() - t0) / RANDOMIZE_MS);
+      const e = 1 - Math.pow(1 - x, 3);
+      for (const n of ['crush', 'filter', 'wobble', 'echo', 'pump'] as const) this[n] = Math.round(from[n] + (to[n] - from[n]) * e);
+      // part of the step just recorded, not knob turns of their own
+      this.knobsNow = this.knobs();
+      if (x < 1) requestAnimationFrame(frame);
+    };
+    frame();
   }
 
   // ── Save and share ────────────────────────────────────────────────────
@@ -648,6 +703,7 @@ export class Session {
     const instrument = this.instrument;
     const raw = this.raw ?? voice;
     const recordedAt = this.recordedAt;
+    const sound = { space: this.space, fx: this.fxKnobs() };
     this.go();
     this.rw.event('save_loop');
     const taped = this.engine!.capture(SHARE_LOOPS);
@@ -681,7 +737,7 @@ export class Session {
         fullAudio: full,
         tape,
         voiceSpan: span,
-        recipe: tape.recipe,
+        recipe: { ...tape.recipe, ...sound },
         instrument,
         raw,
         recordedAt,

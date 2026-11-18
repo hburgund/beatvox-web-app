@@ -44,6 +44,8 @@ function fakeContext() {
     createDynamicsCompressor: () =>
       node({ threshold: param(), knee: param(), ratio: param(), attack: param(), release: param() }),
     createConvolver: () => node({ buffer: null }),
+    createWaveShaper: () => node({ curve: null, oversample: 'none' }),
+    createOscillator: () => node({ type: 'sine', frequency: param(), start() {}, stop() {} }),
     createBuffer: (ch: number, len: number, sr: number) => {
       const data = Array.from({ length: ch }, () => new Float32Array(len));
       return { numberOfChannels: ch, length: len, sampleRate: sr, getChannelData: (c: number) => data[c] };

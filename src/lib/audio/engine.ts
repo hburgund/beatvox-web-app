@@ -967,6 +967,8 @@ export class BeatEngine {
           hits.push(i);
         }
       });
+      // PUMP ducks the mix on every beat
+      if (this.step % 4 === 0) this.emit({ k: 'pump', t });
       this.events.push({ time: ht, step: this.step, hits });
       this.nextTime += stepDur;
       this.step = (this.step + 1) % STEPS;

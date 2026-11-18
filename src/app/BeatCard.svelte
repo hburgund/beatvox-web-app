@@ -97,7 +97,6 @@
     <Knob label="Vol" bind:value={s.volume} />
     <Knob label="Tempo" bind:value={s.bpm} min={40} max={180} />
     <Knob label="Pitch" bind:value={s.pitch} min={0.5} max={2} step={0.01} format={(v) => v.toFixed(2)} />
-    <Knob label="Space" bind:value={s.space} format={pct} />
     <Knob label="Human" bind:value={s.humanize} format={pct} />
   </div>
 </section>
@@ -206,7 +205,7 @@
   }
   .dials {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 4px;
   }
 </style>

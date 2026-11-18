@@ -22,6 +22,8 @@ export type Cmd =
   | { k: 'sends'; t: number; voice: number; delay: number; reverb: number }
   | { k: 'fx'; t: number; params: FxParams }
   | { k: 'tempo'; t: number; bpm: number }
+  /** a beat: PUMP ducks the mix on it */
+  | { k: 'pump'; t: number }
   /** fade out every hit still sounding (STOP) */
   | { k: 'silence'; t: number };
 
@@ -110,6 +112,9 @@ export class VoiceBank {
       case 'fx':
         this.fxParams = { ...c.params };
         this.fx.set(c.params, c.t);
+        return;
+      case 'pump':
+        this.fx.pump(c.t);
         return;
       case 'tempo':
         this.bpm = c.bpm;
