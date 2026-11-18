@@ -33,10 +33,10 @@ export const DEFAULT_PARAMS: SliceParams = {
   maxLenMs: 1500,
   prerollMs: 15,
   attackSensitivity: 0.5,
-  attackMinGapMs: 80,
+  attackMinGapMs: 160,
   syllableSmoothMs: 30,
   syllableDipDb: 4,
-  syllableMinGapMs: 100,
+  syllableMinGapMs: 180,
   mixedSplitStrength: 0.6,
 };
 
