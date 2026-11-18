@@ -140,6 +140,11 @@
           identifies you. Roundware also notes what gets played, so the project knows which BeatVoxes are heard. Your browser keeps a random ID for this and
           remembers your likes; neither is tied to your name.
         </dd>
+        <dt>Errors are reported anonymously.</dt>
+        <dd>
+          If something breaks in your browser, BeatVox sends the error to Sentry so it can be fixed: what went wrong and on which page, but not your
+          recordings, your location or anything that identifies you.
+        </dd>
       </dl>
     </details>
 

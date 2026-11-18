@@ -4,6 +4,10 @@ import '@fontsource/courier-prime/700.css';
 import './theme.css';
 import { sharePageId, STUDIO_PATH } from '../lib/roundware';
 import { rw } from '../lib/rw';
+import { startErrorReporting } from '../lib/monitoring';
+
+// errors in people's browsers go to Sentry, when the build has its key (see monitoring.ts)
+void startErrorReporting();
 
 // Three pages, each loading only its own code: the map (home), the studio,
 // and one BeatVox's share page (/b/<id>). Each starts a Roundware session,
