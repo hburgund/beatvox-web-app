@@ -14,6 +14,7 @@
   import About from '../about/About.svelte';
   import AboutButton from '../about/AboutButton.svelte';
   import { about } from '../about/aboutState.svelte';
+  import { HOWTO_EVENT } from '../about/howto.svelte';
   import Check from '../lib/ui/Check.svelte';
   import { Player } from '../share/player.svelte';
   import { rw } from '../lib/rw';
@@ -90,6 +91,15 @@
       // private mode: it just shows again next time
     }
   }
+  // the how-to video plays alone: Wander and any beat stop
+  $effect(() => {
+    const quiet = () => {
+      stopWander();
+      player.stop(0.3);
+    };
+    addEventListener(HOWTO_EVENT, quiet);
+    return () => removeEventListener(HOWTO_EVENT, quiet);
+  });
   // tapping a beat or opening About counts as having seen it
   $effect(() => {
     if (welcome && (selected || about.open)) dismissWelcome();

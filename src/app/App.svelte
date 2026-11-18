@@ -8,6 +8,7 @@
   import GrooveAudition from './GrooveAudition.svelte';
   import SaveBar from './SaveBar.svelte';
   import ShareSheet from './ShareSheet.svelte';
+  import { HOWTO_EVENT } from '../about/howto.svelte';
   import About from '../about/About.svelte';
   import AboutButton from '../about/AboutButton.svelte';
   import { about } from '../about/aboutState.svelte';
@@ -25,6 +26,13 @@
   $effect(() => {
     void [s.volume, s.bpm, s.pitch, s.space, s.humanize, s.crush, s.filter, s.wobble, s.echo, s.echoTime, s.pump];
     s.applyMix();
+  });
+
+  // the how-to video plays alone: the beat stops
+  $effect(() => {
+    const quiet = () => s.stopBeat();
+    addEventListener(HOWTO_EVENT, quiet);
+    return () => removeEventListener(HOWTO_EVENT, quiet);
   });
 
   // a new capture (or a new voice) closes the sheet

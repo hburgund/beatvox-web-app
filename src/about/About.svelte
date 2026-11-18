@@ -4,6 +4,7 @@
   // playing; on the map, a line at the top shows what's playing, with Skip.
   import AboutContent from './AboutContent.svelte';
   import { about } from './aboutState.svelte';
+  import HowtoVideo from './HowtoVideo.svelte';
 
   interface Wander {
     title: string;
@@ -75,6 +76,9 @@
     </div>
   </div>
 </dialog>
+
+<!-- the how-to video, opened from About or the map's welcome card -->
+<HowtoVideo />
 
 <style>
   /* a phone: a sheet from the bottom, nearly the whole height */

@@ -6,6 +6,7 @@
 -->
 <script lang="ts">
   import booth from './beatvox-2008-newport.jpg';
+  import { howto } from './howto.svelte';
 
   const steps = [
     ['Record', 'Record anything for up to 15 seconds: your name, a word, a beatbox.'],
@@ -32,6 +33,7 @@
         <li><span class="num" aria-hidden="true">{i + 1}</span><span><b>{t}</b><span class="d">{d}</span></span></li>
       {/each}
     </ol>
+    <button class="link video" onclick={() => howto.show()}>▶ Watch the how-to video (1 min)</button>
   </section>
 
   <section id="about-since" class="card box">
@@ -182,6 +184,11 @@
 </div>
 
 <style>
+  .video {
+    display: block;
+    margin: 14px auto 0;
+    font-weight: 700;
+  }
   .about {
     display: flex;
     flex-direction: column;

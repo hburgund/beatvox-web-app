@@ -6,6 +6,7 @@
   import Votes from '../lib/ui/Votes.svelte';
   import MiniClock from '../lib/ui/MiniClock.svelte';
   import FamilyMap from './FamilyMap.svelte';
+  import { HOWTO_EVENT } from '../about/howto.svelte';
   import About from '../about/About.svelte';
   import AboutButton from '../about/AboutButton.svelte';
   import { Player } from './player.svelte';
@@ -24,6 +25,15 @@
   const p = new Player();
   /** the source vox plays on its own, so it can be heard over the beat */
   const vp = new Player();
+  // the how-to video plays alone
+  $effect(() => {
+    const quiet = () => {
+      p.stop();
+      vp.stop();
+    };
+    addEventListener(HOWTO_EVENT, quiet);
+    return () => removeEventListener(HOWTO_EVENT, quiet);
+  });
 
   $effect(() => {
     let gone = false;

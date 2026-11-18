@@ -3,6 +3,7 @@
   // LISTEN (starts Wander), MAKE YOURS, or the About page. Shown once.
   import { STUDIO_PATH } from '../lib/roundware';
   import { about } from '../about/aboutState.svelte';
+  import { howto } from '../about/howto.svelte';
 
   let { canListen, onlisten, onclose }: { canListen: boolean; onlisten: () => void; onclose: () => void } = $props();
 
@@ -59,6 +60,7 @@
     <a class="btn primary" href={STUDIO_PATH} onclick={onclose}>MAKE YOURS</a>
   </div>
   <p class="hint">LISTEN plays beats from around the world, one after another.</p>
+  <button class="link about" onclick={() => howto.show()}>▶ Watch the how-to video (1 min)</button>
   <button class="link about" onclick={() => about.show()}>What is BeatVox? About the project →</button>
 </section>
 
