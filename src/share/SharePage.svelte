@@ -9,7 +9,9 @@
   import { HOWTO_EVENT } from '../about/howto.svelte';
   import About from '../about/About.svelte';
   import AboutButton from '../about/AboutButton.svelte';
+  import VideoSheet from './VideoSheet.svelte';
   import { Player } from './player.svelte';
+  import { ShareVideo, canRebuild } from './video.svelte';
   import { loadShared, ringRows, type Shared, type SharedMix } from '../lib/shared';
   import { MAP_PATH, STUDIO_PATH, beatvoxShareUrl, mapUrl, revoxUrl } from '../lib/roundware';
   import { rw } from '../lib/rw';
@@ -22,6 +24,7 @@
   let sheetOpen = $state(false);
   let note = $state('');
   let dialog = $state<HTMLDialogElement>();
+  let videoOpen = $state(false);
   const p = new Player();
   /** the source vox plays on its own, so it can be heard over the beat */
   const vp = new Player();
@@ -57,6 +60,16 @@
   });
 
   const live = $derived(data?.status === 'live' ? data : null);
+  // its video, made again here on request (needs the recipe and the slices)
+  const video = $derived(
+    live && canRebuild(live.mix.recipe, live.instrument)
+      ? new ShareVideo({ id: live.mix.id, title: live.mix.title, file: live.mix.file, recipe: live.mix.recipe! }, live.vox.file, live.instrument!)
+      : null,
+  );
+  $effect(() => {
+    const v = video;
+    return () => v?.dispose();
+  });
   // the bar playing, so a beat that evolves changes as it plays
   const rows = $derived(ringRows(live?.mix.recipe ?? null, p.playing === 'main' ? p.bar : -1));
   const ringSize = $derived(Math.min(340, width));
@@ -98,6 +111,12 @@
     } catch (e) {
       if ((e as Error).name !== 'AbortError') note = url;
     }
+  }
+
+  function openVideo() {
+    p.stop();
+    vp.stop();
+    videoOpen = true;
   }
 
   function openSheet() {
@@ -195,6 +214,15 @@
         </div>
       </div>
 
+      {#if video}
+        <button class="btn make-video" onclick={openVideo}>
+          <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"
+            ><rect x="2" y="4" width="11" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="2" /><path d="M13 9l5-3v8l-5-3z" fill="currentColor" /></svg
+          >
+          MAKE THE VIDEO
+        </button>
+      {/if}
+
       <button class="mini-map" onclick={openSheet} aria-label="This vox around the world: {live.family.length} beats. Open the map.">
         <div class="tiles" class:world={worldwide}><FamilyMap family={live.family} current={live.mix.id} /></div>
         <div class="strip">
@@ -267,6 +295,8 @@
     </div>
   </dialog>
 {/if}
+
+{#if video}<VideoSheet v={video} bind:open={videoOpen} />{/if}
 
 <About />
 
@@ -411,6 +441,10 @@
   .vox-name {
     font-size: 15px;
     letter-spacing: 0.08em;
+  }
+  .make-video {
+    gap: 10px;
+    min-height: 48px;
   }
   .mini-map {
     display: block;
