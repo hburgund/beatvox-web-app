@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { environment, IGNORE_ERRORS, scrubUrl, startErrorReporting } from './monitoring';
+import { environment, IGNORE_ERRORS, isDeployPermalink, scrubUrl, startErrorReporting } from './monitoring';
 
 describe('error reporting', () => {
   it('is off without a DSN', async () => {
@@ -17,6 +17,12 @@ describe('error reporting', () => {
     expect(environment('beatvox.app')).toBe('live-site');
     expect(environment('deploy-preview-12--beatvox-lab.netlify.app')).toBe('preview');
     expect(environment('localhost')).toBe('other');
+  });
+
+  it("leaves out Netlify's deploy permalinks (its screenshot bot), not previews", () => {
+    expect(isDeployPermalink('6afe37afeb0f8389f87a47cd--beatvox-lab.netlify.app')).toBe(true);
+    expect(isDeployPermalink('deploy-preview-12--beatvox-lab.netlify.app')).toBe(false);
+    expect(isDeployPermalink('beatvox.app')).toBe(false);
   });
 
   it("ignores a sound interrupted, and audio or the mic refused", () => {

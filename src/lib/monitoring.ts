@@ -5,15 +5,21 @@
 // On, errors in people's browsers reach Sentry, so failures that only happen
 // on some phones (recording, audio starting, making a video) show up without
 // anyone reporting them. Nothing personal goes with them, as on the
-// Roundware web app and admin: no user, cookies, headers, bodies or query
-// parameters (Sentry's dataCollection collects all of those by default), no
-// session replay, no performance tracing, addresses without their query
-// strings, and no console breadcrumbs. The Sentry project's "Prevent Storing
-// of IP Addresses" covers the address it connects from. The About page's
-// privacy note says it's there.
+// Roundware web app and admin: no user, cookies, bodies or query parameters
+// (Sentry's dataCollection collects all of those by default), no headers but
+// the browser's User-Agent ("Safari 18 on iOS 18", which Sentry turns into
+// the browser, OS and device tags: the point of all this), no session
+// replay, no performance tracing, addresses without their query strings, and
+// no console breadcrumbs. Netlify's deploy permalinks don't report: only its
+// screenshot bot loads them, on a server with no graphics card. The Sentry
+// project's "Prevent Storing of IP Addresses" covers the address it connects
+// from. The About page's privacy note says it's there.
 
 /** An address without its query string or fragment: they can carry anything (a reVox link's id, a place). */
 export const scrubUrl = (url?: string): string | undefined => url?.replace(/[?#].*$/, '');
+
+/** A Netlify deploy permalink (`<24 hex>--beatvox-lab.netlify.app`): nobody browses there; its screenshot bot does. */
+export const isDeployPermalink = (hostname: string): boolean => /^[0-9a-f]{24}--/.test(hostname);
 
 /** Which site this is: the live one, a Netlify deploy preview, or anywhere else. */
 export function environment(hostname: string): 'live-site' | 'preview' | 'other' {
@@ -35,7 +41,7 @@ export const IGNORE_ERRORS: (string | RegExp)[] = [
 
 export async function startErrorReporting(): Promise<boolean> {
   const dsn = import.meta.env.VITE_SENTRY_DSN as string | undefined;
-  if (!dsn) return false;
+  if (!dsn || isDeployPermalink(location.hostname)) return false;
   const Sentry = await import('@sentry/browser');
   Sentry.init({
     dsn,
@@ -64,7 +70,8 @@ export async function startErrorReporting(): Promise<boolean> {
         event.request.url = scrubUrl(event.request.url);
         delete event.request.query_string;
         delete event.request.cookies;
-        delete event.request.headers;
+        // only the User-Agent, for the browser, OS and device tags
+        event.request.headers = { 'User-Agent': navigator.userAgent };
       }
       delete event.user;
       return event;
