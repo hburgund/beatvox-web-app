@@ -66,7 +66,7 @@
 <div class="app">
   <header>
     <div class="brand">
-      <h1>BEATVOX</h1>
+      <h1><a href={MAP_PATH}>BEATVOX</a></h1>
       <Leds step={s.step} />
       <AboutButton />
     </div>
@@ -106,6 +106,11 @@
     font: 700 28px/1 var(--mono);
     letter-spacing: 0.03em;
     text-shadow: 2px 2px 0 var(--pink);
+  }
+  /* the logo goes to the map, like the MAP button */
+  h1 a {
+    color: inherit;
+    text-decoration: none;
   }
   header .btn {
     text-decoration: none;

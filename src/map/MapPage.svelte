@@ -22,7 +22,7 @@
   import { ringRows, type RingRow } from '../lib/shared';
   import { clockMarker } from '../lib/clockMarker';
   import { Pins, fanOffsets } from '../lib/pins';
-  import { STUDIO_PATH } from '../lib/roundware';
+  import { MAP_PATH, STUDIO_PATH } from '../lib/roundware';
   import { ShuffleBag } from '../lib/shuffleBag';
   import { greatCircle } from '../lib/greatCircle';
 
@@ -517,7 +517,7 @@
 <div class="page">
   <header>
     <div class="left">
-      <span class="brand">BEATVOX</span>
+      <a class="brand" href={MAP_PATH}>BEATVOX</a>
       <AboutButton />
     </div>
     <div class="tools">
@@ -663,6 +663,9 @@
     font: 700 26px/1 var(--mono);
     letter-spacing: 0.03em;
     text-shadow: 2px 2px 0 var(--pink);
+    /* back to the start: the whole globe, nothing picked */
+    color: var(--ink);
+    text-decoration: none;
   }
   .tools {
     display: flex;
