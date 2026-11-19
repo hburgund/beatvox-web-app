@@ -18,8 +18,9 @@ export async function risoMap(
   const ml = await import('maplibre-gl');
   await import('maplibre-gl/dist/maplibre-gl.css');
   // MapLibre 6 looks for its worker beside its own file, which a bundled build
-  // doesn't keep; give it the copy the build ships instead
-  ml.setWorkerUrl((await import('maplibre-gl/dist/maplibre-gl-worker.mjs?url')).default);
+  // doesn't keep; give it the one the build makes instead (bundled like the
+  // page's own code, so it's rewritten for the same browsers)
+  ml.setWorkerUrl((await import('maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url')).default);
   const { globe = false, roads = true, colors = RISO_LIGHT, foldCredit = false, ...rest } = opts;
   const map = new ml.Map({
     container,
